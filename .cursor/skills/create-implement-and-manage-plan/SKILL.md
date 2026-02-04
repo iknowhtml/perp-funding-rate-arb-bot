@@ -50,12 +50,13 @@ Before handing off to Composer, ensure the plan includes:
 
 ## Opus 4.5: Code Example Validation
 
-**Before finalizing any plan, validate all code examples against `CODE_GUIDELINES.md`.**
+**Before finalizing any plan, validate all code examples against `CODE_GUIDELINES.md` and `biome.json`.**
 
 ### Validation Checklist
 
 For every code block in the plan, verify:
 
+**CODE_GUIDELINES.md:**
 - [ ] **Arrow functions**: Uses `const` arrow functions, not `function` declarations
 - [ ] **No `any`**: Uses `unknown` with Valibot validation instead
 - [ ] **No type casts**: Uses Valibot `v.parse()` or type guards, not `as Type`
@@ -65,6 +66,13 @@ For every code block in the plan, verify:
 - [ ] **No file extensions**: Import paths have no `.js` or `.ts` extensions
 - [ ] **Naming conventions**: Functions use verb prefixes (`get*`, `create*`, `calculate*`, etc.)
 - [ ] **Factory over class**: Uses `createX(config)` pattern, not `new X(config)`
+
+**Biome Rules (`biome.json`):**
+- [ ] **2-space indentation**: No tabs, no 4-space indents
+- [ ] **100-char line width**: Long lines must be wrapped
+- [ ] **Node.js import protocol**: Use `node:fs`, `node:path`, not `fs`, `path`
+- [ ] **No unused imports/variables**: Remove any unused declarations in examples
+- [ ] **No unnecessary template literals**: Use `"string"` not `` `string` `` when no interpolation
 
 ### Quick Reference: Common Violations
 
@@ -77,6 +85,9 @@ For every code block in the plan, verify:
 | `const fee = amount * rate` | `const feeCents = (amountCents * rateBps) / 10000n` |
 | `new Client(config)` | `createClient(config)` |
 | `import { object } from "valibot"` | `import * as v from "valibot"` |
+| `import { readFile } from "fs"` | `import { readFile } from "node:fs"` |
+| `` `static string` `` | `"static string"` |
+| 4-space or tab indent | 2-space indent |
 
 ### Validation Workflow
 
