@@ -1,0 +1,20 @@
+pre-commit:
+  piped: true
+  commands:
+    biome:
+      glob: '*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc}'
+      run: pnpm biome check --write {staged_files}
+      stage_fixed: true
+    gitleaks:
+      # Scans staged files for secrets/credentials before allowing commit
+      # Install: brew install gitleaks (macOS) or see https://github.com/gitleaks/gitleaks
+      run: gitleaks protect -v --staged
+
+pre-push:
+  commands:
+    biome-ci:
+      run: pnpm biome ci --error-on-warnings
+    typecheck:
+      run: pnpm typecheck
+    test:
+      run: pnpm test:run

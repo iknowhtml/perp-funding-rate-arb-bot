@@ -1,0 +1,175 @@
+---
+description: Testing standards with Vitest
+globs: "**/*.test.ts"
+alwaysApply: true
+---
+
+# Testing Rules
+
+**See [`CODE_GUIDELINES.md`](../../CODE_GUIDELINES.md#testing)** for additional testing patterns.
+
+## Framework
+
+Use **Vitest** for all testing.
+
+## Test File Location
+
+**Colocate test files with source files:**
+
+```
+src/
+├── lib/
+│   ├── client.ts
+│   └── client.test.ts     # ✅ Colocated
+├── utils/
+│   ├── format.ts
+│   └── format.test.ts     # ✅ Colocated
+```
+
+## Test File Naming
+
+Always use `.test.ts` suffix:
+
+```typescript
+// ✅ Good
+client.test.ts
+format.test.ts
+
+// ❌ Bad
+client.spec.ts
+client-test.ts
+__tests__/client.ts
+```
+
+## Test Structure
+
+Use descriptive `describe` and `it` blocks:
+
+```typescript
+describe("formatCents", () => {
+  it("should format positive amounts", () => {
+    expect(formatCents(12345n)).toBe("$123.45");
+  });
+
+  it("should format negative amounts", () => {
+    expect(formatCents(-12345n)).toBe("-$123.45");
+  });
+
+  it("should handle zero", () => {
+    expect(formatCents(0n)).toBe("$0.00");
+  });
+});
+```
+
+## Arrange-Act-Assert Pattern
+
+```typescript
+it("should calculate fee correctly", () => {
+  // Arrange
+  const amount = 1000000n; // $10,000
+  const rateBps = 25n; // 0.25%
+
+  // Act
+  const fee = calculateFee(amount, rateBps);
+
+  // Assert
+  expect(fee).toBe(2500n); // $25.00
+});
+```
+
+## Mocking
+
+### Mock External Services
+
+```typescript
+vi.mock("@/lib/api-client", () => ({
+  createApiClient: vi.fn(() => ({
+    get: vi.fn(),
+    post: vi.fn(),
+  })),
+}));
+```
+
+### Don't Mock Pure Functions
+
+```typescript
+// Don't mock pure functions - test them directly
+expect(calculateTotal(items)).toBe(expectedTotal);
+```
+
+### Use `vi.fn()` for Function Mocks
+
+```typescript
+const mockCallback = vi.fn();
+await processItems(items, mockCallback);
+expect(mockCallback).toHaveBeenCalledTimes(3);
+```
+
+## Running Tests
+
+```bash
+pnpm test          # Watch mode (interactive)
+pnpm test:run      # Single run (exits when complete)
+pnpm test:coverage # With coverage
+```
+
+### AI/Cursor Test Commands
+
+**Always use `test:run`** when running tests from Cursor or scripts:
+
+```bash
+# ✅ Good - process exits after tests complete
+pnpm test:run
+pnpm test:run src/utils/format.test.ts
+
+# ❌ Bad - stays in watch mode, hangs the terminal
+pnpm test
+```
+
+## Test Validation Workflow
+
+**ALWAYS run tests after writing them.**
+
+When tests fail:
+1. Is the **assertion** correct? → Fix test
+2. Is the **mock** correct? → Fix mock
+3. Otherwise → Fix the implementation
+
+**Never skip failing tests** — fix the test or the code.
+
+## Test Factories
+
+Create factories for test data:
+
+```typescript
+// src/test/factories.ts
+export const createUser = (overrides?: Partial<User>): User => ({
+  id: "user-123",
+  email: "test@example.com",
+  name: "Test User",
+  ...overrides,
+});
+
+// Usage
+const user = createUser({ name: "Custom Name" });
+```
+
+## Testing BigInt Values
+
+```typescript
+describe("bigint calculations", () => {
+  it("should handle large numbers without precision loss", () => {
+    const a = 9007199254740993n; // Larger than Number.MAX_SAFE_INTEGER
+    const b = 2n;
+    
+    expect(a * b).toBe(18014398509481986n);
+  });
+});
+```
+
+## Coverage Expectations
+
+- Test happy paths
+- Test error cases and edge cases
+- Test validation logic
+- Mock external dependencies (APIs, file system, etc.)

@@ -1,0 +1,61 @@
+/**
+ * Exchange adapter exports.
+ *
+ * @see {@link ../adrs/0010-exchange-adapters.md ADR-0010: Exchange Adapters}
+ */
+
+export type {
+  Balance,
+  CreateOrderParams,
+  Exchange,
+  ExchangeAdapter,
+  Fill,
+  FundingRate,
+  Order,
+  OrderBook,
+  OrderBookLevel,
+  OrderSide,
+  OrderStatus,
+  OrderType,
+  Position,
+  PositionSide,
+  Ticker,
+  TickerCallback,
+} from "./types";
+
+export { ExchangeError } from "./errors";
+export type { ExchangeErrorCode } from "./errors";
+
+export {
+  balanceSchema,
+  createOrderParamsSchema,
+  fillSchema,
+  fundingRateSchema,
+  isBalance,
+  isCreateOrderParams,
+  isFill,
+  isFundingRate,
+  isOrder,
+  isOrderBook,
+  isOrderBookLevel,
+  isPosition,
+  isTicker,
+  orderBookLevelSchema,
+  orderBookSchema,
+  orderSchema,
+  orderSideSchema,
+  orderStatusSchema,
+  orderTypeSchema,
+  positionSchema,
+  positionSideSchema,
+  tickerSchema,
+} from "./types";
+
+// Exchange-specific rate limit configurations
+export { COINBASE_RATE_LIMITS } from "./coinbase";
+export {
+  BINANCE_ENDPOINT_WEIGHTS,
+  BINANCE_RATE_LIMITS,
+  getBinanceEndpointWeight,
+} from "./binance";
+export { BYBIT_RATE_LIMITS } from "./bybit";

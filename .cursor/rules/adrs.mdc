@@ -1,0 +1,160 @@
+---
+description: Architecture Decision Records (ADRs) - always check before implementing
+globs: "adrs/**/*.md"
+alwaysApply: true
+---
+
+# Architecture Decision Records (ADRs)
+
+## ALWAYS Reference ADRs
+
+**Before implementing any feature or pattern, check the `adrs/` directory for relevant decisions.**
+
+ADRs document the architectural patterns, design decisions, and implementation approaches for this project. They are the source of truth for "how we do things here."
+
+## ADR Location
+
+All ADRs are stored in the `adrs/` directory at the project root.
+
+## When to Check ADRs
+
+Check ADRs before:
+- Implementing a new feature
+- Adding a new pattern or abstraction
+- Making architectural changes
+- Adding new dependencies
+- Changing existing patterns
+
+## ADR Naming Convention
+
+- Format: `NNNN-descriptive-title.md`
+- Use kebab-case for the title portion
+- Number sequentially starting from 0001
+
+## ADR Template
+
+```markdown
+# ADR NNNN: Title
+
+- **Status:** Proposed | Accepted | Deprecated | Superseded
+- **Date:** YYYY-MM-DD
+- **Updated:** YYYY-MM-DD (if modified)
+- **Owners:** Name
+- **Related:**
+  - [ADR-NNNN: Related Title](NNNN-related.md)
+
+## Context
+
+Why is this decision needed? What problem are we solving?
+
+## Decision
+
+What was decided? Be specific about the implementation.
+
+## Consequences
+
+### Positive
+- Benefit 1
+- Benefit 2
+
+### Negative
+- Trade-off 1
+- Trade-off 2
+
+### Risks
+- Risk 1 and mitigation
+
+## References
+- External documentation
+- Related code files
+```
+
+## Referencing ADRs in Code
+
+Use JSDoc to reference ADRs:
+
+```typescript
+/**
+ * Order state machine for tracking order lifecycle.
+ *
+ * @see {@link ../../adrs/0001-state-machines.md ADR-0001: State Machines}
+ */
+export const transitionOrder = (order: Order, event: OrderEvent): Order => {
+  // Implementation follows ADR-0001 patterns
+};
+```
+
+## When to Create ADRs
+
+Create an ADR for:
+- Significant architectural decisions
+- Choice of patterns or libraries
+- Trade-offs that need documentation
+- Decisions that future developers should understand
+
+## NEVER Reference Private Projects
+
+**Do NOT include explicit references to private or external projects in ADRs.**
+
+- ❌ Do not link to private GitHub repos
+- ❌ Do not mention specific company/interview projects by name
+- ❌ Do not cite ADR numbers from other codebases
+
+If a pattern was inspired by another project, describe the pattern itself without attribution:
+
+```markdown
+// ❌ Bad: References private project
+This ADR draws from patterns in [XYZ](https://github.com/abc/xyz) (ADR-XXXX).
+
+// ✅ Good: Describes the pattern
+This ADR adopts a pragmatic hexagonal-inspired architecture, balancing structure with simplicity.
+```
+
+ADRs should be self-contained and not depend on access to external private repositories.
+
+## When to Update ADRs
+
+Update an ADR when:
+1. The implementation changes significantly
+2. File paths or structure changes
+3. Dependencies or patterns change
+4. A decision is superseded by a new one
+
+## Status Values
+
+- **Proposed**: Under discussion, not yet implemented
+- **Accepted**: Implemented and current
+- **Deprecated**: No longer recommended but may still exist
+- **Superseded**: Replaced by another ADR (link to replacement)
+
+## Verify Tools and Libraries
+
+**ALWAYS verify that tools, libraries, and frameworks mentioned in ADRs are actually used in this project.**
+
+Before referencing any tool:
+1. Check `package.json` for the dependency
+2. Check config files (e.g., `biome.json`, `tsconfig.json`)
+3. Do NOT assume tools from other projects apply here
+
+Common mistakes to avoid:
+- ❌ Mentioning ESLint when the project uses Biome
+- ❌ Referencing Jest when the project uses Vitest
+- ❌ Citing npm commands when the project uses pnpm
+
+```markdown
+// ❌ Bad: Wrong tool for this project
+Use ESLint rules to enforce boundaries.
+
+// ✅ Good: Correct tool for this project
+Use Biome lint rules to enforce boundaries.
+```
+
+## Verification Before Committing
+
+Before committing ADR changes:
+1. File paths match actual codebase structure
+2. Code examples compile/work
+3. Dependencies mentioned are actually installed
+4. Tools referenced match project tooling (check `package.json`, config files)
+5. Related ADRs are cross-referenced
+6. README ADR table is up to date (if exists)

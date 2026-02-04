@@ -1,0 +1,215 @@
+# File Organization & Directory Structure
+
+**Always follow consistent file organization patterns for maintainability and discoverability.**
+
+## Directory Structure
+
+### Module Organization
+
+Each module should be organized as a self-contained directory:
+
+```
+src/lib/
+├── module-name/
+│   ├── index.ts          # Public API exports (entry point)
+│   ├── implementation.ts # Implementation files (if needed)
+│   ├── types.ts          # Type definitions (if substantial)
+│   ├── schema.ts         # Validation schemas (if substantial)
+│   └── *.test.ts         # Colocated tests
+```
+
+### Entry Points (`index.ts`)
+
+**Every module directory MUST have an `index.ts` file** that serves as the public API:
+
+```typescript
+// ✅ Good: index.ts re-exports from named implementation file
+export {
+  createLogger,
+  logger,
+  createRotatingLogStream,
+  type LogLevel,
+  type Logger,
+  type LoggerConfig,
+} from "./logger";
+
+// ✅ Good: If module is simple, implementation can be in index.ts directly
+export const parseEnv = (): Env => { /* ... */ };
+export type { Env } from "./schema";
+```
+
+**Rules:**
+- `index.ts` should only export public APIs (either directly or via re-exports)
+- Use named exports, not default exports
+- Re-export types with `export type` for better tree-shaking
+- Implementation can be in `index.ts` directly OR in a named file (e.g., `logger.ts`, `env.ts`) with `index.ts` re-exporting
+- When using a named implementation file, name it after the module (e.g., `logger.ts` for `logger/` module)
+
+### File Naming
+
+| Type | Convention | Example |
+|------|------------|---------|
+| Implementation | kebab-case or module-name | `logger.ts`, `env.ts`, `parse-env.ts` |
+| Types | kebab-case | `types.ts`, `schemas.ts` |
+| Tests | `*.test.ts` (matches source file) | `logger.test.ts`, `env.test.ts` |
+| Index | `index.ts` | `index.ts` |
+
+**Note**: Implementation files can be named after the module (e.g., `logger.ts` for `logger/` module) or use descriptive kebab-case names.
+
+### Module Structure Patterns
+
+#### Simple Module (Single File)
+If a module is simple and self-contained, you have two options:
+
+**Option 1: Everything in `index.ts`**
+```
+module-name/
+├── index.ts        # Contains all implementation
+└── index.test.ts   # Tests
+```
+
+**Option 2: Named implementation file with re-export**
+```
+module-name/
+├── index.ts        # Re-exports from module-name.ts
+├── module-name.ts  # Contains all implementation
+└── module-name.test.ts  # Tests
+```
+
+#### Complex Module (Multiple Files)
+If a module needs separation of concerns:
+
+```
+module-name/
+├── index.ts           # Public API exports
+├── module-name.ts     # Main implementation (or implementation.ts)
+├── types.ts           # Type definitions (if substantial)
+├── schema.ts          # Validation schemas (if substantial)
+├── module-name.test.ts
+└── types.test.ts
+```
+
+### Test Colocation
+
+**Tests MUST be colocated with source files and match the source file name:**
+
+```
+✅ Good:
+src/lib/logger/
+├── index.ts
+├── logger.ts
+└── logger.test.ts  # Matches logger.ts
+
+✅ Good (if everything in index.ts):
+src/lib/env/
+├── index.ts
+└── index.test.ts  # Matches index.ts
+
+❌ Bad:
+src/lib/logger/
+├── logger.ts
+└── index.test.ts  # Should be logger.test.ts
+
+❌ Bad:
+src/lib/logger/
+└── logger.ts
+tests/lib/logger/
+└── logger.test.ts  # Not colocated
+```
+
+### Import Paths
+
+**Always import from module directories, not individual files:**
+
+```typescript
+// ✅ Good: Import from module directory
+import { logger } from "@/lib/logger";
+import { env } from "@/lib/env";
+
+// ❌ Bad: Import from specific file
+import { logger } from "@/lib/logger/index";
+import { env } from "@/lib/env/env";
+```
+
+**Exception**: When importing types/schemas that aren't re-exported:
+
+```typescript
+// ✅ Good: Import type that's not in public API
+import type { EnvSchema } from "@/lib/env/schema";
+```
+
+## Anti-Patterns
+
+### ❌ Redundant Re-export Files (When Implementation is Small)
+
+```typescript
+// ❌ Bad: Unnecessary re-export when implementation is small
+// src/lib/env/index.ts
+export * from "./env";
+// src/lib/env/env.ts (only 20 lines)
+
+// ✅ Good: Consolidate small implementations into index.ts
+// src/lib/env/index.ts contains the actual implementation
+
+// ✅ Good: Re-export is acceptable when implementation is substantial
+// src/lib/logger/index.ts
+export { createLogger, logger, ... } from "./logger";
+// src/lib/logger/logger.ts (100+ lines with multiple concerns)
+```
+
+### ❌ Default Exports
+
+```typescript
+// ❌ Bad: Default export
+export default logger;
+
+// ✅ Good: Named export
+export { logger };
+```
+
+### ❌ Barrel Files with Circular Dependencies
+
+```typescript
+// ❌ Bad: Circular dependency risk
+// src/lib/index.ts
+export * from "./module-a";
+export * from "./module-b";
+// module-a imports from module-b, module-b imports from module-a
+
+// ✅ Good: Explicit imports where needed
+```
+
+## Module Examples
+
+### Example 1: Simple Module (env)
+
+```
+src/lib/env/
+├── index.ts      # parseEnv, env, getEnv, type Env
+├── schema.ts     # envSchema (if substantial)
+└── index.test.ts # Tests
+```
+
+### Example 2: Module with Named Implementation (logger)
+
+```
+src/lib/logger/
+├── index.ts           # Re-exports public API from logger.ts
+├── logger.ts          # All implementation (createLogger, logger, createRotatingLogStream)
+└── logger.test.ts     # Tests for logger.ts
+```
+
+**Note**: This pattern is preferred when the implementation file is substantial or you want the implementation file name to match the module name for better discoverability.
+
+## Migration Checklist
+
+When organizing a module:
+
+- [ ] Module has `index.ts` as entry point
+- [ ] `index.ts` exports only public API (directly or via re-exports)
+- [ ] Implementation files are named descriptively (module-name.ts or kebab-case)
+- [ ] Tests are colocated with `*.test.ts` suffix matching source file name
+- [ ] Types/schemas separated if substantial
+- [ ] No redundant re-export files for small implementations
+- [ ] No default exports
+- [ ] Imports use module directory paths (not specific files)

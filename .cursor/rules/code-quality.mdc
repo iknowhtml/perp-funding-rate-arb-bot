@@ -1,0 +1,213 @@
+---
+description: Code quality verification workflow with subagents
+globs: "**/*.ts"
+alwaysApply: true
+---
+
+# Code Quality Verification
+
+## 🚨 PLAN COMPLETION CHECKLIST - RUN THIS FIRST 🚨
+
+**If you just finished implementing a plan from `.cursor/plans/active/`, STOP and run this checklist NOW:**
+
+**Note**: All plans include a `lifecycle-management` todo (see `.cursor/plans/PLAN_TEMPLATE.md`) that must be marked `completed` as part of this workflow.
+
+```bash
+# 1. Update plan frontmatter: todos to status: completed (including lifecycle-management)
+# 2. Check all validation boxes [x]
+# 3. Update roadmap link to ../../active/<roadmap-id>/README.md
+# 4. Create directory and move:
+mkdir -p .cursor/plans/implemented/<ROADMAP>/<PHASE>
+mv .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md \
+   .cursor/plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md
+# 5. MANDATORY: Delete from active (verify removal):
+test -f .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md && \
+  rm -f .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md
+# 6. Verify final state:
+test -f .cursor/plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md && \
+  ! test -f .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md && \
+  echo "SUCCESS" || echo "ERROR: Fix immediately"
+```
+
+**DO NOT mark task as complete until plan is moved to `implemented/`.**
+
+---
+
+**ALWAYS verify code quality after making changes** by using the code-reviewer subagent.
+
+## Workflow
+
+After adding or modifying TypeScript code:
+
+1. **Use the code-reviewer subagent** to check code quality
+2. **Wait for the review to complete**
+3. **If errors found**: Fix in main agent, then re-run the subagent
+4. **If all pass**: Continue with task
+
+## CRITICAL: After Code Generation
+
+**MANDATORY**: After generating any code, you MUST:
+1. **Remove all type casts** (`as Type`) - use type guards or Valibot validation instead
+2. **Run code review** using the code-reviewer subagent before considering the task complete
+3. **Fix all violations** before marking the task as done
+
+## 🚨 CRITICAL: After Completing a Plan - MANDATORY MOVEMENT 🚨
+
+**ABSOLUTELY MANDATORY - NO EXCEPTIONS**: After implementing, completing, or finishing ANY plan from `.cursor/plans/active/`, you **MUST IMMEDIATELY** move it to `implemented/`.
+
+**TRIGGER CONDITIONS** (move plan if ANY of these are true):
+- ✅ User asks to "implement" a plan
+- ✅ User asks to "complete" a plan
+- ✅ User asks to "finish" a plan
+- ✅ All todos are marked `completed`
+- ✅ All validation boxes are checked `[x]`
+- ✅ **ANY indication that plan work is done**
+
+**MANDATORY workflow** (execute in this exact order - NO SKIPPING):
+
+1. **Update plan metadata**:
+   - Mark all todos as `status: completed` (including the `lifecycle-management` todo)
+   - Check all validation boxes `[x]`
+   - Update roadmap link from `../README.md` to `../../active/<roadmap-id>/README.md`
+
+2. **Create directory structure**:
+   ```bash
+   mkdir -p .cursor/plans/implemented/<roadmap-id>/<phase-id>
+   ```
+
+3. **Move the plan file**:
+   ```bash
+   mv .cursor/plans/active/<roadmap-id>/<phase-id>/<plan-id>.md \
+      .cursor/plans/implemented/<roadmap-id>/<phase-id>/<plan-id>.md
+   ```
+
+4. **🚨 CRITICAL STEP - MANDATORY DELETION FROM ACTIVE/ 🚨**: **ALWAYS delete from `active/` immediately after moving**:
+   ```bash
+   # After mv command, ALWAYS run this - NO EXCEPTIONS:
+   test -f .cursor/plans/active/<path> && rm .cursor/plans/active/<path> || echo "OK"
+   ```
+   - **CRITICAL**: The file must ONLY exist in `implemented/` - NEVER in both locations
+   - **NO EXCEPTIONS** - even if `mv` should have removed it, verify and delete
+   - **MANDATORY** - this step is not optional under any circumstances
+   - **If file still exists in active/ after mv, DELETE IT IMMEDIATELY** - this is a critical error
+   - **Force deletion if needed**: `test -f .cursor/plans/active/<path> && rm -f .cursor/plans/active/<path>`
+
+5. **Verify completion** (MANDATORY):
+   ```bash
+   test -f .cursor/plans/implemented/<path> && \
+     ! test -f .cursor/plans/active/<path> && \
+     echo "SUCCESS" || \
+     (test -f .cursor/plans/active/<path> && rm -f .cursor/plans/active/<path> && echo "DELETED duplicate")
+   ```
+   - File exists in `implemented/`
+   - **File does NOT exist in `active/`** - if it does, DELETE IT IMMEDIATELY with `rm -f`
+   - **Final check**: Run `! test -f .cursor/plans/active/<path> && echo "VERIFIED: File removed from active/"`
+   - All todos marked completed
+   - All validation boxes checked
+
+**THIS IS NOT OPTIONAL - IT IS MANDATORY - NO EXCEPTIONS**
+
+**This is NOT optional** - plan lifecycle management is part of completing any plan implementation task. **You MUST move the plan file whenever ANY plan work is completed, no matter what.**
+
+**Reference**: See `.cursor/rules/plan-lifecycle.mdc` for detailed workflow.
+
+## Using the Code-Reviewer Subagent
+
+The `code-reviewer` subagent automatically:
+- Detects the package manager (pnpm, bun, npm, yarn)
+- Runs Biome linting and formatting checks
+- Runs TypeScript type checking
+- **ABSOLUTELY MUST** review code against `CODE_GUIDELINES.md` (if present) - this is mandatory, not optional
+- Reports all issues with specific file paths, line numbers, and suggested fixes
+
+### CRITICAL: CODE_GUIDELINES.md Compliance
+
+**The code-reviewer MUST enforce CODE_GUIDELINES.md absolutely.** This includes but is not limited to:
+
+1. **Functional Programming Over Classes**: NEVER allow classes unless absolutely necessary (e.g., Error classes extending Error). Always prefer factory functions (`createX`) over constructors (`new X`).
+
+2. **Arrow Functions**: ALL exported functions MUST use `const` arrow functions, never `function` declarations.
+
+3. **BigInt for Financial Math**: ALL monetary calculations MUST use `bigint`, never `number`. Variable names MUST include unit suffixes (`Cents`, `Bps`, `Sats`).
+
+4. **No `any` Type**: NEVER allow `any` - use `unknown` with Valibot validation instead.
+
+5. **No Type Casts**: NEVER allow type casts (`as Type`) - use Valibot validation or type guards. **This is CRITICAL - all type casts must be removed and replaced with proper validation/type guards.**
+
+6. **Explicit Return Types**: ALL exported functions MUST have explicit return types.
+
+7. **Naming Conventions**: MUST enforce all naming conventions (camelCase for functions/variables, SCREAMING_SNAKE_CASE for constants, PascalCase for types, kebab-case for files).
+
+8. **Valibot Validation**: MUST use Valibot for all runtime validation, never manual type assertions.
+
+9. **Error Handling**: MUST use custom error classes extending Error, with proper error wrapping.
+
+10. **Test Colocation**: Tests MUST be colocated with source files using `.test.ts` suffix.
+
+**Any violation of CODE_GUIDELINES.md MUST be flagged as a critical issue and fixed before code is considered acceptable.**
+
+### Invocation
+
+After creating or modifying files, invoke the subagent:
+
+```
+Use the code-reviewer subagent to review the generated/modified code.
+```
+
+Or simply:
+
+```
+Review the code using the code-reviewer subagent.
+```
+
+The subagent will:
+1. **FIRST**: Read `CODE_GUIDELINES.md` from the project root (MANDATORY)
+2. Run Biome checks (via `pnpm lint` or `biome check .`)
+3. Run TypeScript checks (via `pnpm typecheck` or `tsc --noEmit`)
+4. **ABSOLUTELY MUST** review code against `CODE_GUIDELINES.md` - flag ALL violations as critical issues
+5. Provide a comprehensive report with prioritized issues and fixes, with CODE_GUIDELINES.md violations marked as highest priority
+
+## Error Resolution
+
+When the code-reviewer subagent reports errors:
+
+1. **Do NOT fix in the subagent** — fixes must be in main agent
+2. **Review all errors** from the subagent before fixing (CODE_GUIDELINES.md violations are highest priority, then TypeScript, then Biome)
+3. **Fix systematically** — start with CODE_GUIDELINES.md violations (these are critical), then type errors (they may cause lint errors), then linting
+4. **Re-run the subagent** after fixes to verify all issues are resolved - CODE_GUIDELINES.md compliance MUST be verified
+
+### Common Biome Errors
+
+| Error | Fix |
+|-------|-----|
+| `noUnusedImports` | Remove unused import |
+| `noUnusedVariables` | Remove or use the variable |
+| `useNodejsImportProtocol` | Use `node:` prefix (e.g., `node:fs`) |
+| `noExplicitAny` | Replace `any` with proper type |
+
+### Common TypeScript Errors
+
+| Error | Fix |
+|-------|-----|
+| `TS2304` (not found) | Import the missing type/value |
+| `TS2345` (argument type) | Fix argument type or add type assertion |
+| `TS2322` (not assignable) | Fix type mismatch |
+| `TS7006` (implicit any) | Add explicit type annotation |
+
+## Auto-Fix Option
+
+For quick fixes, use biome's auto-fix:
+
+```bash
+pnpm biome check --write .
+```
+
+**Note**: Only use auto-fix for formatting/import issues. Review changes before committing. After auto-fixing, re-run the code-reviewer subagent to verify all issues are resolved.
+
+## Integration with Git Hooks
+
+Checks also run automatically via Lefthook:
+- **pre-commit**: Biome check on staged files
+- **pre-push**: Biome CI + typecheck + tests
+
+Git hooks provide a safety net, but running checks proactively catches issues earlier.

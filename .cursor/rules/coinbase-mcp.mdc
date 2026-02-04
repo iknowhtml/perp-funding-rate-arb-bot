@@ -1,0 +1,68 @@
+---
+description: Use Coinbase MCP server for all Coinbase-related tasks
+globs: "**/*coinbase*"
+alwaysApply: true
+---
+
+# Coinbase MCP Server Usage
+
+**ALWAYS use the Coinbase CDP MCP server when working with anything Coinbase-related.**
+
+## When to Use
+
+Use the Coinbase MCP server for:
+- Questions about Coinbase Advanced Trade API
+- Coinbase API authentication (ES256 JWT, CDP API keys)
+- Coinbase SDK usage (`@coinbase-sample/advanced-trade-sdk-ts`)
+- Coinbase adapter implementation or debugging
+- Coinbase API endpoints, rate limits, or best practices
+- Any Coinbase-related code generation or documentation lookup
+
+## How to Use
+
+The Coinbase MCP server is configured at `.cursor/mcp.json` with the URL:
+```
+https://docs.cdp.coinbase.com/mcp
+```
+
+**Before answering Coinbase-related questions or implementing Coinbase features:**
+
+1. **Search CDP documentation** using the MCP server
+2. **Reference official Coinbase patterns** from the documentation
+3. **Use accurate API endpoints** and authentication methods from the docs
+4. **Follow Coinbase best practices** as documented in CDP
+
+## Example Usage
+
+Instead of guessing or using generic patterns:
+
+```typescript
+// ❌ Bad: Generic implementation without checking docs
+const signRequest = (method: string, path: string) => {
+  // Guessing at Coinbase auth...
+};
+
+// ✅ Good: Use MCP to search CDP docs first
+// "Search Coinbase CDP docs for Advanced Trade API authentication"
+// Then implement based on official documentation
+```
+
+## MCP Server Capabilities
+
+The Coinbase MCP server provides:
+- **Documentation search**: Search all CDP documentation
+- **API reference**: Access to latest API endpoints and schemas
+- **Best practices**: Official patterns and recommendations
+- **Code examples**: Real examples from Coinbase documentation
+
+## Testing MCP Connection
+
+To verify the MCP server is working, ask:
+- "What MCP tools do you have available?"
+- "Search Coinbase CDP docs for Advanced Trade API authentication"
+
+## References
+
+- [Coinbase MCP Setup](https://docs.cdp.coinbase.com/get-started/develop-with-ai/setup/ai-mcp-setup)
+- MCP Configuration: `.cursor/mcp.json`
+- Coinbase Adapter: `src/adapters/coinbase/`

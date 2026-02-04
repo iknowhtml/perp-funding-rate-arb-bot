@@ -1,0 +1,58 @@
+{
+  "name": "funding-rate-arb-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Funding rate arbitrage bot for perpetual futures",
+  "author": "",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@9.15.2",
+  "scripts": {
+    "postinstall": "lefthook install",
+    "setup": "./scripts/setup.sh",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "clean": "rm -rf dist coverage",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f postgres",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@coinbase-sample/advanced-trade-sdk-ts": "^0.2.0",
+    "@hono/node-server": "^1.19.9",
+    "cockatiel": "^3.2.1",
+    "drizzle-orm": "^0.45.1",
+    "hono": "^4.11.7",
+    "lru-cache": "^11.2.5",
+    "p-queue": "^9.1.0",
+    "postgres": "^3.4.8",
+    "valibot": "^1.0.0",
+    "ws": "^8.19.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^22.10.0",
+    "@types/ws": "^8.18.1",
+    "drizzle-kit": "^0.31.8",
+    "lefthook": "^1.9.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

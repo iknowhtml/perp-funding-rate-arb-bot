@@ -1,0 +1,329 @@
+---
+description: General coding standards and TypeScript practices
+globs: "**/*.ts"
+alwaysApply: true
+---
+
+# General Coding Rules
+
+## 🚨 FIRST: CHECK IF WORKING ON A PLAN 🚨
+
+**BEFORE doing anything else, check: Am I implementing a plan from `.cursor/plans/active/`?**
+
+**When creating a new plan**, use the template at `.cursor/plans/PLAN_TEMPLATE.md` which includes:
+- Standard plan structure
+- **Lifecycle management todo** (`id: lifecycle-management`) that must be completed
+- Proper frontmatter format
+
+**If implementing a plan**, you MUST complete the **PLAN COMPLETION CHECKLIST** when done:
+
+```
+□ 1. Mark all todos as `status: completed` in plan frontmatter (including lifecycle-management)
+□ 2. Check all validation boxes `[x]` in plan
+□ 3. Update roadmap link to `../../active/<roadmap-id>/README.md`
+□ 4. mkdir -p .cursor/plans/implemented/<roadmap-id>/<phase-id>
+□ 5. mv .cursor/plans/active/<path> .cursor/plans/implemented/<path>
+□ 6. test -f .cursor/plans/active/<path> && rm -f .cursor/plans/active/<path>
+□ 7. Verify: file ONLY in implemented/, NOT in active/
+```
+
+**TRIGGER PHRASES** (if user says ANY of these, complete checklist when done):
+- "implement plan" / "implement @plan-path"
+- "complete plan" / "finish plan"  
+- "done with plan" / "plan is done"
+
+---
+
+**Always follow [`CODE_GUIDELINES.md`](../../CODE_GUIDELINES.md)** — it is the source of truth for coding standards.
+
+**Always reference ADRs** — check `adrs/` for architectural decisions before implementing features.
+
+**For Coinbase-related work** — always use the Coinbase MCP server (see `.cursor/rules/coinbase-mcp.mdc`).
+
+## Key Principles
+
+1. **Safety First**: Prioritize correctness over cleverness
+2. **Deterministic**: Logic should be testable and reproducible
+3. **Auditable**: Every action should be traceable
+4. **ADR-Driven**: Reference ADRs for architectural patterns
+
+## TypeScript Rules
+
+### Use `const` Arrow Functions
+
+```typescript
+// ✅ Good
+const calculateTotal = (items: Item[]): bigint =>
+  items.reduce((sum, item) => sum + item.amount, 0n);
+
+// ❌ Bad
+function calculateTotal(items: Item[]): bigint {
+  return items.reduce((sum, item) => sum + item.amount, 0n);
+}
+```
+
+### Functional Programming Preference
+
+- **Factory functions over classes**: `createClient(config)` not `new Client(config)`
+- **Pure functions**: Minimize side effects, pass dependencies as arguments
+- **Immutable data**: Avoid mutating objects; use spread syntax
+
+### Use Native BigInt for Financial Math
+
+**ALWAYS use native `bigint` for monetary calculations.** Store amounts as smallest unit.
+
+```typescript
+// ✅ Good: Native bigint (amounts in smallest unit)
+const notionalCents = 1000000n; // $10,000.00 in cents
+const feeRateBps = 10n; // 0.10% = 10 basis points
+const feeCents = (notionalCents * feeRateBps) / 10000n;
+
+// ✅ Good: Unit suffixes make scale explicit
+const priceSats = 5000000000000n; // Price in satoshis
+const leverageBps = 10000n; // 1x = 10000 bps
+
+// ❌ Bad: JavaScript numbers lose precision
+const fee = notional * feeRate;
+```
+
+### Use Valibot for Validation
+
+```typescript
+import * as v from "valibot";
+
+// ✅ Good: Valibot for schema validation
+const ConfigSchema = v.object({
+  maxRetries: v.pipe(v.number(), v.minValue(0), v.maxValue(5)),
+  timeout: v.pipe(v.number(), v.minValue(1000)),
+});
+
+// ✅ Good: Type guard with Valibot
+const isValidConfig = (data: unknown): data is Config =>
+  v.is(ConfigSchema, data);
+
+// ❌ Bad: Type casts
+const config = response as Config;
+```
+
+### No Type Casts — Use Type Guards or Validation
+
+```typescript
+// ❌ Bad: (response as OrderResponse)
+// ✅ Good: Use Valibot validation or type guards
+const parsed = v.parse(ResponseSchema, response);
+```
+
+### Never Use `any`
+
+```typescript
+// ✅ Good: Use unknown with validation
+const parseResponse = (data: unknown): Order => v.parse(OrderSchema, data);
+
+// ❌ Bad: any disables type checking
+const parseResponse = (data: any): Order => data;
+```
+
+### Explicit Return Types for Exports
+
+```typescript
+// ✅ Good: Explicit return type
+export const formatAmount = (cents: bigint): string => {
+  return `$${(cents / 100n).toString()}`;
+};
+
+// ❌ Bad: Inferred return type for exports
+export const formatAmount = (cents: bigint) => {
+  return `$${(cents / 100n).toString()}`;
+};
+```
+
+### Import Statements - No File Extensions
+
+**NEVER use `.js` extensions in import statements.** TypeScript resolves files automatically.
+
+```typescript
+// ✅ Good: No extension
+import { createClient } from "./client";
+import type { Config } from "./types";
+export { ExchangeError } from "./errors";
+
+// ❌ Bad: .js extension
+import { createClient } from "./client.js";
+import type { Config } from "./types.js";
+export { ExchangeError } from "./errors.js";
+```
+
+**Rationale:**
+- TypeScript's module resolution handles file extensions automatically
+- Keeps imports consistent with source file extensions (`.ts`)
+- Reduces confusion between source (`.ts`) and compiled (`.js`) files
+- Works correctly with `moduleResolution: "bundler"` in tsconfig.json
+
+### ADR References in JSDoc
+
+```typescript
+/** @see {@link ../../adrs/0001-state-machines.md ADR-0001: State Machines} */
+export const transitionOrder = (order: Order, event: OrderEvent): Order => {
+  // ...
+};
+```
+
+## Naming Conventions
+
+### Files
+
+- Files: kebab-case (`order-service.ts`, `risk-engine.ts`)
+- Tests: `*.test.ts` suffix (`order-service.test.ts`)
+
+### Code
+
+| Type | Convention | Example |
+|------|------------|---------|
+| Functions | camelCase + verb | `calculateFee`, `getFundingRate` |
+| Variables | camelCase | `fundingRate`, `spotPrice` |
+| Constants | SCREAMING_SNAKE_CASE | `MAX_RETRIES`, `DEFAULT_TIMEOUT_MS` |
+| Types | PascalCase | `OrderStatus`, `RiskLevel` |
+| BigInt amounts | camelCase + unit suffix | `notionalCents`, `priceSats`, `rateBps` |
+| Records | `<plural>By<Key>` | `ordersById`, `usersbyEmail` |
+
+### Function Prefixes
+
+- `get*` — Retrieve data: `getUser`, `getBalance`
+- `calculate*` — Pure math: `calculateFee`, `calculateTotal`
+- `check*` — Return boolean: `checkIsValid`, `checkHasPermission`
+- `parse*` — Parse data: `parseResponse`, `parseConfig`
+- `create*` — Construct values: `createOrder`, `createClient`
+- `is*` — Type guards only: `isError`, `isValidOrder`
+
+## Imports
+
+```typescript
+// ✅ Good: Organized imports
+import { readFile } from "node:fs/promises";
+
+import * as v from "valibot";
+
+import { createClient } from "@/lib/client";
+import { logger } from "@/lib/logger";
+
+import type { Config, Order } from "@/types";
+```
+
+## Environment Variables
+
+**ALWAYS update documentation when adding/modifying environment variables:**
+
+1. **`README.md`**: Update "Environment Variables" section
+2. **`.env.example`**: Add example value
+
+## Code Quality Checks
+
+**After making code changes, ALWAYS run linting and type checking.**
+
+### Verification Workflow
+
+After adding or modifying TypeScript code:
+
+1. **Run checks in parallel using subagents** (faster feedback)
+2. **If errors occur, fix them in the main agent**
+3. **Re-run checks to verify fixes**
+
+### Running Checks as Subagents
+
+Launch **two parallel subagents** to run biome and tsc simultaneously:
+
+```
+Subagent 1 (Biome Lint):
+- Command: pnpm biome check .
+- Purpose: Check linting and formatting
+- On failure: Report specific files and errors
+
+Subagent 2 (TypeScript):
+- Command: pnpm typecheck
+- Purpose: Check type errors
+- On failure: Report specific files and errors
+```
+
+**Subagent prompts:**
+
+For Biome:
+```
+Run biome linting check on the codebase.
+Command: pnpm biome check .
+Report any errors with file paths and line numbers.
+If there are errors, list them clearly.
+If no errors, confirm the check passed.
+```
+
+For TypeScript:
+```
+Run TypeScript type checking on the codebase.
+Command: pnpm typecheck
+Report any type errors with file paths and line numbers.
+If there are errors, list them clearly.
+If no errors, confirm the check passed.
+```
+
+### Fixing Errors
+
+**Always fix errors in the main agent**, not subagents:
+
+1. Review errors reported by subagents
+2. Fix the issues in source files
+3. Re-run checks (can use subagents again)
+4. Repeat until all checks pass
+
+### When to Run Checks
+
+Run checks after:
+- Creating new files
+- Modifying existing files
+- Generating code
+- Significant refactoring
+- Completing a plan implementation (see plan lifecycle management below)
+
+**Do NOT skip checks** — catching errors early prevents bugs.
+
+## Plan Lifecycle Management
+
+🚨 **ABSOLUTELY MANDATORY - NO EXCEPTIONS** 🚨
+
+**CRITICAL RULE**: When ANY plan from `.cursor/plans/active/` is implemented, completed, or finished, you **MUST IMMEDIATELY** move it to `implemented/`.
+
+**THIS APPLIES WHENEVER:**
+- User asks to "implement" a plan
+- User asks to "complete" a plan
+- User asks to "finish" a plan
+- All todos are marked `completed`
+- All validation boxes are checked `[x]`
+- **ANY indication that plan work is done**
+
+**MANDATORY workflow** (execute in this exact order):
+1. Update plan todos to `status: completed`
+2. Check all validation boxes `[x]`
+3. Update roadmap link to point to `../../active/<roadmap-id>/README.md`
+4. Create directory: `mkdir -p .cursor/plans/implemented/<roadmap-id>/<phase-id>`
+5. Move file: `mv .cursor/plans/active/<path> .cursor/plans/implemented/<path>`
+6. **CRITICAL STEP**: **ALWAYS delete from `active/` immediately after moving**:
+   ```bash
+   # After mv, ALWAYS run:
+   test -f .cursor/plans/active/<path> && rm .cursor/plans/active/<path> || echo "OK"
+   ```
+7. **MANDATORY verification**: File must ONLY exist in `implemented/`, NOT in `active/`
+   ```bash
+   test -f .cursor/plans/implemented/<path> && \
+     ! test -f .cursor/plans/active/<path> && \
+     echo "SUCCESS" || \
+     (test -f .cursor/plans/active/<path> && rm .cursor/plans/active/<path> && echo "DELETED duplicate")
+   ```
+8. **If file still exists in `active/` after move, DELETE IT IMMEDIATELY** - this is a critical error:
+   ```bash
+   # Force deletion if it still exists:
+   test -f .cursor/plans/active/<path> && rm -f .cursor/plans/active/<path> && echo "FORCE DELETED"
+   ```
+
+**🚨 CRITICAL REMINDER: File MUST be removed from `active/` - NO EXCEPTIONS 🚨**
+
+**THIS IS NOT OPTIONAL - IT IS MANDATORY - NO EXCEPTIONS**
+
+**Reference**: See `.cursor/rules/plan-lifecycle.mdc` for detailed instructions and `.cursor/rules/code-quality.mdc` for workflow integration.

@@ -1,0 +1,16 @@
+# Gitleaks configuration
+# https://github.com/gitleaks/gitleaks
+
+title = "Gitleaks config for funding-rate-arb-bot"
+
+# Extend the default ruleset
+[extend]
+useDefault = true
+
+# Paths to ignore (test files may contain mock credentials)
+[allowlist]
+paths = [
+  '''\.test\.ts$''',
+  '''test-utils\.ts$''',
+  '''\.env\.example$''',
+]

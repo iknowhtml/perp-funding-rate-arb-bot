@@ -1,0 +1,125 @@
+---
+description: TypeScript type checking standards and workflow
+globs: "**/*.ts"
+alwaysApply: true
+---
+
+# TypeScript Type Checking
+
+**Always run type checking before committing code.**
+
+## Commands
+
+```bash
+# Type check all files
+pnpm typecheck
+
+# Type check with watch mode (development)
+tsc --noEmit --watch
+```
+
+## Rules
+
+1. **Run typecheck before committing**
+   - Use `pnpm typecheck` to check for type errors
+   - Fix all type errors before submitting
+   - Never use `any` type - use `unknown` with Valibot validation instead
+   - Never suppress type errors with `@ts-ignore` or `@ts-expect-error` without justification
+
+2. **Type Safety Principles**
+
+```typescript
+// ❌ Bad: Using any
+const parseData = (data: any): Order => data;
+
+// ✅ Good: Using unknown with validation
+const parseData = (data: unknown): Order => v.parse(OrderSchema, data);
+
+// ❌ Bad: Suppressing type errors
+// @ts-ignore
+const result = unsafeOperation();
+
+// ✅ Good: Fix the type issue or use proper type guards
+const result = isSafe(unsafeValue) ? safeOperation(unsafeValue) : defaultValue;
+```
+
+3. **Explicit Return Types**
+
+```typescript
+// ✅ Good: Explicit return type for exported functions
+export const calculateFee = (amount: bigint, rateBps: bigint): bigint => {
+  return (amount * rateBps) / 10000n;
+};
+
+// ❌ Bad: Inferred return type for exports
+export const calculateFee = (amount: bigint, rateBps: bigint) => {
+  return (amount * rateBps) / 10000n;
+};
+```
+
+4. **Type Guards**
+
+```typescript
+// ✅ Good: Type guard with proper predicate
+const isOrder = (value: unknown): value is Order => {
+  return v.is(OrderSchema, value);
+};
+
+// Usage
+if (isOrder(data)) {
+  // data is now typed as Order
+  processOrder(data);
+}
+```
+
+## Common Type Errors
+
+| Error Code | Description | Fix |
+|------------|-------------|-----|
+| `TS2304` | Cannot find name | Import the missing type/value |
+| `TS2345` | Argument type mismatch | Fix argument type or add proper validation |
+| `TS2322` | Type not assignable | Fix type mismatch or use type guard |
+| `TS7006` | Implicit any parameter | Add explicit type annotation |
+| `TS2339` | Property does not exist | Check type definition or add property |
+| `TS2554` | Expected N arguments | Fix function call signature |
+
+## Error Resolution Workflow
+
+When typecheck fails:
+
+1. **Read the error message** - TypeScript provides detailed error messages
+2. **Check the file and line** - Locate the exact issue
+3. **Fix the root cause** - Don't suppress errors, fix the types
+4. **Re-run typecheck** - Verify the fix resolves the issue
+
+## AI/Cursor Guidelines
+
+**ALWAYS run typecheck after generating or modifying TypeScript code:**
+
+```bash
+pnpm typecheck
+```
+
+Run after:
+- Creating new files
+- Modifying existing files
+- Generating code
+- Significant refactoring
+- Adding new dependencies
+
+## Integration with Code Quality
+
+Type checking is part of the code quality workflow:
+
+1. **Biome** - Linting and formatting
+2. **TypeScript** - Type checking (this rule)
+3. **Tests** - Runtime validation
+
+All three should pass before committing code.
+
+## Git Hooks
+
+Type checking runs automatically via Lefthook:
+- **pre-push**: Runs `pnpm typecheck` before pushing
+
+Fix type errors locally before pushing to avoid CI failures.

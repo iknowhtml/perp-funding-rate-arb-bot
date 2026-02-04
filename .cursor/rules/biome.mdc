@@ -1,0 +1,78 @@
+---
+description: Biome linting and formatting standards
+globs: "**/*.ts, **/*.json"
+alwaysApply: true
+---
+
+# Biome Linting and Formatting
+
+**Always lint and format code with Biome before committing.**
+
+## Commands
+
+```bash
+# Lint all files
+pnpm lint
+
+# Format all files
+pnpm format
+
+# Lint and fix automatically
+pnpm lint --write
+
+# Check both (CI mode)
+pnpm biome ci .
+```
+
+## Rules
+
+1. **Run Biome before committing**
+   - Use `pnpm lint` to check for errors
+   - Use `pnpm format` to format code
+   - Fix all errors before submitting
+
+2. **Template Literals**
+
+```typescript
+// ❌ Bad: Template literal without interpolation
+console.log(`Operation completed successfully!`);
+
+// ✅ Good: String literal
+console.log("Operation completed successfully!");
+
+// ✅ Good: Template literal with interpolation
+console.log(`Operation completed: ${result}`);
+```
+
+3. **Import Organization**
+   - Node built-ins first
+   - External packages
+   - Internal modules
+   - Types last
+
+```typescript
+// ✅ Good: Organized imports
+import { readFile } from "node:fs/promises";
+
+import * as v from "valibot";
+
+import { createClient } from "@/lib/client";
+
+import type { Config } from "@/types";
+```
+
+4. **Line Width**: 100 characters
+5. **Indentation**: 2 spaces
+
+## AI/Cursor Guidelines
+
+**ALWAYS run Biome after generating or modifying code:**
+
+```bash
+pnpm biome check --write .
+```
+
+Run after:
+- Creating new files
+- Generating code
+- Making significant edits
