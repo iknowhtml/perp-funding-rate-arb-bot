@@ -428,6 +428,15 @@ export const createLogger = (config: LoggerConfig) => {
 3. **Anomaly detection**: ML-based anomaly detection for unusual trading patterns
 4. **SLA monitoring**: Track uptime, execution success rate, reconciliation accuracy
 
+## Dependencies
+
+```bash
+# Required for metrics
+pnpm add prom-client
+```
+
+**Note**: `prom-client` is the de facto standard for Prometheus metrics in Node.js with 3.5M+ weekly downloads.
+
 ## References
 
 - [ADR-0001: Bot Architecture](0001-bot-architecture.md) — Worker loop and state management
