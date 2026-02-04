@@ -178,44 +178,46 @@ drizzle-kit, vitest, tsx, typescript, @biomejs/biome
 
 **Goal**: Implement the trading strategy, risk management, and execution logic.
 
+**Status**: 0 of 7 implementation plans completed. Active plans in `active/0001-mvp-roadmap/03-core-logic/`.
+
 ### Tasks
 
-- [ ] **State Machines** (`src/domains/state/`)
+- [ ] **State Machines** — [Active Plan](./03-core-logic/0001-state-machines.md)
   - [ ] Order state machine (CREATED → SUBMITTED → FILLED) (ADR-0012)
   - [ ] Hedge state machine (IDLE → ENTERING → ACTIVE → EXITING) (ADR-0012)
   - [ ] State transition validation
   - [ ] State persistence for audit trail
 
-- [ ] **Position Derivation** (`src/domains/position/`)
+- [ ] **Position Derivation** — [Active Plan](./03-core-logic/0002-position-derivation.md)
   - [ ] Derive position state from account data
   - [ ] Calculate position metrics (notional, P&L, margin)
   - [ ] Position reconciliation logic
 
-- [ ] **Risk Engine** (`src/domains/risk/`)
+- [ ] **Risk Engine** — [Active Plan](./03-core-logic/0003-risk-engine.md)
   - [ ] Risk assessment function (ADR-0013)
   - [ ] Hard limits enforcement (position size, leverage, drawdown)
   - [ ] Soft limits (warnings)
   - [ ] Liquidation distance calculation
   - [ ] Emergency exit logic
 
-- [ ] **Strategy Engine** (`src/domains/strategy/`)
+- [ ] **Strategy Engine** — [Active Plan](./03-core-logic/0004-strategy-engine.md)
   - [ ] Funding rate trend analysis (ADR-0014)
   - [ ] Entry signal generation
   - [ ] Exit signal generation
   - [ ] Position sizing logic
 
-- [ ] **Execution Engine** (`src/worker/execution.ts`)
+- [ ] **Execution Engine** — [Active Plan](./03-core-logic/0005-execution-engine.md)
   - [ ] Enter hedge execution (perp short + spot buy)
   - [ ] Exit hedge execution (spot sell + perp buy)
   - [ ] Order placement and fill tracking
   - [ ] Execution validation (slippage, risk re-check)
 
-- [ ] **Reconciler** (`src/worker/reconciler.ts`)
+- [ ] **Reconciler** — [Active Plan](./03-core-logic/0006-reconciler.md)
   - [ ] Periodic reconciliation with exchange (ADR-0001)
   - [ ] Inconsistency detection
   - [ ] State correction logic
 
-- [ ] **Evaluation Loop** (`src/worker/evaluator.ts`)
+- [ ] **Evaluation Loop** — [Active Plan](./03-core-logic/0007-evaluation-loop.md)
   - [ ] 2-second evaluation tick (ADR-0001)
   - [ ] Risk assessment → Strategy evaluation → Execution
   - [ ] State health checks (stale data detection)
@@ -234,34 +236,36 @@ drizzle-kit, vitest, tsx, typescript, @biomejs/biome
 
 **Goal**: Validate the bot with paper trading and backtesting before risking real capital.
 
+**Status**: 0 of 5 implementation plans completed. Active plans in `active/0001-mvp-roadmap/04-simulation/`.
+
 ### Tasks
 
-- [ ] **Paper Trading Adapter** (`src/adapters/paper/`)
+- [ ] **Paper Trading Adapter** — [Active Plan](./04-simulation/0001-paper-trading-adapter.md)
   - [ ] Implement `ExchangeAdapter` interface (ADR-0010)
   - [ ] Simulate order fills with configurable slippage
   - [ ] Simulate partial fills
   - [ ] Simulate API errors and latency
   - [ ] Track paper trading state (balances, positions)
 
-- [ ] **Slippage Modeling** (`src/lib/slippage/`)
+- [ ] **Slippage Modeling** — [Active Plan](./04-simulation/0002-slippage-modeling.md)
   - [ ] Order book depth analysis (ADR-0015)
   - [ ] Pre-trade slippage estimation
   - [ ] Post-trade slippage tracking
   - [ ] Slippage limit enforcement
 
-- [ ] **Historical Data Ingestion** (`src/lib/data-ingestion/`)
+- [ ] **Historical Data Ingestion** — [Active Plan](./04-simulation/0003-historical-data-ingestion.md)
   - [ ] Funding rate data collection (from exchange API)
   - [ ] Price data collection
   - [ ] Order book snapshot collection (optional)
   - [ ] Data storage in Postgres (ADR-0016)
 
-- [ ] **Backtesting Engine** (`src/lib/backtest/`)
+- [ ] **Backtesting Engine** — [Active Plan](./04-simulation/0004-backtesting-engine.md)
   - [ ] Event-driven backtester (ADR-0016)
   - [ ] Historical data loading
   - [ ] Performance metrics calculation (Sharpe, drawdown, win rate)
   - [ ] Results export (CSV, JSON)
 
-- [ ] **Backtesting CLI** (`src/commands/backtest.ts`)
+- [ ] **Backtesting CLI** — [Active Plan](./04-simulation/0005-backtesting-cli.md)
   - [ ] Command-line interface for running backtests
   - [ ] Parameter optimization support
   - [ ] Results visualization (optional)
@@ -280,38 +284,33 @@ drizzle-kit, vitest, tsx, typescript, @biomejs/biome
 
 **Goal**: Deploy with small capital to validate live performance matches backtests.
 
+**Status**: 0 of 4 implementation plans completed. Active plans in `active/0001-mvp-roadmap/05-live-testing/`.
+
 ### Tasks
 
-- [ ] **Monitoring & Alerting** (`src/lib/alerts/`)
+- [ ] **Monitoring & Alerting** — [Active Plan](./05-live-testing/0001-monitoring-alerting.md)
   - [ ] Discord webhook integration (ADR-0008)
   - [ ] Telegram bot integration (optional)
   - [ ] Alert levels (critical, warning, info)
   - [ ] Alert routing (critical → Discord + Telegram)
 
-- [ ] **Metrics Collection** (`src/lib/metrics/`)
+- [ ] **Metrics Collection** — [Active Plan](./05-live-testing/0002-metrics-collection.md)
   - [ ] Prometheus metrics (ADR-0008)
   - [ ] Trading metrics (evaluations, executions, P&L)
   - [ ] Performance metrics (latency, error rates)
   - [ ] Risk metrics (position size, margin utilization)
 
-- [ ] **Deployment** (`deployment/`)
+- [ ] **Deployment** — [Active Plan](./05-live-testing/0003-deployment.md)
   - [ ] Dockerfile (ADR-0007)
   - [ ] Fly.io configuration (`fly.toml`) (ADR-0007)
   - [ ] Environment variable setup
   - [ ] Database migration on startup
 
-- [ ] **Small Capital Deployment**
+- [ ] **Small Capital Deployment** — [Active Plan](./05-live-testing/0004-small-capital-deployment.md)
   - [ ] Deploy with $1,000-$5,000 capital
   - [ ] Monitor for 1-2 weeks
   - [ ] Compare live performance vs backtests
   - [ ] Tune parameters based on live data
-
-- [ ] **Validation Checklist**
-  - [ ] Live P&L matches expected (within 10%)
-  - [ ] Execution slippage matches estimates (within 20%)
-  - [ ] No unexpected errors or crashes
-  - [ ] Risk limits enforced correctly
-  - [ ] Alerts trigger appropriately
 
 ### Validation
 
@@ -327,27 +326,29 @@ drizzle-kit, vitest, tsx, typescript, @biomejs/biome
 
 **Goal**: Scale to full capital deployment and optimize performance.
 
+**Status**: 0 of 3 implementation plans completed. Active plans in `active/0001-mvp-roadmap/06-production/`.
+
 ### Tasks
 
-- [ ] **Performance Optimization**
+- [ ] **Performance Optimization** — [Active Plan](./06-production/0001-performance-optimization.md)
   - [ ] Profile evaluation loop latency
   - [ ] Optimize database queries
   - [ ] Reduce WebSocket message processing overhead
   - [ ] Optimize order book depth analysis
 
-- [ ] **Scaling Capital**
+- [ ] **Scaling Capital** — [Active Plan](./06-production/0002-scaling-capital.md)
   - [ ] Gradually increase position size
   - [ ] Monitor slippage impact at larger sizes
   - [ ] Adjust position sizing based on liquidity
   - [ ] Scale to target capital ($50K-$300K)
 
-- [ ] **Operational Excellence**
+- [ ] **Operational Excellence** — [Active Plan](./06-production/0003-operational-excellence.md)
   - [ ] Runbook documentation
   - [ ] Incident response procedures
   - [ ] Performance monitoring dashboards
   - [ ] Regular performance reviews
 
-- [ ] **Future Enhancements** (Optional)
+- [ ] **Future Enhancements** (Optional - No plans yet)
   - [ ] Additional exchange adapters (Bybit, OKX)
   - [ ] Cross-exchange arbitrage
   - [ ] Machine learning for parameter optimization
