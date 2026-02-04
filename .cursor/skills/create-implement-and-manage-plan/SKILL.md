@@ -48,6 +48,47 @@ Before handing off to Composer, ensure the plan includes:
 
 ---
 
+## Opus 4.5: Code Example Validation
+
+**Before finalizing any plan, validate all code examples against `CODE_GUIDELINES.md`.**
+
+### Validation Checklist
+
+For every code block in the plan, verify:
+
+- [ ] **Arrow functions**: Uses `const` arrow functions, not `function` declarations
+- [ ] **No `any`**: Uses `unknown` with Valibot validation instead
+- [ ] **No type casts**: Uses Valibot `v.parse()` or type guards, not `as Type`
+- [ ] **Explicit return types**: All exported functions have explicit return types
+- [ ] **BigInt for money**: Financial calculations use `bigint` with unit suffixes (`Cents`, `Bps`, `Sats`)
+- [ ] **Valibot namespace import**: Uses `import * as v from "valibot"`, not named imports
+- [ ] **No file extensions**: Import paths have no `.js` or `.ts` extensions
+- [ ] **Naming conventions**: Functions use verb prefixes (`get*`, `create*`, `calculate*`, etc.)
+- [ ] **Factory over class**: Uses `createX(config)` pattern, not `new X(config)`
+
+### Quick Reference: Common Violations
+
+| ❌ Violation | ✅ Correct |
+|--------------|-----------|
+| `function foo() {}` | `const foo = (): void => {}` |
+| `data: any` | `data: unknown` + `v.parse(Schema, data)` |
+| `response as Order` | `v.parse(OrderSchema, response)` |
+| `from "./client.js"` | `from "./client"` |
+| `const fee = amount * rate` | `const feeCents = (amountCents * rateBps) / 10000n` |
+| `new Client(config)` | `createClient(config)` |
+| `import { object } from "valibot"` | `import * as v from "valibot"` |
+
+### Validation Workflow
+
+1. **Review each code block** in the plan
+2. **Check against checklist** above
+3. **Fix violations** before moving to implementation
+4. **Add corrected examples** as reference for Composer
+
+Plans with non-compliant code examples create implementation debt. Fix in planning phase, not implementation.
+
+---
+
 ## Composer: Implementation
 
 ### Workflow
