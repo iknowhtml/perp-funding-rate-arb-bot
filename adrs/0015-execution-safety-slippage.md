@@ -417,12 +417,113 @@ export const validateExecution = async (
 };
 ```
 
+### Hedge Drift Detection and Correction
+
+Hedge drift occurs when perp and spot notional values don't match after execution:
+
+```typescript
+export const MAX_DRIFT_BPS = 50n; // 0.5% maximum acceptable drift
+
+export interface HedgeDrift {
+  perpNotionalCents: bigint;
+  spotNotionalCents: bigint;
+  driftBps: bigint;
+  needsCorrection: boolean;
+}
+
+export const calculateHedgeDrift = (
+  perpOrder: OrderResult,
+  spotOrder: OrderResult,
+): HedgeDrift => {
+  const perpNotional = perpOrder.filledQuantity * perpOrder.averagePrice;
+  const spotNotional = spotOrder.filledQuantity * spotOrder.averagePrice;
+  
+  const diff = perpNotional > spotNotional 
+    ? perpNotional - spotNotional 
+    : spotNotional - perpNotional;
+  
+  const driftBps = perpNotional > 0n 
+    ? (diff * 10000n) / perpNotional 
+    : 0n;
+
+  return {
+    perpNotionalCents: perpNotional,
+    spotNotionalCents: spotNotional,
+    driftBps,
+    needsCorrection: driftBps > MAX_DRIFT_BPS,
+  };
+};
+
+export const correctDrift = async (
+  drift: HedgeDrift,
+  adapter: ExchangeAdapter,
+  symbol: string,
+  logger: Logger,
+): Promise<void> => {
+  const diff = drift.perpNotionalCents - drift.spotNotionalCents;
+  
+  logger.warn("Correcting hedge drift", { drift, diff });
+  
+  if (diff > 0n) {
+    // Need more spot to match perp
+    await adapter.placeOrder({
+      symbol,
+      side: "BUY",
+      type: "MARKET",
+      quantity: diff,
+    });
+  } else {
+    // Need more perp to match spot
+    await adapter.placeOrder({
+      symbol: `${symbol}-PERP`,
+      side: "SELL",
+      type: "MARKET",
+      quantity: -diff,
+    });
+  }
+};
+```
+
+### Execution Circuit Breaker
+
+Prevent cascading failures during execution:
+
+```typescript
+import { CircuitBreaker, ConsecutiveBreaker, handleAll } from "cockatiel";
+
+export const createExecutionCircuitBreaker = () => {
+  return new CircuitBreaker(handleAll, {
+    halfOpenAfter: 30_000, // Try again after 30 seconds
+    breaker: new ConsecutiveBreaker(2), // Open after 2 consecutive failures
+  });
+};
+
+// Usage
+const executionCircuitBreaker = createExecutionCircuitBreaker();
+
+executionCircuitBreaker.onStateChange((state) => {
+  if (state === "open") {
+    alertService.send({
+      type: "EXECUTION_CIRCUIT_BREAKER_OPEN",
+      message: "Execution circuit breaker opened after consecutive failures",
+    });
+  }
+});
+```
+
 ### Integration with Execution Queue
 
 ```typescript
 // src/worker/execution.ts
+import pRetry from "p-retry";
+import pTimeout from "p-timeout";
 
 const executeEnterHedge = async (sizeCents: bigint) => {
+  // 0. Check circuit breaker
+  if (executionCircuitBreaker.state === "open") {
+    return { aborted: true, reason: "execution_circuit_breaker_open" };
+  }
+
   // 1. Get order book
   const orderBook = await exchange.getOrderBook(symbol);
   
@@ -444,35 +545,101 @@ const executeEnterHedge = async (sizeCents: bigint) => {
     return { aborted: true, reason: validation.reason };
   }
   
-  // 4. Execute with slippage estimate
-  const perpOrder = await executeMarketOrder(
-    exchange,
-    { symbol, side: "SELL", quantity: optimalSize },
-    validation.slippageEstimate!,
-    slippageConfig.maxSlippageBps,
-  );
+  // 4. Execute with slippage estimate (through circuit breaker)
+  const perpOrder = await executionCircuitBreaker.execute(async () => {
+    const order = await executeMarketOrder(
+      exchange,
+      { symbol, side: "SELL", quantity: optimalSize },
+      validation.slippageEstimate!,
+      slippageConfig.maxSlippageBps,
+    );
+    // 4a. Confirm fill with polling
+    return confirmOrderFill(exchange, order.orderId, ORDER_FILL_TIMEOUT_MS);
+  });
 
-  const spotOrder = await executeMarketOrder(
-    exchange,
-    { symbol, side: "BUY", quantity: optimalSize },
-    validation.slippageEstimate!,
-    slippageConfig.maxSlippageBps,
-  );
+  const spotOrder = await executionCircuitBreaker.execute(async () => {
+    const order = await executeMarketOrder(
+      exchange,
+      { symbol, side: "BUY", quantity: optimalSize },
+      validation.slippageEstimate!,
+      slippageConfig.maxSlippageBps,
+    );
+    // 4b. Confirm fill with polling
+    return confirmOrderFill(exchange, order.orderId, ORDER_FILL_TIMEOUT_MS);
+  });
   
-  // 5. Analyze execution
+  // 5. Handle partial fills
+  if (perpOrder.status === "PARTIALLY_FILLED" || spotOrder.status === "PARTIALLY_FILLED") {
+    await handlePartialFills(perpOrder, spotOrder, exchange, slippageConfig);
+  }
+  
+  // 6. Calculate and correct hedge drift
+  const drift = calculateHedgeDrift(perpOrder, spotOrder);
+  if (drift.needsCorrection) {
+    logger.warn("Hedge drift detected", { drift });
+    await correctDrift(drift, exchange, symbol, logger);
+  }
+  
+  // 7. Analyze execution
   const perpAnalysis = await analyzeExecution(perpOrder, perpFills, orderBook, validation.slippageEstimate!.expectedPrice);
   const spotAnalysis = await analyzeExecution(spotOrder, spotFills, orderBook, validation.slippageEstimate!.expectedPrice);
   
-  // 6. Log slippage metrics
+  // 8. Log slippage metrics
   metrics.executionSlippageBps.observe(Number(perpAnalysis.realizedSlippageBps));
   metrics.executionSlippageBps.observe(Number(spotAnalysis.realizedSlippageBps));
   
-  // 7. Alert if slippage exceeded estimate significantly
+  // 9. Alert if slippage exceeded estimate significantly
   if (perpAnalysis.slippageDifferenceBps > 20n || spotAnalysis.slippageDifferenceBps > 20n) {
     await alertService.send({
       type: "SLIPPAGE_ANOMALY",
       data: { perpAnalysis, spotAnalysis },
     });
+  }
+  
+  return { success: true, perpOrder, spotOrder, drift };
+};
+
+// Handle partial fills by completing the remaining quantity
+const handlePartialFills = async (
+  perpOrder: OrderResult,
+  spotOrder: OrderResult,
+  adapter: ExchangeAdapter,
+  config: SlippageConfig,
+): Promise<void> => {
+  const MAX_RETRY_ATTEMPTS = 3;
+  
+  // Complete perp fill if partial
+  if (perpOrder.status === "PARTIALLY_FILLED") {
+    const remaining = perpOrder.quantity - perpOrder.filledQuantity;
+    await pRetry(
+      async () => {
+        const order = await adapter.placeOrder({
+          symbol: perpOrder.symbol,
+          side: perpOrder.side,
+          type: "MARKET",
+          quantity: remaining,
+        });
+        return confirmOrderFill(adapter, order.orderId);
+      },
+      { retries: MAX_RETRY_ATTEMPTS },
+    );
+  }
+  
+  // Complete spot fill if partial
+  if (spotOrder.status === "PARTIALLY_FILLED") {
+    const remaining = spotOrder.quantity - spotOrder.filledQuantity;
+    await pRetry(
+      async () => {
+        const order = await adapter.placeOrder({
+          symbol: spotOrder.symbol,
+          side: spotOrder.side,
+          type: "MARKET",
+          quantity: remaining,
+        });
+        return confirmOrderFill(adapter, order.orderId);
+      },
+      { retries: MAX_RETRY_ATTEMPTS },
+    );
   }
 };
 ```
@@ -485,12 +652,16 @@ const executeEnterHedge = async (sizeCents: bigint) => {
 2. **Execution Quality**: Tracks realized vs expected slippage for optimization
 3. **Liquidity Awareness**: Adjusts position sizing based on available depth
 4. **Risk Reduction**: Validates execution safety before placing orders
+5. **Fill Confirmation**: Explicit polling prevents assuming orders are filled
+6. **Drift Correction**: Automatic correction prevents notional mismatch
+7. **Circuit Breaker**: Prevents cascading failures during execution
 
 ### Negative
 
 1. **Complexity**: Requires order book depth analysis and slippage estimation
-2. **Latency**: Order book fetching adds latency to execution path
+2. **Latency**: Order book fetching and fill polling add latency to execution path
 3. **False Positives**: May reject valid opportunities if order book snapshot is stale
+4. **Overhead**: Circuit breaker and retry logic add complexity
 
 ### Risks
 
@@ -500,6 +671,20 @@ const executeEnterHedge = async (sizeCents: bigint) => {
 | Order book manipulation | Use multiple exchanges for price discovery (future) |
 | Slippage model incorrect | Backtest slippage estimates vs realized, tune model |
 | Large order impact | Use TWAP for large orders, split into chunks |
+| Fill confirmation timeout | Cancel order and retry, or abort with alert |
+| Partial fills | Complete remaining quantity with retries |
+| Hedge drift | Automatic correction with small market orders |
+| Consecutive failures | Circuit breaker prevents runaway execution attempts |
+
+## Dependencies
+
+```bash
+# Required for fill confirmation and retry handling
+pnpm add p-retry p-timeout
+
+# Already installed
+# cockatiel (circuit breaker)
+```
 
 ## Future Considerations
 

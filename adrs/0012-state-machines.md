@@ -87,7 +87,80 @@ export type OrderEvent =
   | { type: "PARTIAL_FILL"; filledQty: bigint; avgPrice: bigint }
   | { type: "FILL"; filledQty: bigint; avgPrice: bigint }
   | { type: "CANCEL"; reason: string }
-  | { type: "REJECT"; error: string };
+  | { type: "REJECT"; error: string }
+  | { type: "TIMEOUT"; reason: string }; // ACK timeout or fill timeout
+```
+
+### 4a. Order ACK Timeout Handling
+
+Orders can get stuck in SUBMITTED state if the exchange never acknowledges. Implement timeout handling:
+
+```typescript
+export const ORDER_ACK_TIMEOUT_MS = 30_000; // 30 seconds
+export const ORDER_FILL_TIMEOUT_MS = 60_000; // 60 seconds
+
+export interface OrderWithTimeout extends Order {
+  submittedAt: Date;
+  ackedAt?: Date;
+  timeoutAt?: Date;
+}
+
+export const checkOrderTimeout = (order: OrderWithTimeout): OrderEvent | null => {
+  const now = Date.now();
+  
+  // Check ACK timeout (SUBMITTED state)
+  if (order.status === "SUBMITTED" && order.submittedAt) {
+    const elapsed = now - order.submittedAt.getTime();
+    if (elapsed > ORDER_ACK_TIMEOUT_MS) {
+      return { type: "TIMEOUT", reason: "ack_timeout" };
+    }
+  }
+  
+  // Check fill timeout (ACKED or PARTIAL state)
+  if ((order.status === "ACKED" || order.status === "PARTIAL") && order.ackedAt) {
+    const elapsed = now - order.ackedAt.getTime();
+    if (elapsed > ORDER_FILL_TIMEOUT_MS) {
+      return { type: "TIMEOUT", reason: "fill_timeout" };
+    }
+  }
+  
+  return null;
+};
+```
+
+### 4b. Fill Confirmation Polling
+
+Never assume an order is filled without explicit confirmation from the exchange:
+
+```typescript
+import pRetry from "p-retry";
+import pTimeout from "p-timeout";
+
+export const confirmOrderFill = async (
+  adapter: ExchangeAdapter,
+  orderId: string,
+  timeoutMs: number = ORDER_FILL_TIMEOUT_MS,
+): Promise<OrderResult> => {
+  const poll = async (): Promise<OrderResult> => {
+    const order = await adapter.getOrder(orderId);
+    
+    if (order.status === "FILLED" || order.status === "CANCELED" || order.status === "REJECTED") {
+      return order;
+    }
+    
+    throw new Error(`Order ${orderId} still pending: ${order.status}`);
+  };
+
+  return pTimeout(
+    pRetry(poll, {
+      retries: 10,
+      minTimeout: 500,
+      maxTimeout: 5000,
+      factor: 1.5,
+    }),
+    { milliseconds: timeoutMs },
+  );
+};
 ```
 
 ### 5. Idempotency via Intent IDs
@@ -122,14 +195,25 @@ export interface StateTransition {
 - Invalid transitions are caught early
 - State history is trackable for debugging
 - Idempotency prevents duplicate actions on retry
+- Timeout handling prevents stuck orders
 
 ### Negative
 - More boilerplate than ad-hoc state management
 - Need to update transition tables when adding states
+- Timeout handling adds complexity
 
 ### Risks
 - **Incomplete transition table**: Mitigated by TypeScript exhaustiveness checking
 - **Stale state in DB**: Mitigated by reconciliation with exchange REST API
+- **Timeout during execution**: Mitigated by fill confirmation polling with retries
+- **Network partition**: Mitigated by idempotency keys and reconciler
+
+## Dependencies
+
+```bash
+# Recommended for timeout and retry handling
+pnpm add p-retry p-timeout
+```
 
 ## References
 - [XState concepts](https://xstate.js.org/docs/concepts/)

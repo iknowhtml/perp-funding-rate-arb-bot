@@ -77,7 +77,11 @@ export interface Position {
 
 ### Helper Functions
 
+For technical calculations (SMA, EMA, standard deviation), use the battle-tested `technicalindicators` library:
+
 ```typescript
+import { SMA, EMA, StandardDeviation } from "technicalindicators";
+
 // Parse funding rate string to basis points (bigint)
 export const parseRateToBps = (rate: string): bigint => {
   const rateNum = Number.parseFloat(rate);
@@ -91,29 +95,38 @@ export const parsePrice = (price: string): bigint => {
   return BigInt(Math.round(priceNum * 100));
 };
 
-// Calculate average of bigint array
+// Calculate average using library (returns number, convert to bigint)
 export const calculateAverage = (values: bigint[]): bigint => {
+  if (values.length === 0) {
+    return 0n;
+  }
+  // Convert to numbers for SMA calculation, then back to bigint
+  const numberValues = values.map((v) => Number(v));
+  const smaResult = SMA.calculate({ period: values.length, values: numberValues });
+  return smaResult.length > 0 ? BigInt(Math.round(smaResult[0])) : 0n;
+};
+
+// Calculate standard deviation using library
+export const calculateStandardDeviation = (values: bigint[]): bigint => {
+  if (values.length === 0) {
+    return 0n;
+  }
+  const numberValues = values.map((v) => Number(v));
+  const stdResult = StandardDeviation.calculate({ period: values.length, values: numberValues });
+  return stdResult.length > 0 ? BigInt(Math.round(stdResult[0])) : 0n;
+};
+
+// For simple average without library overhead
+export const calculateSimpleAverage = (values: bigint[]): bigint => {
   if (values.length === 0) {
     return 0n;
   }
   const sum = values.reduce((acc, val) => acc + val, 0n);
   return sum / BigInt(values.length);
 };
-
-// Calculate standard deviation of bigint array
-export const calculateStandardDeviation = (values: bigint[]): bigint => {
-  if (values.length === 0) {
-    return 0n;
-  }
-  const avg = calculateAverage(values);
-  const variance = values.reduce((acc, val) => {
-    const diff = val > avg ? val - avg : avg - val;
-    return acc + diff * diff;
-  }, 0n) / BigInt(values.length);
-  // Approximate square root (simplified - use proper sqrt for production)
-  return BigInt(Math.floor(Math.sqrt(Number(variance))));
-};
 ```
+
+**Note**: The `technicalindicators` library handles edge cases (empty arrays, single values) correctly. For BigInt precision in final calculations, convert results back to bigint after computation.
 
 ### Funding Rate Prediction
 
@@ -499,8 +512,22 @@ export const monitorFundingRate = (
 3. **Funding Rate Forecasting**: Predict funding rates multiple periods ahead
 4. **Market Regime Detection**: Incorporate broader market conditions (volatility, volume)
 
+## Dependencies
+
+```bash
+# Recommended for technical indicators (SMA, EMA, standard deviation)
+pnpm add technicalindicators
+```
+
+The `technicalindicators` library provides:
+- Battle-tested SMA/EMA calculations
+- Proper edge case handling
+- ~188 unit tests
+- TypeScript support
+
 ## References
 
 - [ADR-0001: Bot Architecture](0001-bot-architecture.md) — Evaluation loop
 - [ADR-0012: State Machines](0012-state-machines.md) — Position lifecycle
 - [ADR-0013: Risk Management Engine](0013-risk-management.md) — Risk assessment integration
+- [technicalindicators](https://www.npmjs.com/package/technicalindicators) — Technical analysis library
