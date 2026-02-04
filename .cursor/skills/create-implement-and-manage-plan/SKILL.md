@@ -1,5 +1,5 @@
 ---
-name: create-plan-and-implement
+name: create-implement-and-manage-plan
 description: Create, implement, and manage development plans. Use Opus 4.5 for plan creation/context gathering, Composer for implementation.
 ---
 
