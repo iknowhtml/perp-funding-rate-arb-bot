@@ -1,5 +1,5 @@
 pre-commit:
-  piped: true
+  parallel: true
   commands:
     biome:
       glob: '*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc}'
@@ -11,6 +11,7 @@ pre-commit:
       run: gitleaks protect -v --staged
 
 pre-push:
+  parallel: true
   commands:
     biome-ci:
       run: pnpm biome ci --error-on-warnings
