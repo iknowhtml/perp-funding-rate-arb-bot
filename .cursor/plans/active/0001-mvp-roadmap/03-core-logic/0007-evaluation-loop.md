@@ -37,7 +37,7 @@ Implement the main evaluation loop ("brain tick") that runs every 2 seconds and:
 
 This ties together all the core logic components into a cohesive decision pipeline.
 
-Reference: [ADR-0001: Bot Architecture](../../../../adrs/0001-bot-architecture.md)
+Reference: [ADR-0001: Bot Architecture](../../../../../adrs/0001-bot-architecture.md)
 
 ## Tasks
 
@@ -345,7 +345,7 @@ src/worker/
 ## References
 
 - [MVP Roadmap](../README.md)
-- [ADR-0001: Bot Architecture](../../../../adrs/0001-bot-architecture.md) — Evaluation pipeline
-- [ADR-0012: State Machines](../../../../adrs/0012-state-machines.md)
-- [ADR-0013: Risk Management Engine](../../../../adrs/0013-risk-management.md)
-- [ADR-0014: Funding Rate Strategy](../../../../adrs/0014-funding-rate-strategy.md)
+- [ADR-0001: Bot Architecture](../../../../../adrs/0001-bot-architecture.md) — Evaluation pipeline
+- [ADR-0012: State Machines](../../../../../adrs/0012-state-machines.md)
+- [ADR-0013: Risk Management Engine](../../../../../adrs/0013-risk-management.md)
+- [ADR-0014: Funding Rate Strategy](../../../../../adrs/0014-funding-rate-strategy.md)

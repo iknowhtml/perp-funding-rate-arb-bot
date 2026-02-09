@@ -37,7 +37,7 @@ Implement historical data collection and storage in Postgres for backtesting. Th
 - Prices (for P&L calculation)
 - Order book snapshots (for slippage backtesting, optional)
 
-Reference: [ADR-0016: Backtesting & Simulation](../../../../adrs/0016-backtesting-simulation.md)
+Reference: [ADR-0016: Backtesting & Simulation](../../../../../adrs/0016-backtesting-simulation.md)
 
 ## Tasks
 
@@ -416,5 +416,5 @@ No new dependencies required (uses existing Drizzle ORM).
 ## References
 
 - [MVP Roadmap](../README.md)
-- [ADR-0016: Backtesting & Simulation](../../../../adrs/0016-backtesting-simulation.md)
-- [ADR-0005: Database Strategy](../../../../adrs/0005-database-strategy.md)
+- [ADR-0016: Backtesting & Simulation](../../../../../adrs/0016-backtesting-simulation.md)
+- [ADR-0005: Database Strategy](../../../../../adrs/0005-database-strategy.md)

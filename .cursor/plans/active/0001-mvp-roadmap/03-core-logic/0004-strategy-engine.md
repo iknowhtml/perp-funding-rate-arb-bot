@@ -40,7 +40,7 @@ Implement the funding rate prediction and strategy engine that:
 
 The bot's **core alpha** comes from entering when funding is high and exiting before it drops.
 
-Reference: [ADR-0014: Funding Rate Prediction & Strategy](../../../../adrs/0014-funding-rate-strategy.md)
+Reference: [ADR-0014: Funding Rate Prediction & Strategy](../../../../../adrs/0014-funding-rate-strategy.md)
 
 ## Tasks
 
@@ -344,5 +344,5 @@ pure bigint functions (see ADR-0014 for rationale).
 ## References
 
 - [MVP Roadmap](../README.md)
-- [ADR-0014: Funding Rate Prediction & Strategy](../../../../adrs/0014-funding-rate-strategy.md)
-- [ADR-0013: Risk Management Engine](../../../../adrs/0013-risk-management.md)
+- [ADR-0014: Funding Rate Prediction & Strategy](../../../../../adrs/0014-funding-rate-strategy.md)
+- [ADR-0013: Risk Management Engine](../../../../../adrs/0013-risk-management.md)

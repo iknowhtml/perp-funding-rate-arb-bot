@@ -40,7 +40,7 @@ Implement periodic reconciliation with exchange REST API to ensure internal stat
 
 REST is the authoritative truth source; WebSocket provides low-latency hints.
 
-Reference: [ADR-0001: Bot Architecture](../../../../adrs/0001-bot-architecture.md)
+Reference: [ADR-0001: Bot Architecture](../../../../../adrs/0001-bot-architecture.md)
 
 ## Tasks
 
@@ -323,4 +323,4 @@ No new dependencies required.
 ## References
 
 - [MVP Roadmap](../README.md)
-- [ADR-0001: Bot Architecture](../../../../adrs/0001-bot-architecture.md) — Reconciler interaction
+- [ADR-0001: Bot Architecture](../../../../../adrs/0001-bot-architecture.md) — Reconciler interaction

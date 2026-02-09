@@ -37,7 +37,7 @@ Implement an event-driven backtesting engine that:
 
 Backtesting proves the strategy works in past market conditions before risking real capital.
 
-Reference: [ADR-0016: Backtesting & Simulation](../../../../adrs/0016-backtesting-simulation.md)
+Reference: [ADR-0016: Backtesting & Simulation](../../../../../adrs/0016-backtesting-simulation.md)
 
 ## Tasks
 
@@ -632,5 +632,5 @@ No new dependencies required.
 ## References
 
 - [MVP Roadmap](../README.md)
-- [ADR-0016: Backtesting & Simulation](../../../../adrs/0016-backtesting-simulation.md)
-- [ADR-0014: Funding Rate Strategy](../../../../adrs/0014-funding-rate-strategy.md)
+- [ADR-0016: Backtesting & Simulation](../../../../../adrs/0016-backtesting-simulation.md)
+- [ADR-0014: Funding Rate Strategy](../../../../../adrs/0014-funding-rate-strategy.md)

@@ -34,7 +34,7 @@ isProject: false
 
 Implement a comprehensive Risk Management Engine that evaluates risk before every trading decision and enforces hard limits. Risk management is the **most critical component** of a production trading system.
 
-Reference: [ADR-0013: Risk Management Engine](../../../../adrs/0013-risk-management.md)
+Reference: [ADR-0013: Risk Management Engine](../../../../../adrs/0013-risk-management.md)
 
 ## Tasks
 
@@ -263,5 +263,5 @@ No new dependencies required.
 ## References
 
 - [MVP Roadmap](../README.md)
-- [ADR-0013: Risk Management Engine](../../../../adrs/0013-risk-management.md)
-- [ADR-0001: Bot Architecture](../../../../adrs/0001-bot-architecture.md) — Two-phase risk check
+- [ADR-0013: Risk Management Engine](../../../../../adrs/0013-risk-management.md)
+- [ADR-0001: Bot Architecture](../../../../../adrs/0001-bot-architecture.md) — Two-phase risk check

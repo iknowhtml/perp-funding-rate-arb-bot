@@ -48,7 +48,7 @@ Implement the execution engine that safely enters and exits hedged positions. Th
 4. Detects and corrects hedge drift
 5. Persists execution for audit trail
 
-Reference: [ADR-0001: Bot Architecture](../../../../adrs/0001-bot-architecture.md), [ADR-0015: Execution Safety & Slippage](../../../../adrs/0015-execution-safety-slippage.md)
+Reference: [ADR-0001: Bot Architecture](../../../../../adrs/0001-bot-architecture.md), [ADR-0015: Execution Safety & Slippage](../../../../../adrs/0015-execution-safety-slippage.md)
 
 ## Tasks
 
@@ -546,5 +546,5 @@ pnpm add p-retry p-timeout
 ## References
 
 - [MVP Roadmap](../README.md)
-- [ADR-0001: Bot Architecture](../../../../adrs/0001-bot-architecture.md) — Execution jobs
-- [ADR-0015: Execution Safety & Slippage](../../../../adrs/0015-execution-safety-slippage.md)
+- [ADR-0001: Bot Architecture](../../../../../adrs/0001-bot-architecture.md) — Execution jobs
+- [ADR-0015: Execution Safety & Slippage](../../../../../adrs/0015-execution-safety-slippage.md)

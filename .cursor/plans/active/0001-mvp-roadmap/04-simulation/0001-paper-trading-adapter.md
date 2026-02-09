@@ -34,7 +34,7 @@ isProject: false
 
 Implement a full paper trading adapter that implements the `ExchangeAdapter` interface and simulates realistic market conditions. This allows testing execution logic without risking real capital.
 
-Reference: [ADR-0010: Exchange Adapters](../../../../adrs/0010-exchange-adapters.md), [ADR-0016: Backtesting & Simulation](../../../../adrs/0016-backtesting-simulation.md)
+Reference: [ADR-0010: Exchange Adapters](../../../../../adrs/0010-exchange-adapters.md), [ADR-0016: Backtesting & Simulation](../../../../../adrs/0016-backtesting-simulation.md)
 
 ## Tasks
 
@@ -390,5 +390,5 @@ No new dependencies required.
 ## References
 
 - [MVP Roadmap](../README.md)
-- [ADR-0010: Exchange Adapters](../../../../adrs/0010-exchange-adapters.md)
-- [ADR-0016: Backtesting & Simulation](../../../../adrs/0016-backtesting-simulation.md)
+- [ADR-0010: Exchange Adapters](../../../../../adrs/0010-exchange-adapters.md)
+- [ADR-0016: Backtesting & Simulation](../../../../../adrs/0016-backtesting-simulation.md)

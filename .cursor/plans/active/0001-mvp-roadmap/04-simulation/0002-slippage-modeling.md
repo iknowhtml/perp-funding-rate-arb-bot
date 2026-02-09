@@ -37,7 +37,7 @@ Implement comprehensive slippage modeling that:
 
 Slippage can **destroy profitability** in funding rate arbitrage if not properly managed.
 
-Reference: [ADR-0015: Execution Safety & Slippage](../../../../adrs/0015-execution-safety-slippage.md)
+Reference: [ADR-0015: Execution Safety & Slippage](../../../../../adrs/0015-execution-safety-slippage.md)
 
 ## Tasks
 
@@ -352,4 +352,4 @@ No new dependencies required.
 ## References
 
 - [MVP Roadmap](../README.md)
-- [ADR-0015: Execution Safety & Slippage](../../../../adrs/0015-execution-safety-slippage.md)
+- [ADR-0015: Execution Safety & Slippage](../../../../../adrs/0015-execution-safety-slippage.md)

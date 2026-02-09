@@ -32,7 +32,7 @@ Implement explicit state machines for order lifecycle and hedge lifecycle manage
 - State history for debugging and audit
 - Idempotency for retries
 
-Reference: [ADR-0012: State Machines](../../../../adrs/0012-state-machines.md)
+Reference: [ADR-0012: State Machines](../../../../../adrs/0012-state-machines.md)
 
 ## Tasks
 
@@ -180,5 +180,5 @@ No new dependencies required.
 ## References
 
 - [MVP Roadmap](../README.md)
-- [ADR-0012: State Machines](../../../../adrs/0012-state-machines.md)
-- [ADR-0001: Bot Architecture](../../../../adrs/0001-bot-architecture.md)
+- [ADR-0012: State Machines](../../../../../adrs/0012-state-machines.md)
+- [ADR-0001: Bot Architecture](../../../../../adrs/0001-bot-architecture.md)

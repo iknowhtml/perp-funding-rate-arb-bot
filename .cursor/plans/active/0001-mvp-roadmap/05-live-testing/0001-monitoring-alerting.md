@@ -38,7 +38,7 @@ Implement alerting for critical events to ensure the bot operator is notified of
 - Execution anomalies
 - Health degradation
 
-Reference: [ADR-0008: Monitoring & Observability](../../../../adrs/0008-monitoring-observability.md)
+Reference: [ADR-0008: Monitoring & Observability](../../../../../adrs/0008-monitoring-observability.md)
 
 ## Tasks
 
@@ -431,7 +431,7 @@ pnpm add prom-client
 - Enables grafana dashboards and alerting
 - Low overhead for high-frequency metrics
 
-**Core Metrics to Implement** (see [ADR-0008](../../../../adrs/0008-monitoring-observability.md)):
+**Core Metrics to Implement** (see [ADR-0008](../../../../../adrs/0008-monitoring-observability.md)):
 - `evaluation_latency_ms` (histogram) - Evaluation loop timing
 - `execution_latency_ms` (histogram) - Order execution timing
 - `position_size_cents` (gauge) - Current position size
@@ -454,4 +454,4 @@ pnpm add prom-client
 ## References
 
 - [MVP Roadmap](../README.md)
-- [ADR-0008: Monitoring & Observability](../../../../adrs/0008-monitoring-observability.md)
+- [ADR-0008: Monitoring & Observability](../../../../../adrs/0008-monitoring-observability.md)
