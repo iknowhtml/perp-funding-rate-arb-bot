@@ -141,6 +141,10 @@ When all todos are complete:
 
 **Important**: Move the **original plan file** that's referenced in the roadmap (e.g., `.cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md`), not standalone plan files created elsewhere. If work relates to an existing roadmap plan, update and move that plan, not a separate one.
 
+### 🚨 HARD REQUIREMENT: Delete from Active/ After Move 🚨
+
+**MANDATORY**: After moving a plan to `implemented/`, you **MUST** delete it from `active/`. The plan file must **ONLY** exist in `implemented/`, never in both locations.
+
 ```bash
 # 1. Update plan: todos to completed, validation boxes [x]
 
@@ -149,13 +153,17 @@ mkdir -p .cursor/plans/implemented/<ROADMAP>/<PHASE>
 mv .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md \
    .cursor/plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md
 
-# 3. Verify (delete if still in active/)
+# 3. 🚨 MANDATORY: Delete from active/ (file must NOT exist in both locations)
 test -f .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md && \
   rm -f .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md
 
-# 4. Confirm
-! test -f .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md && echo "SUCCESS"
+# 4. Verify: File ONLY in implemented/, NOT in active/
+test -f .cursor/plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md && \
+  ! test -f .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md && \
+  echo "SUCCESS" || echo "ERROR: File still exists in active/"
 ```
+
+**This is NOT optional** - leaving the file in both locations causes confusion and violates the plan lifecycle. Always verify deletion after moving.
 
 **Example**: If implementing "co-locate exchange code" work that relates to the rate-limiting plan at `.cursor/plans/active/0001-mvp-roadmap/02-connectivity/0002-rate-limiting.md`, move **that plan** to `implemented/`, not a separate standalone plan file.
 
@@ -167,7 +175,8 @@ test -f .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md && \
 |-------|-----|
 | Extract tasks from `## Tasks` prose | Parse `frontmatter.todos` array |
 | Forget `lifecycle-management` todo | Always include as final todo |
-| Leave file in both locations | File only in `implemented/` after completion |
+| **Leave file in both locations** | **🚨 MANDATORY: Delete from `active/` after moving to `implemented/`** |
 | Skip code-reviewer | Run after every implementation task |
 | Create standalone plans for work that relates to existing roadmap plans | Update and move the original roadmap plan |
 | Move standalone plan files instead of the referenced roadmap plan | Move the original plan file from `active/<ROADMAP>/<PHASE>/` |
+| Forget to verify deletion | Always run verification command after move |
