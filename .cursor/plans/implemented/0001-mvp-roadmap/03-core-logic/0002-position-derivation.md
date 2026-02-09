@@ -4,26 +4,26 @@ overview: Implement position state derivation from account data with metrics cal
 todos:
   - id: position-types
     content: Define position types and interfaces
-    status: pending
+    status: completed
   - id: derive-position
     content: Implement position derivation from account state
-    status: pending
+    status: completed
   - id: position-metrics
     content: Implement position metrics calculation (notional, P&L, margin)
-    status: pending
+    status: completed
   - id: reconciliation
     content: Implement position reconciliation logic
-    status: pending
+    status: completed
   - id: tests
     content: Add unit tests for position derivation
-    status: pending
+    status: completed
   - id: lifecycle-management
     content: Move plan to implemented/ directory after completion (update todos, check validation boxes, update roadmap link, move file, delete from active/)
-    status: pending
+    status: completed
 isProject: false
 ---
 
-> **Note**: This plan is part of Phase 3 (Core Logic) in [MVP Roadmap](../README.md).
+> **Note**: This plan is part of Phase 3 (Core Logic) in [MVP Roadmap](../../active/0001-mvp-roadmap/README.md).
 
 # Position Derivation
 
@@ -238,12 +238,12 @@ No new dependencies required.
 
 ## Validation
 
-- [ ] Position derived correctly from account state
-- [ ] Pending fills applied to position
-- [ ] Metrics calculated correctly (notional, P&L, margin)
-- [ ] Reconciliation detects inconsistencies
-- [ ] Liquidation distance calculated correctly
-- [ ] Unit tests pass
+- [x] Position derived correctly from account state
+- [x] Pending fills applied to position
+- [x] Metrics calculated correctly (notional, P&L, margin)
+- [x] Reconciliation detects inconsistencies
+- [x] Liquidation distance calculated correctly
+- [x] Unit tests pass
 
 ## References
 
