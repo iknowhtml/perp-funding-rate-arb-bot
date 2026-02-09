@@ -141,29 +141,36 @@ When all todos are complete:
 
 **Important**: Move the **original plan file** that's referenced in the roadmap (e.g., `.cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md`), not standalone plan files created elsewhere. If work relates to an existing roadmap plan, update and move that plan, not a separate one.
 
-### 🚨 HARD REQUIREMENT: Delete from Active/ After Move 🚨
+### Why `cp` + `rm`, not `mv`
 
-**MANDATORY**: After moving a plan to `implemented/`, you **MUST** delete it from `active/`. The plan file must **ONLY** exist in `implemented/`, never in both locations.
+**NEVER use `mv` to move plan files.** The `mv` command can silently fail to delete the source file (cross-device moves, IDE file watchers recreating it, or the agent interpreting `mv` as a file write instead of a shell command). Always use explicit `cp` + `rm` to guarantee deletion.
+
+### Procedure: Copy, Delete, Verify (all in one shell command)
+
+**Run all steps in a SINGLE shell command** so the agent cannot stop between copy and delete. Do NOT split these into separate tool calls.
 
 ```bash
-# 1. Update plan: todos to completed, validation boxes [x]
-
-# 2. Move the original plan file from active/ to implemented/
-mkdir -p .cursor/plans/implemented/<ROADMAP>/<PHASE>
-mv .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md \
-   .cursor/plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md
-
-# 3. 🚨 MANDATORY: Delete from active/ (file must NOT exist in both locations)
-test -f .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md && \
-  rm -f .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md
-
-# 4. Verify: File ONLY in implemented/, NOT in active/
-test -f .cursor/plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md && \
-  ! test -f .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md && \
-  echo "SUCCESS" || echo "ERROR: File still exists in active/"
+# ALL IN ONE SHELL COMMAND - do not split into separate calls
+ACTIVE=".cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md" && \
+IMPL=".cursor/plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md" && \
+mkdir -p "$(dirname "$IMPL")" && \
+cp "$ACTIVE" "$IMPL" && \
+rm -f "$ACTIVE" && \
+test -f "$IMPL" && ! test -f "$ACTIVE" && \
+echo "SUCCESS: plan moved and deleted from active/" || \
+echo "FAILED: verify manually"
 ```
 
-**This is NOT optional** - leaving the file in both locations causes confusion and violates the plan lifecycle. Always verify deletion after moving.
+### Checklist (every step is mandatory)
+
+1. Update plan frontmatter: all todos to `status: completed`
+2. Check all validation boxes `[x]`
+3. `cp` the file from `active/` to `implemented/`
+4. `rm -f` the file from `active/` (unconditional, not behind `test -f`)
+5. Verify: file exists in `implemented/` AND does NOT exist in `active/`
+6. If verify fails, run `rm -f` on the active path again and re-verify
+
+**The file must ONLY exist in `implemented/` when done. Never in both locations. Never skip the `rm` step.**
 
 **Example**: If implementing "co-locate exchange code" work that relates to the rate-limiting plan at `.cursor/plans/active/0001-mvp-roadmap/02-connectivity/0002-rate-limiting.md`, move **that plan** to `implemented/`, not a separate standalone plan file.
 
@@ -175,8 +182,11 @@ test -f .cursor/plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md && \
 |-------|-----|
 | Extract tasks from `## Tasks` prose | Parse `frontmatter.todos` array |
 | Forget `lifecycle-management` todo | Always include as final todo |
-| **Leave file in both locations** | **🚨 MANDATORY: Delete from `active/` after moving to `implemented/`** |
+| **Use `mv` to move plan files** | **Use `cp` + `rm -f` (explicit copy then delete)** |
+| **Split copy/delete into separate tool calls** | **Run `cp` + `rm -f` + verify in ONE shell command** |
+| **Leave file in both locations** | **Always `rm -f` from `active/` and verify deletion** |
+| **Use conditional delete (`test -f && rm`)** | **Use unconditional `rm -f` (always safe, always runs)** |
 | Skip code-reviewer | Run after every implementation task |
 | Create standalone plans for work that relates to existing roadmap plans | Update and move the original roadmap plan |
 | Move standalone plan files instead of the referenced roadmap plan | Move the original plan file from `active/<ROADMAP>/<PHASE>/` |
-| Forget to verify deletion | Always run verification command after move |
+| Forget to verify deletion | Always verify file does NOT exist in `active/` after delete |
