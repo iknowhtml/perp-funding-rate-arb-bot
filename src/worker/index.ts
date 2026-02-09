@@ -9,6 +9,26 @@ export {
 } from "./data-plane";
 
 export {
+  // Execution engine
+  createExecutionCircuitBreaker,
+  DEFAULT_EXECUTION_CONFIG,
+  EXECUTION_CIRCUIT_BREAKER_CONFIG,
+  ExecutionError,
+  executeEnterHedge,
+  executeExitHedge,
+  OrderFillTimeoutError,
+  SlippageExceededError,
+  type EnterHedgeDeps,
+  type EnterHedgeExecutionParams,
+  type ExecutionConfig,
+  type ExecutionResult,
+  type ExitHedgeDeps,
+  type ExitHedgeExecutionParams,
+  type HedgeDrift,
+  type SlippageEstimate,
+} from "./execution";
+
+export {
   DEFAULT_FRESHNESS_CONFIG,
   FreshnessConfigSchema,
   isStateFresh,

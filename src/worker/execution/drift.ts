@@ -84,10 +84,14 @@ export const calculateHedgeDrift = (
  * If perp notional > spot notional: need more spot (buy spot)
  * If spot notional > perp notional: need more perp (sell perp)
  *
+ * Requires a reference price to convert the quote-denominated notional
+ * difference into base-denominated order quantity.
+ *
  * @param drift - The calculated hedge drift
  * @param adapter - Exchange adapter for placing orders
  * @param symbol - Base trading symbol (e.g., "BTC-USD")
  * @param perpSymbol - Perp trading symbol (e.g., "BTC-USD-PERP")
+ * @param midPriceQuote - Current mid price for quote-to-base conversion
  * @param config - Execution config
  * @param logger - Logger for audit trail
  * @throws {ExecutionError} If corrective order fails
@@ -97,6 +101,7 @@ export const correctDrift = async (
   adapter: ExchangeAdapter,
   symbol: string,
   perpSymbol: string,
+  midPriceQuote: bigint,
   config: ExecutionConfig,
   logger: Logger,
 ): Promise<void> => {
@@ -104,16 +109,36 @@ export const correctDrift = async (
     return;
   }
 
+  if (midPriceQuote <= 0n) {
+    throw new ExecutionError(
+      "Cannot correct drift: invalid mid price for quote-to-base conversion",
+      "DRIFT_CORRECTION_INVALID_PRICE",
+    );
+  }
+
   const diffQuote =
     drift.perpNotionalQuote > drift.spotNotionalQuote
       ? drift.perpNotionalQuote - drift.spotNotionalQuote
       : drift.spotNotionalQuote - drift.perpNotionalQuote;
+
+  // Convert quote-denominated difference to base units using mid price
+  const correctionBase = diffQuote / midPriceQuote;
+
+  if (correctionBase <= 0n) {
+    logger.info("Drift correction amount rounds to zero, skipping", {
+      diffQuote: diffQuote.toString(),
+      midPriceQuote: midPriceQuote.toString(),
+    });
+    return;
+  }
 
   logger.warn("Correcting hedge drift", {
     driftBps: drift.driftBps.toString(),
     perpNotionalQuote: drift.perpNotionalQuote.toString(),
     spotNotionalQuote: drift.spotNotionalQuote.toString(),
     diffQuote: diffQuote.toString(),
+    correctionBase: correctionBase.toString(),
+    midPriceQuote: midPriceQuote.toString(),
   });
 
   try {
@@ -123,7 +148,7 @@ export const correctDrift = async (
         symbol,
         side: "BUY",
         type: "MARKET",
-        quantityBase: diffQuote, // Approximate: using quote diff as base
+        quantityBase: correctionBase,
       });
       await confirmOrderFill(adapter, correctionOrder.id, config, logger);
     } else {
@@ -132,13 +157,14 @@ export const correctDrift = async (
         symbol: perpSymbol,
         side: "SELL",
         type: "MARKET",
-        quantityBase: diffQuote,
+        quantityBase: correctionBase,
       });
       await confirmOrderFill(adapter, correctionOrder.id, config, logger);
     }
 
     logger.info("Drift correction complete", {
       driftBps: drift.driftBps.toString(),
+      correctionBase: correctionBase.toString(),
     });
   } catch (error) {
     throw new ExecutionError(

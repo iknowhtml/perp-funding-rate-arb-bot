@@ -188,7 +188,16 @@ export const executeEnterHedge = async (
         intentId,
         driftBps: drift.driftBps.toString(),
       });
-      await correctDrift(drift, adapter, symbol, perpSymbol, executionConfig, logger);
+      const driftMidPriceQuote = validation.slippageEstimate.midPriceQuote;
+      await correctDrift(
+        drift,
+        adapter,
+        symbol,
+        perpSymbol,
+        driftMidPriceQuote,
+        executionConfig,
+        logger,
+      );
     }
 
     logger.info("Enter hedge execution complete", {

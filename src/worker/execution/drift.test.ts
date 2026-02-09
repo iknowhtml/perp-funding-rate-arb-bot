@@ -163,6 +163,8 @@ describe("correctDrift", () => {
     fillPollIntervalMs: 10,
   });
 
+  const midPriceQuote = 50000n;
+
   it("should not place orders when correction is not needed", async () => {
     const adapter = {
       createOrder: vi.fn(),
@@ -176,7 +178,15 @@ describe("correctDrift", () => {
       needsCorrection: false,
     };
 
-    await correctDrift(drift, adapter, "BTC-USD", "BTC-USD-PERP", createTestConfig(), logger);
+    await correctDrift(
+      drift,
+      adapter,
+      "BTC-USD",
+      "BTC-USD-PERP",
+      midPriceQuote,
+      createTestConfig(),
+      logger,
+    );
 
     expect(adapter.createOrder).not.toHaveBeenCalled();
   });
@@ -195,13 +205,22 @@ describe("correctDrift", () => {
       needsCorrection: true,
     };
 
-    await correctDrift(drift, adapter, "BTC-USD", "BTC-USD-PERP", createTestConfig(), logger);
+    await correctDrift(
+      drift,
+      adapter,
+      "BTC-USD",
+      "BTC-USD-PERP",
+      midPriceQuote,
+      createTestConfig(),
+      logger,
+    );
 
     expect(adapter.createOrder).toHaveBeenCalledWith(
       expect.objectContaining({
         symbol: "BTC-USD",
         side: "BUY",
         type: "MARKET",
+        quantityBase: 20n, // 1000000 / 50000 = 20
       }),
     );
   });
@@ -220,14 +239,68 @@ describe("correctDrift", () => {
       needsCorrection: true,
     };
 
-    await correctDrift(drift, adapter, "BTC-USD", "BTC-USD-PERP", createTestConfig(), logger);
+    await correctDrift(
+      drift,
+      adapter,
+      "BTC-USD",
+      "BTC-USD-PERP",
+      midPriceQuote,
+      createTestConfig(),
+      logger,
+    );
 
     expect(adapter.createOrder).toHaveBeenCalledWith(
       expect.objectContaining({
         symbol: "BTC-USD-PERP",
         side: "SELL",
         type: "MARKET",
+        quantityBase: 20n, // 1000000 / 50000 = 20
       }),
     );
+  });
+
+  it("should throw when midPriceQuote is zero", async () => {
+    const adapter = {
+      createOrder: vi.fn(),
+      getOrder: vi.fn(),
+    } as unknown as ExchangeAdapter;
+
+    const drift: HedgeDrift = {
+      perpNotionalQuote: 51000000n,
+      spotNotionalQuote: 50000000n,
+      driftBps: 196n,
+      needsCorrection: true,
+    };
+
+    await expect(
+      correctDrift(drift, adapter, "BTC-USD", "BTC-USD-PERP", 0n, createTestConfig(), logger),
+    ).rejects.toThrow("Cannot correct drift");
+  });
+
+  it("should skip when correction rounds to zero base", async () => {
+    const adapter = {
+      createOrder: vi.fn(),
+      getOrder: vi.fn(),
+    } as unknown as ExchangeAdapter;
+
+    const drift: HedgeDrift = {
+      perpNotionalQuote: 50001n, // Very small diff: 1
+      spotNotionalQuote: 50000n,
+      driftBps: 196n,
+      needsCorrection: true,
+    };
+
+    // With midPriceQuote=50000, diff=1 / 50000 = 0 base (rounds down)
+    await correctDrift(
+      drift,
+      adapter,
+      "BTC-USD",
+      "BTC-USD-PERP",
+      midPriceQuote,
+      createTestConfig(),
+      logger,
+    );
+
+    expect(adapter.createOrder).not.toHaveBeenCalled();
   });
 });

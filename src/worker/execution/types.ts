@@ -7,6 +7,7 @@
 
 import * as v from "valibot";
 
+import { exchangeOrderSchema } from "@/adapters/types";
 import type { ExchangeOrder } from "@/adapters/types";
 
 // --- Execution Result ---
@@ -173,8 +174,8 @@ export const executionResultSchema = v.object({
   success: v.boolean(),
   aborted: v.boolean(),
   reason: v.optional(v.string()),
-  perpOrder: v.optional(v.any()),
-  spotOrder: v.optional(v.any()),
+  perpOrder: v.optional(exchangeOrderSchema),
+  spotOrder: v.optional(exchangeOrderSchema),
   drift: v.optional(hedgeDriftSchema),
   slippageEstimate: v.optional(slippageEstimateSchema),
   timestamp: v.date(),
