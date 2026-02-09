@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-02-04
+- **Updated:** 2026-02-09
 - **Owners:** -
 - **Related:**
   - [ADR-0001: Bot Architecture](0001-bot-architecture.md)
@@ -29,18 +30,22 @@ Risk management is not optional—it is the **most critical component** of a pro
 ```typescript
 export type RiskLevel = "SAFE" | "CAUTION" | "WARNING" | "DANGER" | "BLOCKED";
 
+export type RiskAction = "ALLOW" | "PAUSE" | "EXIT" | "BLOCK";
+
 export interface RiskAssessment {
   level: RiskLevel;
-  action: "ALLOW" | "PAUSE" | "EXIT" | "BLOCK";
+  action: RiskAction;
   reasons: string[];
-  metrics: {
-    positionSizeUsd: bigint;
-    leverageBps: bigint;
-    marginUtilizationBps: bigint;
-    liquidationDistanceBps: bigint;
-    dailyPnLCents: bigint;
-    totalDrawdownBps: bigint;
-  };
+  metrics: RiskMetrics;
+}
+
+export interface RiskMetrics {
+  notionalQuote: bigint;
+  leverageBps: bigint;
+  marginUtilizationBps: bigint;
+  liquidationDistanceBps: bigint;
+  dailyPnlQuote: bigint;
+  drawdownBps: bigint;
 }
 ```
 
@@ -72,131 +77,172 @@ export interface RiskAssessment {
 - Easier to reason about risk per position
 - Can upgrade to Cross Margin later if needed
 
-### Type Definitions
+### Risk Snapshot (Input Type)
+
+The risk engine operates on a purpose-built `RiskSnapshot`, **not** the worker's `BotState` directly. This keeps the risk engine pure, testable, and decoupled from the state store implementation.
+
+The caller constructs a `RiskSnapshot` from the actual `BotState`, `Position`, and `Balance` data.
 
 ```typescript
-// Bot state type (referenced in ADR-0001: Bot Architecture)
-export interface BotState {
-  account: {
-    equityCents: bigint;
-    marginUsedCents: bigint;
-    dailyPnLCents?: bigint;
-    totalDrawdownBps?: bigint;
-  };
-  position: Position | null;
-  market: {
-    markPrice: bigint;
-    liquidationPrice?: bigint;
-  };
-}
-
-// Position type (referenced in ADR-0012: State Machines)
-export interface Position {
-  sizeCents: bigint;
-  side: "LONG" | "SHORT";
-  entryTime?: Date;
-  entryFundingRateBps?: bigint;
+/**
+ * Input snapshot for risk evaluation.
+ *
+ * Uses *Quote suffix for amounts in quote currency smallest units,
+ * matching the codebase convention from src/adapters/types.ts.
+ */
+export interface RiskSnapshot {
+  equityQuote: bigint;
+  marginUsedQuote: bigint;
+  position: {
+    side: "LONG" | "SHORT";
+    notionalQuote: bigint;
+    leverageBps: bigint;
+    markPriceQuote: bigint;
+    liquidationPriceQuote: bigint | null;
+  } | null;
+  dailyPnlQuote: bigint;
+  peakEquityQuote: bigint;
 }
 ```
 
-### Helper Functions
+**Design rationale:**
+- `equityQuote` / `marginUsedQuote`: Derived from `Balance` data (sum of quote-denominated balances)
+- `position`: Extracted from `Position` (adapter type), which already has `leverageBps`, `marginQuote`, `markPriceQuote`, `liquidationPriceQuote`
+- `dailyPnlQuote` / `peakEquityQuote`: Tracked externally over time (not available from a single exchange snapshot)
+
+### Risk Metrics Calculation
+
+Reuses existing pure functions from `src/domains/position/metrics.ts`:
+- `calculateMarginUtilizationBps(marginUsedQuote, equityQuote)`
+- `calculateLiquidationDistanceBps(markPriceQuote, liquidationPriceQuote, side)`
 
 ```typescript
-// Calculate risk metrics from bot state
-export const calculateRiskMetrics = (state: BotState): RiskAssessment["metrics"] => {
-  const positionSizeUsd = state.position?.sizeCents ? state.position.sizeCents / 100n : 0n;
-  const leverageBps = state.position
-    ? (state.position.sizeCents * 10000n) / (state.account.equityCents || 1n)
+const BPS_PER_UNIT = 10000n;
+
+export const calculateRiskMetrics = (snapshot: RiskSnapshot): RiskMetrics => {
+  const notionalQuote = snapshot.position?.notionalQuote ?? 0n;
+  const leverageBps = snapshot.position?.leverageBps ?? 0n;
+
+  const marginUtilizationBps = calculateMarginUtilizationBps(
+    snapshot.marginUsedQuote,
+    snapshot.equityQuote,
+  );
+
+  const liquidationDistanceBps = snapshot.position
+    ? calculateLiquidationDistanceBps(
+        snapshot.position.markPriceQuote,
+        snapshot.position.liquidationPriceQuote,
+        snapshot.position.side,
+      )
+    : BPS_PER_UNIT; // 100% buffer if no position
+
+  const drawdownBps = snapshot.peakEquityQuote > 0n
+    ? ((snapshot.peakEquityQuote - snapshot.equityQuote) * BPS_PER_UNIT)
+        / snapshot.peakEquityQuote
     : 0n;
-  const marginUtilizationBps = state.account.equityCents > 0n
-    ? (state.account.marginUsedCents * 10000n) / state.account.equityCents
-    : 0n;
-  const liquidationDistanceBps = state.position && state.market.liquidationPrice
-    ? calculateLiquidationDistance(state.position, state.market.markPrice, state.market.liquidationPrice)
-    : 10000n; // 100% buffer if no position
 
   return {
-    positionSizeUsd,
+    notionalQuote,
     leverageBps,
     marginUtilizationBps,
     liquidationDistanceBps,
-    dailyPnLCents: state.account.dailyPnLCents ?? 0n,
-    totalDrawdownBps: state.account.totalDrawdownBps ?? 0n,
+    dailyPnlQuote: snapshot.dailyPnlQuote,
+    drawdownBps,
   };
 };
 ```
 
 ### Risk Evaluation Flow
 
+Uses monotonic escalation helpers to prevent accidentally downgrading severity:
+
 ```typescript
+export const escalateRiskLevel = (
+  current: RiskLevel,
+  next: RiskLevel,
+): RiskLevel =>
+  RISK_LEVEL_SEVERITY[next] > RISK_LEVEL_SEVERITY[current] ? next : current;
+
+export const escalateRiskAction = (
+  current: RiskAction,
+  next: RiskAction,
+): RiskAction =>
+  RISK_ACTION_SEVERITY[next] > RISK_ACTION_SEVERITY[current] ? next : current;
+
 export const evaluateRisk = (
-  state: BotState,
+  snapshot: RiskSnapshot,
   config: RiskConfig,
 ): RiskAssessment => {
-  const metrics = calculateRiskMetrics(state);
+  const metrics = calculateRiskMetrics(snapshot);
   const reasons: string[] = [];
   let level: RiskLevel = "SAFE";
-  let action: "ALLOW" | "PAUSE" | "EXIT" | "BLOCK" = "ALLOW";
+  let action: RiskAction = "ALLOW";
 
-  // Convert config values to bigint for comparison
-  const maxPositionSizeUsdCents = BigInt(config.maxPositionSizeUsd) * 100n;
+  // Convert config USD values to quote units
+  const quoteScale = 10n ** BigInt(config.quoteDecimals);
+  const maxPositionSizeQuote = BigInt(config.maxPositionSizeUsd) * quoteScale;
   const maxLeverageBps = BigInt(config.maxLeverageBps);
-  const maxDailyLossCents = BigInt(Math.abs(config.maxDailyLossCents));
+  const maxDailyLossQuote = BigInt(config.maxDailyLossUsd) * quoteScale;
   const maxDrawdownBps = BigInt(config.maxDrawdownBps);
   const minLiquidationBufferBps = BigInt(config.minLiquidationBufferBps);
   const maxMarginUtilizationBps = BigInt(config.maxMarginUtilizationBps);
-  const warningPositionSizeUsdCents = BigInt(config.warningPositionSizeUsd) * 100n;
+  const warningPositionSizeQuote = BigInt(config.warningPositionSizeUsd) * quoteScale;
   const warningMarginUtilizationBps = BigInt(config.warningMarginUtilizationBps);
   const warningLiquidationBufferBps = BigInt(config.warningLiquidationBufferBps);
 
   // 1. Check hard limits (BLOCK if exceeded)
-  if (metrics.positionSizeUsd > maxPositionSizeUsdCents) {
-    reasons.push(`Position size ${metrics.positionSizeUsd} exceeds max ${maxPositionSizeUsdCents}`);
-    level = "BLOCKED";
-    action = "BLOCK";
+  if (metrics.notionalQuote > maxPositionSizeQuote) {
+    reasons.push("Position size exceeds maximum");
+    level = escalateRiskLevel(level, "BLOCKED");
+    action = escalateRiskAction(action, "BLOCK");
   }
 
   if (metrics.leverageBps > maxLeverageBps) {
-    reasons.push(`Leverage ${metrics.leverageBps}bps exceeds max ${maxLeverageBps}bps`);
-    level = "BLOCKED";
-    action = "BLOCK";
+    reasons.push("Leverage exceeds maximum");
+    level = escalateRiskLevel(level, "BLOCKED");
+    action = escalateRiskAction(action, "BLOCK");
   }
 
-  if (metrics.dailyPnLCents < -maxDailyLossCents) {
-    reasons.push(`Daily P&L ${metrics.dailyPnLCents} exceeds max loss ${-maxDailyLossCents}`);
-    level = "DANGER";
-    action = "EXIT";
+  // 2. Check danger limits (EXIT)
+  if (metrics.dailyPnlQuote < -maxDailyLossQuote) {
+    reasons.push("Daily loss exceeds maximum");
+    level = escalateRiskLevel(level, "DANGER");
+    action = escalateRiskAction(action, "EXIT");
   }
 
-  if (metrics.totalDrawdownBps < -maxDrawdownBps) {
-    reasons.push(`Total drawdown ${metrics.totalDrawdownBps}bps exceeds max ${-maxDrawdownBps}bps`);
-    level = "DANGER";
-    action = "EXIT";
+  if (metrics.drawdownBps > maxDrawdownBps) {
+    reasons.push("Drawdown exceeds maximum");
+    level = escalateRiskLevel(level, "DANGER");
+    action = escalateRiskAction(action, "EXIT");
   }
 
-  // 2. Check liquidation buffer (EXIT if too close)
   if (metrics.liquidationDistanceBps < minLiquidationBufferBps) {
-    reasons.push(`Liquidation buffer ${metrics.liquidationDistanceBps}bps below min ${minLiquidationBufferBps}bps`);
-    level = "DANGER";
-    action = "EXIT";
+    reasons.push("Liquidation buffer below minimum");
+    level = escalateRiskLevel(level, "DANGER");
+    action = escalateRiskAction(action, "EXIT");
   }
 
-  // 3. Check margin utilization (PAUSE if high)
+  // 3. Check warning limits (PAUSE)
   if (metrics.marginUtilizationBps > maxMarginUtilizationBps) {
-    reasons.push(`Margin utilization ${metrics.marginUtilizationBps}bps exceeds max ${maxMarginUtilizationBps}bps`);
-    level = level === "SAFE" ? "WARNING" : level;
-    action = action === "ALLOW" ? "PAUSE" : action;
+    reasons.push("Margin utilization exceeds maximum");
+    level = escalateRiskLevel(level, "WARNING");
+    action = escalateRiskAction(action, "PAUSE");
   }
 
-  // 4. Check soft limits (warnings)
-  if (metrics.positionSizeUsd > warningPositionSizeUsdCents) {
-    reasons.push(`Position size approaching limit`);
-    level = level === "SAFE" ? "CAUTION" : level;
+  // 4. Check soft limits (CAUTION)
+  if (metrics.notionalQuote > warningPositionSizeQuote) {
+    reasons.push("Position size approaching limit");
+    level = escalateRiskLevel(level, "CAUTION");
   }
 
   if (metrics.marginUtilizationBps > warningMarginUtilizationBps) {
-    reasons.push(`Margin utilization approaching limit`);
-    level = level === "SAFE" ? "CAUTION" : level;
+    reasons.push("Margin utilization approaching limit");
+    level = escalateRiskLevel(level, "CAUTION");
+  }
+
+  if (metrics.liquidationDistanceBps < warningLiquidationBufferBps) {
+    reasons.push("Liquidation buffer approaching minimum");
+    level = escalateRiskLevel(level, "CAUTION");
   }
 
   return { level, action, reasons, metrics };
@@ -211,13 +257,14 @@ Risk is evaluated **twice** per execution:
 2. **Right before sending orders**: Re-checks because state changes between decision and action
 
 ```typescript
-const executeEnterHedge = async (sizeCents: bigint) => {
+const executeEnterHedge = async (sizeQuote: bigint) => {
   // Re-check risk immediately before execution
-  const risk = evaluateRisk(state, config);
+  const risk = evaluateRisk(snapshot, config);
   if (risk.action === "BLOCK" || risk.action === "EXIT") {
-    await alertService.send({
-      type: "EXECUTION_BLOCKED",
+    await onAlert({
+      type: "ALERT",
       reason: risk.reasons.join(", "),
+      timestamp: new Date(),
     });
     return { aborted: true, reason: risk.reasons };
   }
@@ -228,14 +275,37 @@ const executeEnterHedge = async (sizeCents: bigint) => {
 
 ### Emergency Actions
 
+Uses a simple `AlertCallback` function type (no full AlertService exists yet):
+
+```typescript
+export type AlertCallback = (action: EmergencyAction) => Promise<void>;
+```
+
 #### Kill Switch
 
 If risk level is `DANGER` or `BLOCKED`:
 
 1. **Immediately exit all positions** (reduce-only orders)
 2. **Stop accepting new intents** (pause evaluation loop)
-3. **Send critical alert** (Discord + Telegram)
+3. **Send critical alert** via callback
 4. **Log emergency state** to audit log
+
+```typescript
+export const checkEmergencyConditions = (
+  assessment: RiskAssessment,
+): EmergencyActionType | null => {
+  if (assessment.level === "BLOCKED" || assessment.action === "BLOCK") {
+    return "KILL_SWITCH";
+  }
+  if (assessment.level === "DANGER" || assessment.action === "EXIT") {
+    return "KILL_SWITCH";
+  }
+  if (assessment.action === "PAUSE") {
+    return "REDUCE_ONLY";
+  }
+  return null;
+};
+```
 
 #### Reduce-Only Mode
 
@@ -251,41 +321,35 @@ Position size is calculated based on:
 
 1. **Available capital** (equity - margin used)
 2. **Risk limits** (max position size, max leverage)
-3. **Liquidity** (order book depth for slippage estimation)
 
 ```typescript
-export const calculateMaxPositionSize = (
-  state: BotState,
+const BPS_PER_UNIT = 10000n;
+
+export const calculateMaxPositionSizeQuote = (
+  equityQuote: bigint,
+  marginUsedQuote: bigint,
   config: RiskConfig,
 ): bigint => {
-  const availableCapital = state.account.equityCents - state.account.marginUsedCents;
-  const maxLeverageBps = BigInt(config.maxLeverageBps);
-  const maxByCapital = (availableCapital * maxLeverageBps) / 10000n;
-  const maxByLimit = BigInt(config.maxPositionSizeUsd) * 100n; // Convert to cents
+  const availableCapitalQuote = equityQuote - marginUsedQuote;
+  if (availableCapitalQuote <= 0n) return 0n;
 
-  return maxByCapital < maxByLimit ? maxByCapital : maxByLimit;
+  const maxLeverageBps = BigInt(config.maxLeverageBps);
+  const maxByCapitalQuote = (availableCapitalQuote * maxLeverageBps) / BPS_PER_UNIT;
+
+  const quoteScale = 10n ** BigInt(config.quoteDecimals);
+  const maxByLimitQuote = BigInt(config.maxPositionSizeUsd) * quoteScale;
+
+  return maxByCapitalQuote < maxByLimitQuote ? maxByCapitalQuote : maxByLimitQuote;
 };
 ```
 
 ### Liquidation Distance Calculation
 
-```typescript
-export const calculateLiquidationDistance = (
-  position: Position,
-  markPrice: bigint,
-  liquidationPrice: bigint,
-): bigint => {
-  if (!liquidationPrice || liquidationPrice === 0n) {
-    return 10000n; // 100% buffer if no liquidation price (shouldn't happen)
-  }
+**Reuses** `calculateLiquidationDistanceBps` from `src/domains/position/metrics.ts` (already implemented and tested). No duplicate implementation needed.
 
-  const distanceBps = position.side === "SHORT"
-    ? ((markPrice - liquidationPrice) * 10000n) / markPrice
-    : ((liquidationPrice - markPrice) * 10000n) / markPrice;
-
-  return distanceBps;
-};
-```
+The existing function correctly handles both LONG and SHORT positions:
+- **LONG**: Distance = `(markPrice - liquidationPrice) / markPrice` (liq is below mark)
+- **SHORT**: Distance = `(liquidationPrice - markPrice) / markPrice` (liq is above mark)
 
 ## Implementation
 
@@ -295,13 +359,15 @@ export const calculateLiquidationDistance = (
 import * as v from "valibot";
 
 export const RiskConfigSchema = v.object({
-  // Hard limits
-  maxPositionSizeUsd: v.pipe(v.number(), v.minValue(100), v.maxValue(1000000)),
-  maxLeverageBps: v.pipe(v.number(), v.minValue(10000), v.maxValue(100000)), // 1x to 10x
-  maxDailyLossCents: v.pipe(v.number(), v.minValue(0), v.transform((v) => -Math.abs(v))), // Negative
-  maxDrawdownBps: v.pipe(v.number(), v.minValue(0), v.maxValue(5000)), // 0% to 50%
-  minLiquidationBufferBps: v.pipe(v.number(), v.minValue(1000), v.maxValue(5000)), // 10% to 50%
-  maxMarginUtilizationBps: v.pipe(v.number(), v.minValue(5000), v.maxValue(9500)), // 50% to 95%
+  quoteDecimals: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(18)),
+
+  // Hard limits (amounts in USD display units)
+  maxPositionSizeUsd: v.pipe(v.number(), v.minValue(100), v.maxValue(1_000_000)),
+  maxLeverageBps: v.pipe(v.number(), v.minValue(10000), v.maxValue(100000)),
+  maxDailyLossUsd: v.pipe(v.number(), v.minValue(0)),
+  maxDrawdownBps: v.pipe(v.number(), v.minValue(0), v.maxValue(5000)),
+  minLiquidationBufferBps: v.pipe(v.number(), v.minValue(1000), v.maxValue(5000)),
+  maxMarginUtilizationBps: v.pipe(v.number(), v.minValue(5000), v.maxValue(9500)),
 
   // Soft limits (warnings)
   warningPositionSizeUsd: v.pipe(v.number(), v.minValue(100)),
@@ -310,39 +376,45 @@ export const RiskConfigSchema = v.object({
 });
 
 export type RiskConfig = v.InferOutput<typeof RiskConfigSchema>;
+
+export const DEFAULT_RISK_CONFIG: RiskConfig = {
+  quoteDecimals: 6,              // USDC (6 decimals)
+  maxPositionSizeUsd: 10000,     // $10,000
+  maxLeverageBps: 30000,         // 3x
+  maxDailyLossUsd: 500,          // $500
+  maxDrawdownBps: 1000,          // 10%
+  minLiquidationBufferBps: 2000, // 20%
+  maxMarginUtilizationBps: 8000, // 80%
+  warningPositionSizeUsd: 7500,  // $7,500
+  warningMarginUtilizationBps: 7000, // 70%
+  warningLiquidationBufferBps: 3000, // 30%
+};
 ```
 
-### Risk Engine Interface
+### Pure Functions (No OOP Interface)
 
-```typescript
-export interface RiskEngine {
-  evaluate(state: BotState, config: RiskConfig): RiskAssessment;
-  calculateMaxPositionSize(state: BotState, config: RiskConfig): bigint;
-  calculateLiquidationDistance(position: Position, markPrice: bigint, liquidationPrice: bigint): bigint;
-}
-```
+The risk engine is implemented as **pure functions**, not as a class or OOP interface. This follows the codebase's functional programming preference:
+
+- `calculateRiskMetrics(snapshot)` — Compute metrics from state
+- `evaluateRisk(snapshot, config)` — Evaluate risk level and action
+- `calculateMaxPositionSizeQuote(equityQuote, marginUsedQuote, config)` — Position sizing
+- `checkEmergencyConditions(assessment)` — Determine emergency action type
+- `triggerKillSwitch(reason, onAlert)` — Execute kill switch with callback
+- `enterReduceOnlyMode(reason, onAlert)` — Enter reduce-only mode with callback
 
 ### Integration with Strategy Engine
 
 ```typescript
-// src/domains/strategy/strategy.ts
-
 // Trading intent type (referenced in ADR-0001: Bot Architecture)
 export type TradingIntent =
   | { type: "NOOP" }
-  | { type: "ENTER_HEDGE"; params: { sizeCents: bigint } }
+  | { type: "ENTER_HEDGE"; params: { sizeQuote: bigint } }
   | { type: "EXIT_HEDGE"; reason: string };
-
-export interface MarketState {
-  position: { open: boolean } | null;
-  fundingRate: FundingRateSnapshot; // Defined in ADR-0014
-  fundingHistory: FundingRateSnapshot[]; // Defined in ADR-0014
-}
 
 export const evaluateStrategy = (
   state: MarketState,
-  risk: RiskAssessment, // Risk already evaluated
-  config: StrategyConfig, // Defined in ADR-0014
+  risk: RiskAssessment,
+  config: StrategyConfig,
 ): TradingIntent => {
   // Strategy respects risk assessment
   if (risk.action === "BLOCK" || risk.action === "EXIT") {
