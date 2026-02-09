@@ -2,10 +2,12 @@
 
 - **Status:** Accepted
 - **Date:** 2026-02-04
+- **Updated:** 2026-02-09
 - **Owners:** -
 - **Related:**
   - [ADR-0001: Bot Architecture](0001-bot-architecture.md)
   - [ADR-0012: State Machines](0012-state-machines.md)
+  - [ADR-0016: Backtesting & Simulation](0016-backtesting-simulation.md)
 
 ## Context
 
@@ -135,29 +137,52 @@ export class ExchangeError extends Error {
 - **Use REST** as authoritative fallback for reconciliation
 - Track connection state and staleness timestamps
 
-### 7. Paper Trading Adapter
+### 7. Paper Trading Adapter (Delegating Pattern)
 
-For testing without real money:
+The paper adapter uses a **delegating pattern**: it wraps a real `ExchangeAdapter` (e.g., Coinbase) for market data reads and simulates execution locally. This avoids duplicating market data fetching and ensures paper trades fill against real bid/ask spreads.
 
 ```typescript
-export const createPaperAdapter = (config: PaperConfig): ExchangeAdapter => {
-  let balances = new Map(config.initialBalances);
-  
+export interface PaperAdapter extends ExchangeAdapter {
+  processFunding(): Promise<bigint>;
+  getState(): Readonly<PaperState>;
+}
+
+export interface PaperAdapterConfig {
+  marketDataSource: ExchangeAdapter; // Real adapter for market data
+  initialBalances: Record<string, bigint>;
+  simulation?: Partial<SimulationConfig>;
+}
+
+export const createPaperAdapter = (config: PaperAdapterConfig): PaperAdapter => {
+  const state = createPaperState(config.initialBalances);
+  const source = config.marketDataSource;
+
   return {
-    placeSpotOrder: async (params) => {
-      // Simulate fill at mid price with configurable slippage
-      const slippageMultiplier = params.side === "BUY"
-        ? 10000n + config.slippageBps
-        : 10000n - config.slippageBps;
-      const fillPrice = (midPrice * slippageMultiplier) / 10000n;
-      
-      updateBalances(balances, params, fillPrice);
-      return createFilledOrder(params, fillPrice);
+    // Market data: delegated to real adapter
+    getTicker: (symbol) => source.getTicker(symbol),
+    getFundingRate: (symbol) => source.getFundingRate(symbol),
+    getOrderBook: (symbol, depth) => source.getOrderBook(symbol, depth),
+    subscribeTicker: (symbol, cb) => source.subscribeTicker(symbol, cb),
+    unsubscribeTicker: (symbol) => source.unsubscribeTicker(symbol),
+
+    // Execution: simulated locally with slippage
+    createOrder: async (params) => {
+      const ticker = await source.getTicker(params.symbol);
+      return simulateMarketOrder(state, params, ticker, simulation);
     },
+
+    // Balances & positions: tracked in memory
+    getBalance: async (asset) => state.balances.get(asset) ?? zeroBalance(asset),
+    getPositions: async () => Array.from(state.positions.values()),
     // ... other methods
   };
 };
 ```
+
+The `marketDataSource` slot is pluggable, supporting three modes:
+- **Live paper trading**: `marketDataSource` = real Coinbase adapter
+- **Backtesting**: `marketDataSource` = ReplayAdapter serving historical data (see [ADR-0016](0016-backtesting-simulation.md))
+- **Unit testing**: `marketDataSource` = mock adapter with `vi.fn()` stubs
 
 ### 8. Official SDK Usage
 

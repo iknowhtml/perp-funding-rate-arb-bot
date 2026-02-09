@@ -2,11 +2,13 @@
 
 - **Status:** Accepted
 - **Date:** 2026-02-04
+- **Updated:** 2026-02-09
 - **Owners:** -
 - **Related:**
   - [ADR-0001: Bot Architecture](0001-bot-architecture.md)
   - [ADR-0010: Exchange Adapters](0010-exchange-adapters.md)
   - [ADR-0014: Funding Rate Prediction & Strategy](0014-funding-rate-strategy.md)
+  - [ADR-0015: Execution Safety & Slippage Modeling](0015-execution-safety-slippage.md)
 
 ## Context
 
@@ -202,9 +204,11 @@ export const createHistoricalDataLoader = (
 };
 ```
 
-### Event-Driven Backtester
+### Event-Driven Backtester (using ReplayAdapter + PaperAdapter)
 
-Use functional pattern with closure for state management:
+The backtesting engine is a thin orchestration loop. It does **not** implement its own execution simulation -- instead it delegates to the `PaperAdapter` (which handles fills, slippage, balance/position tracking) with a `ReplayAdapter` as the market data source.
+
+This ensures the same execution code path is tested in both paper trading and backtesting.
 
 ```typescript
 export interface BacktestEngine {
@@ -215,355 +219,174 @@ export const createBacktestEngine = (
   config: BacktestConfig,
   dataLoader: HistoricalDataLoader,
 ): BacktestEngine => {
-  let state: BacktestState = {
-    capitalQuote: config.initialCapitalQuote,
-    position: null,
-    fundingHistory: [],
-    prices: new Map(),
-  };
-
-  const trades: BacktestTrade[] = [];
-  const dailyPnL: Map<string, bigint> = new Map();
-
-  const processEvent = async (event: BacktestEvent): Promise<void> => {
-    // Update state with event data
-    state = {
-      ...state,
-      prices: new Map(state.prices).set("spot", event.spotPrice).set("perp", event.perpPrice),
-      fundingHistory: [...state.fundingHistory, {
-        symbol: config.strategyConfig.symbol ?? "BTC-USDT",
-        currentRateBps: event.fundingRateBps,
-        predictedRateBps: event.fundingRateBps,
-        nextFundingTime: new Date(event.timestamp.getTime() + 8 * 60 * 60 * 1000),
-        lastFundingTime: event.timestamp,
-        markPrice: event.perpPrice,
-        indexPrice: event.spotPrice,
-        timestamp: event.timestamp,
-        source: "exchange",
-      }],
-    };
-
-    // Run evaluation (same logic as live bot)
-    const risk = evaluateRisk(state, config.riskConfig);
-    const intent = evaluateStrategy(state, risk, config.strategyConfig);
-
-    // Execute intent (simulated)
-    if (intent.type === "ENTER_HEDGE") {
-      await simulateEntry(intent, event);
-    } else if (intent.type === "EXIT_HEDGE" && state.position) {
-      await simulateExit(intent, event);
-    }
-  };
-
-  const simulateEntry = async (
-    intent: TradingIntent,
-    event: BacktestEvent,
-  ): Promise<void> => {
-    // 1. Estimate slippage (using historical order book if available)
-    const orderBook = await dataLoader.loadOrderBook(event.timestamp);
-    if (!orderBook) {
-      return; // Skip if no order book data
-    }
-    const slippageEstimate = estimateSlippage(orderBook, "BUY", intent.params.sizeQuote, config.slippageConfig.maxSlippageBps);
-
-    if (!slippageEstimate.canExecute) {
-      return; // Skip entry due to slippage
-    }
-
-    // 2. Calculate execution prices (with slippage)
-    const spotEntryPrice = event.spotPrice + (event.spotPrice * slippageEstimate.slippageBps) / 10000n;
-    const perpEntryPrice = event.perpPrice - (event.perpPrice * slippageEstimate.slippageBps) / 10000n;
-
-    // 3. Calculate margin requirement
-    const marginRequired = calculateMargin(intent.params.sizeQuote, config.riskConfig.maxLeverageBps);
-
-    // 4. Update state
-    state = {
-      ...state,
-      position: {
-        entryTime: event.timestamp,
-        entryFundingRateBps: event.fundingRateBps,
-        spotEntryPrice,
-        perpEntryPrice,
-        sizeQuote: intent.params.sizeQuote,
-        marginUsedQuote: marginRequired,
-      },
-      capitalQuote: state.capitalQuote - marginRequired,
-    };
-  };
-
-  const simulateExit = async (
-    intent: TradingIntent,
-    event: BacktestEvent,
-  ): Promise<void> => {
-    if (!state.position) {
-      return;
-    }
-
-    const position = state.position;
-
-    // 1. Estimate slippage
-    const orderBook = await dataLoader.loadOrderBook(event.timestamp);
-    if (!orderBook) {
-      return; // Skip if no order book data
-    }
-    const slippageEstimate = estimateSlippage(orderBook, "SELL", position.sizeQuote, config.slippageConfig.maxSlippageBps);
-
-    // 2. Calculate execution prices
-    const spotExitPrice = event.spotPrice - (event.spotPrice * slippageEstimate.slippageBps) / 10000n;
-    const perpExitPrice = event.perpPrice + (event.perpPrice * slippageEstimate.slippageBps) / 10000n;
-
-    // 3. Calculate P&L
-    const spotPnL = (spotExitPrice - position.spotEntryPrice) * position.sizeQuote / position.spotEntryPrice;
-    const perpPnL = (position.perpEntryPrice - perpExitPrice) * position.sizeQuote / position.perpEntryPrice;
-    const netPnL = spotPnL + perpPnL; // Should be ~0 (delta-neutral)
-
-    // 4. Calculate funding received
-    const holdTimeHours = (event.timestamp.getTime() - position.entryTime.getTime()) / (1000 * 60 * 60);
-    const fundingReceivedQuote = (position.sizeQuote * position.entryFundingRateBps * BigInt(Math.floor(holdTimeHours))) / (10000n * 8n);
-
-    // 5. Calculate slippage cost
-    const entrySlippageCost = (position.sizeQuote * slippageEstimate.slippageBps) / 10000n;
-    const exitSlippageCost = (position.sizeQuote * slippageEstimate.slippageBps) / 10000n;
-    const totalSlippageCost = entrySlippageCost + exitSlippageCost;
-
-    // 6. Net P&L
-    const tradePnL = fundingReceivedQuote - totalSlippageCost;
-
-    // 7. Record trade
-    const trade: BacktestTrade = {
-      entryTime: position.entryTime,
-      exitTime: event.timestamp,
-      entryPrice: position.spotEntryPrice,
-      exitPrice: spotExitPrice,
-      sizeQuote: position.sizeQuote,
-      pnlQuote: tradePnL,
-      returnBps: (tradePnL * 10000n) / position.sizeQuote,
-      fundingReceivedQuote,
-      slippageCostQuote: totalSlippageCost,
-      reason: intent.reason ?? "unknown",
-    };
-
-    trades.push(trade);
-
-    // 8. Update state
-    state = {
-      ...state,
-      capitalQuote: state.capitalQuote + position.marginUsedQuote + tradePnL,
-      position: null,
-    };
-  };
-
-  const calculateResults = (): BacktestResult => {
-    const totalPnL = trades.reduce((sum, t) => sum + t.pnlQuote, 0n);
-    const finalCapital = config.initialCapitalQuote + totalPnL;
-    const totalReturnBps = (totalPnL * 10000n) / config.initialCapitalQuote;
-
-    // Calculate Sharpe ratio (simplified: annualized return / volatility)
-    const returns = trades.map((t) => Number(t.returnBps) / 10000);
-    const avgReturn = returns.reduce((sum, r) => sum + r, 0) / returns.length;
-    const variance = returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length;
-    const stdDev = Math.sqrt(variance);
-    const sharpeRatio = stdDev > 0 ? avgReturn / stdDev : 0;
-
-    // Calculate max drawdown
-    let peak = config.initialCapitalQuote;
-    let maxDrawdown = 0n;
-    let currentCapital = config.initialCapitalQuote;
-
-    for (const trade of trades) {
-      currentCapital += trade.pnlQuote;
-      if (currentCapital > peak) {
-        peak = currentCapital;
-      }
-      const drawdown = ((peak - currentCapital) * 10000n) / peak;
-      if (drawdown > maxDrawdown) {
-        maxDrawdown = drawdown;
-      }
-    }
-
-    // Calculate win rate
-    const winningTrades = trades.filter((t) => t.pnlQuote > 0n).length;
-    const winRate = trades.length > 0 ? winningTrades / trades.length : 0;
-
-    // Calculate average hold time
-    const totalHoldTime = trades.reduce(
-      (sum, t) => sum + (t.exitTime.getTime() - t.entryTime.getTime()),
-      0,
-    );
-    const averageHoldTimeHours = trades.length > 0
-      ? totalHoldTime / (trades.length * 1000 * 60 * 60)
-      : 0;
-
-    return {
-      initialCapitalQuote: config.initialCapitalQuote,
-      finalCapitalQuote: finalCapital,
-      totalPnLQuote: totalPnL,
-      totalReturnBps,
-      sharpeRatio,
-      maxDrawdownBps: maxDrawdown,
-      winRate,
-      totalTrades: trades.length,
-      averageHoldTimeHours,
-      trades,
-      dailyPnL: Array.from(dailyPnL.entries()).map(([date, pnl]) => ({
-        date: new Date(date),
-        pnlQuote: pnl,
-      })),
-    };
-  };
-
-  const generateEvents = (
-    fundingRates: FundingRateSnapshot[],
-    prices: PriceSnapshot[],
-  ): BacktestEvent[] => {
-    // Generate events every 2 seconds (per ADR-0001 evaluation tick)
-    const events: BacktestEvent[] = [];
-    const startTime = config.startDate.getTime();
-    const endTime = config.endDate.getTime();
-    const intervalMs = 2000; // 2 seconds
-
-    for (let time = startTime; time <= endTime; time += intervalMs) {
-      const timestamp = new Date(time);
-      // Find closest funding rate and price snapshots
-      const fundingRate = fundingRates.find((fr) => fr.timestamp <= timestamp) ?? fundingRates[0];
-      const price = prices.find((p) => p.timestamp <= timestamp) ?? prices[0];
-
-      if (fundingRate && price) {
-        events.push({
-          timestamp,
-          fundingRateBps: fundingRate.currentRateBps,
-          spotPrice: price.price,
-          perpPrice: price.price, // Simplified: use same price for perp
-        });
-      }
-    }
-
-    return events;
-  };
-
   return {
     run: async (): Promise<BacktestResult> => {
-      // 1. Load historical data
-      const fundingRates = await dataLoader.loadFundingRates(
+      // 1. Create ReplayAdapter from historical data
+      const replayAdapter = createReplayAdapter({
+        dataLoader,
+        exchange: config.exchange,
+        symbol: config.symbol,
+        startDate: config.startDate,
+        endDate: config.endDate,
+      });
+
+      // 2. Create PaperAdapter with replay as market data source
+      const paperAdapter = createPaperAdapter({
+        marketDataSource: replayAdapter,
+        initialBalances: { USDT: config.initialCapitalQuote },
+        simulation: {
+          baseSlippageBps: config.slippageConfig.baseSlippageBps,
+          errorRate: 0,         // No simulated errors in backtesting
+          latencyMs: { min: 0, max: 0 }, // No simulated latency
+        },
+      });
+
+      await paperAdapter.connect();
+
+      // 3. Generate timeline timestamps
+      const timestamps = generateTimestamps(
         config.startDate,
         config.endDate,
-      );
-      const prices = await dataLoader.loadPrices(
-        config.startDate,
-        config.endDate,
+        config.evaluationIntervalMs ?? 2000,
       );
 
-      // 2. Simulate evaluation loop (every 2 seconds, per ADR-0001)
-      const events = generateEvents(fundingRates, prices);
+      // 4. Main loop: advance time, evaluate, execute via paper adapter
+      for (const timestamp of timestamps) {
+        // Advance replay clock
+        replayAdapter.tick(timestamp);
 
-      for (const event of events) {
-        await processEvent(event);
+        // Fetch market data (from replay)
+        const ticker = await paperAdapter.getTicker(config.symbol);
+        const fundingRate = await paperAdapter.getFundingRate(config.symbol);
+
+        // Run strategy evaluation (same logic as live bot)
+        const intent = evaluateStrategy(ticker, fundingRate, config.strategyConfig);
+
+        // Execute via paper adapter (handles slippage, fills, positions)
+        if (intent.type === "ENTER_HEDGE") {
+          await paperAdapter.createOrder({
+            symbol: config.symbol,
+            side: "SELL",
+            type: "MARKET",
+            quantityBase: intent.params.quantityBase,
+          });
+        } else if (intent.type === "EXIT_HEDGE") {
+          await paperAdapter.createOrder({
+            symbol: config.symbol,
+            side: "BUY",
+            type: "MARKET",
+            quantityBase: intent.params.quantityBase,
+          });
+        }
+
+        // Process funding payments at funding intervals
+        if (isFundingTime(timestamp)) {
+          await paperAdapter.processFunding();
+        }
       }
 
-      // 3. Calculate metrics
-      return calculateResults();
+      // 5. Close open positions at end
+      const openPositions = await paperAdapter.getPositions();
+      for (const position of openPositions) {
+        await paperAdapter.createOrder({
+          symbol: position.symbol,
+          side: position.side === "LONG" ? "SELL" : "BUY",
+          type: "MARKET",
+          quantityBase: position.sizeBase,
+        });
+      }
+
+      // 6. Calculate metrics from paper adapter state
+      const state = paperAdapter.getState();
+      return calculateResults(config, state);
     },
   };
 };
 ```
 
-### Paper Trading Adapter
+**Key design benefits:**
+- **No duplicate simulation logic**: Position tracking, balance management, fill simulation, and slippage are all handled by the paper adapter -- single source of truth
+- **Same code path**: The strategy evaluation and execution path is identical between live paper trading and backtesting
+- **Testable**: Both the ReplayAdapter and PaperAdapter are independently unit-testable with mocks
 
-Use the same adapter interface (ADR-0010) for paper trading:
+### Paper Trading Adapter (Delegating Pattern)
+
+The paper adapter uses a **delegating pattern** (see [ADR-0010](0010-exchange-adapters.md) Section 7): it wraps a real `ExchangeAdapter` for market data and simulates execution locally. The `marketDataSource` slot is pluggable:
+
+| Mode | `marketDataSource` | Data source |
+|------|-------------------|-------------|
+| Live paper trading | `CoinbaseAdapter` | Real-time exchange API |
+| Backtesting | `ReplayAdapter` | Historical data from Postgres |
+| Unit testing | Mock adapter | Controlled test data |
 
 ```typescript
-### Paper Trading Helper Functions
+export const createPaperAdapter = (config: PaperAdapterConfig): PaperAdapter => {
+  const state = createPaperState(config.initialBalances);
+  const source = config.marketDataSource;
 
-```typescript
-// Update balances after order fill
-export const updateBalances = (
-  balances: Map<string, bigint>,
-  params: OrderParams,
-  fillPrice: bigint,
-): void => {
-  const baseAsset = params.symbol.split("-")[0];
-  const quoteAsset = params.symbol.split("-")[1];
-
-  if (params.side === "BUY") {
-    // Spend quote asset, receive base asset
-    const quoteSpent = (params.quantity * fillPrice) / 100n; // Assuming price is in cents
-    const currentQuote = balances.get(quoteAsset) ?? 0n;
-    const currentBase = balances.get(baseAsset) ?? 0n;
-    balances.set(quoteAsset, currentQuote - quoteSpent);
-    balances.set(baseAsset, currentBase + params.quantity);
-  } else {
-    // Spend base asset, receive quote asset
-    const quoteReceived = (params.quantity * fillPrice) / 100n;
-    const currentQuote = balances.get(quoteAsset) ?? 0n;
-    const currentBase = balances.get(baseAsset) ?? 0n;
-    balances.set(quoteAsset, currentQuote + quoteReceived);
-    balances.set(baseAsset, currentBase - params.quantity);
-  }
-};
-
-// Create filled order result
-export const createFilledOrder = (
-  params: OrderParams,
-  fillPrice: bigint,
-): OrderResult => {
   return {
-    orderId: `paper-${Date.now()}`,
-    status: "FILLED",
-    filledQuantity: params.quantity,
-    averagePrice: fillPrice,
+    // Market data: delegated to source (live or replay)
+    getTicker: (symbol) => source.getTicker(symbol),
+    getFundingRate: (symbol) => source.getFundingRate(symbol),
+    getOrderBook: (symbol, depth) => source.getOrderBook(symbol, depth),
+
+    // Execution: simulated locally against real/replayed prices
+    createOrder: async (params) => {
+      const ticker = await source.getTicker(params.symbol);
+      return simulateMarketOrder(state, params, ticker, simulation);
+    },
+
+    // Balances & positions: tracked in memory
+    getBalance: async (asset) => state.balances.get(asset) ?? zeroBalance(asset),
+    getPositions: async () => Array.from(state.positions.values()),
+
+    // Funding: uses live/replayed rates
+    processFunding: async () => { /* fetch rates from source, apply to positions */ },
+    // ... other methods
   };
 };
 ```
 
-### Paper Trading Adapter
+### ReplayAdapter (for Backtesting)
 
-Use the same adapter interface (ADR-0010) for paper trading:
+The `ReplayAdapter` implements `ExchangeAdapter` and replays historical data from Postgres. It serves as the `marketDataSource` for the paper adapter during backtesting:
 
 ```typescript
-export interface PaperConfig {
-  initialBalances: Array<[string, bigint]>;
-  defaultPrice: bigint;
-  slippageBps: number; // Base slippage in basis points
-  slippageVolatilityBps: number; // Volatility around base slippage
+export interface ReplayAdapterConfig {
+  dataLoader: HistoricalDataLoader;
+  exchange: string;
+  symbol: string;
+  startDate: Date;
+  endDate: Date;
 }
 
-export const createPaperAdapter = (config: PaperConfig): ExchangeAdapter => {
-  const balances = new Map<string, bigint>(config.initialBalances);
-  const positions: Position[] = [];
-  let orderBook: OrderBookSnapshot | null = null;
+export const createReplayAdapter = (config: ReplayAdapterConfig): ReplayAdapter => {
+  let currentTimestamp = config.startDate;
+  // Pre-load historical data into sorted arrays for fast lookup
 
   return {
-    placeSpotOrder: async (params) => {
-      // Simulate fill with slippage
-      const midPrice = orderBook ? calculateMidPrice(orderBook) : config.defaultPrice;
-      // Generate random slippage (convert to bigint properly)
-      const randomOffset = (Math.random() - 0.5) * config.slippageVolatilityBps;
-      const slippageBpsNum = config.slippageBps + randomOffset;
-      const slippageBps = BigInt(Math.round(slippageBpsNum));
-      const fillPrice = params.side === "BUY"
-        ? midPrice + (midPrice * slippageBps) / 10000n
-        : midPrice - (midPrice * slippageBps) / 10000n;
+    // Advance replay clock
+    tick: (timestamp: Date) => { currentTimestamp = timestamp; },
 
-      // Update balances
-      updateBalances(balances, params, fillPrice);
-
-      return createFilledOrder(params, fillPrice);
+    // Serve historical data at current replay time
+    getTicker: async (symbol) => {
+      // Return closest price snapshot at or before currentTimestamp
+    },
+    getFundingRate: async (symbol) => {
+      // Return closest funding rate snapshot at or before currentTimestamp
+    },
+    getOrderBook: async (symbol, depth) => {
+      // Return closest order book snapshot at or before currentTimestamp
     },
 
-    getBalances: async () => {
-      return Array.from(balances.entries()).map(([asset, amount]) => ({
-        asset,
-        free: amount,
-        locked: 0n,
-      }));
-    },
+    // Connection management (no-op for replay)
+    connect: async () => {},
+    disconnect: async () => {},
+    isConnected: () => true,
 
-    getPositions: async () => {
-      return positions;
-    },
-
-    // ... other methods
+    // Not applicable for replay -- throw or no-op
+    createOrder: async () => { throw new Error("Use PaperAdapter for order execution"); },
+    // ... other read-only methods
   };
 };
 ```
@@ -678,6 +501,30 @@ export const backtestCommand = async (options: BacktestOptions): Promise<void> =
 | Execution simulation inaccurate | Compare paper trading results with small live capital deployment |
 | Data quality issues | Validate historical data, handle missing data gracefully |
 
+## Architecture Summary
+
+The simulation framework uses three composable components:
+
+```
+┌─────────────────────────────────────────────────────┐
+│                Backtesting Engine                    │
+│  (thin orchestration loop + metrics calculation)     │
+│                                                     │
+│  ┌───────────────────────────────────────────────┐  │
+│  │             PaperAdapter                       │  │
+│  │  (execution simulation, balance/position mgmt) │  │
+│  │                                               │  │
+│  │  marketDataSource:                            │  │
+│  │    ┌────────────────────────────────────────┐ │  │
+│  │    │          ReplayAdapter                  │ │  │
+│  │    │  (serves historical data from Postgres) │ │  │
+│  │    └────────────────────────────────────────┘ │  │
+│  └───────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────┘
+```
+
+For live paper trading, `ReplayAdapter` is replaced with the real `CoinbaseAdapter`. The `PaperAdapter` and strategy evaluation code remain identical.
+
 ## Future Considerations
 
 1. **Walk-Forward Analysis**: Optimize parameters on rolling windows
@@ -688,5 +535,6 @@ export const backtestCommand = async (options: BacktestOptions): Promise<void> =
 ## References
 
 - [ADR-0001: Bot Architecture](0001-bot-architecture.md) — Evaluation loop pattern
-- [ADR-0010: Exchange Adapters](0010-exchange-adapters.md) — Paper trading adapter
+- [ADR-0010: Exchange Adapters](0010-exchange-adapters.md) — Paper trading adapter (delegating pattern)
 - [ADR-0014: Funding Rate Prediction & Strategy](0014-funding-rate-strategy.md) — Strategy logic
+- [ADR-0015: Execution Safety & Slippage Modeling](0015-execution-safety-slippage.md) — Slippage estimation
