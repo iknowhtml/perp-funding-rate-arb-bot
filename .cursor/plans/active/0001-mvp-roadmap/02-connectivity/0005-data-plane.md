@@ -164,22 +164,71 @@ const startAccountPolling = (intervalMs: number): NodeJS.Timeout => {
 
 ### 4. State Update Logic
 
-State updates with staleness detection:
+State updates with staleness detection using per-source thresholds:
+
+Create `src/worker/freshness.ts`:
 
 ```typescript
-export const isStateFresh = (state: BotState, thresholdMs: number): boolean => {
+import * as v from "valibot";
+
+/**
+ * Configuration for state freshness thresholds.
+ * Each data source has its own staleness threshold based on update cadence.
+ * 
+ * - tickerStaleMs: WebSocket ticker updates (continuous)
+ * - fundingStaleMs: REST funding rate polls (30s interval per ADR-0001)
+ * - accountStaleMs: REST account polls (30s interval per ADR-0001)
+ */
+export const FreshnessConfigSchema = v.object({
+  tickerStaleMs: v.pipe(
+    v.number(),
+    v.minValue(1000),
+    v.maxValue(60000),
+  ),
+  fundingStaleMs: v.pipe(
+    v.number(),
+    v.minValue(1000),
+    v.maxValue(300000),
+  ),
+  accountStaleMs: v.pipe(
+    v.number(),
+    v.minValue(1000),
+    v.maxValue(300000),
+  ),
+});
+
+export type FreshnessConfig = v.InferOutput<typeof FreshnessConfigSchema>;
+
+/**
+ * Default freshness thresholds derived from polling cadences.
+ * See ADR-0001: Bot Architecture for update intervals.
+ */
+export const DEFAULT_FRESHNESS_CONFIG: FreshnessConfig = {
+  tickerStaleMs: 5_000,      // 5s - WebSocket should be very fresh
+  fundingStaleMs: 60_000,    // 60s - 30s REST poll + buffer
+  accountStaleMs: 45_000,    // 45s - 30s REST poll + buffer
+};
+
+/**
+ * Check if state is fresh based on per-source staleness thresholds.
+ * Each data source is checked independently with its own threshold.
+ */
+export const isStateFresh = (
+  state: BotState,
+  config: FreshnessConfig,
+): boolean => {
   const now = Date.now();
 
   const tickerFresh = state.lastTickerUpdate
-    ? now - state.lastTickerUpdate.getTime() < thresholdMs
+    ? now - state.lastTickerUpdate.getTime() < config.tickerStaleMs
     : false;
 
   const fundingFresh = state.lastFundingUpdate
-    ? now - state.lastFundingUpdate.getTime() < thresholdMs * 10 // Funding updates less frequently
+    ? now - state.lastFundingUpdate.getTime() < config.fundingStaleMs
     : false;
 
   const accountFresh = state.lastAccountUpdate
-    ? now - state.lastAccountUpdate.getTime() < thresholdMs * 5
+    ? now - state.lastAccountUpdate.getTime() < config.accountStaleMs
     : false;
 
   return tickerFresh && fundingFresh && accountFresh && state.wsConnected;
@@ -192,6 +241,8 @@ export const isStateFresh = (state: BotState, thresholdMs: number): boolean => {
 src/worker/
 ├── state.ts              # In-memory state store
 ├── state.test.ts         # State store tests
+├── freshness.ts          # Freshness config and staleness detection
+├── freshness.test.ts     # Freshness tests
 ├── data-plane.ts         # Data plane implementation
 ├── data-plane.test.ts    # Data plane tests
 └── index.ts              # Re-exports
@@ -199,14 +250,18 @@ src/worker/
 
 ## Dependencies
 
-No new dependencies required.
+```bash
+# Already installed
+# valibot (for FreshnessConfig validation)
+```
 
 ## Validation
 
 - [ ] State store updates correctly from WebSocket messages
 - [ ] REST polling fetches data at correct intervals
-- [ ] State freshness detection works
-- [ ] Stale data is detected and flagged
+- [ ] FreshnessConfig validated with Valibot schema at startup
+- [ ] State freshness detection uses per-source thresholds (no magic multipliers)
+- [ ] Stale data is detected and flagged correctly per data source
 - [ ] All updates are logged appropriately
 - [ ] Unit tests pass
 
