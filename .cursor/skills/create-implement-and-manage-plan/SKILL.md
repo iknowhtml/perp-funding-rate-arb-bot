@@ -1,6 +1,6 @@
 ---
 name: create-implement-and-manage-plan
-description: Create, implement, and manage development plans. Use Opus 4.5 for plan creation/context gathering, Composer for implementation.
+description: Create, implement, and manage development plans. Use Opus 4.6 for plan creation/context gathering, Composer for implementation.
 ---
 
 # Plan Management
@@ -9,12 +9,12 @@ description: Create, implement, and manage development plans. Use Opus 4.5 for p
 
 | Phase | Model | Why |
 |-------|-------|-----|
-| **Plan Creation & Context** | Opus 4.5 | Superior reasoning, better at synthesizing patterns |
+| **Plan Creation & Context** | Opus 4.6 | Superior reasoning, better at synthesizing patterns |
 | **Implementation** | Composer | Faster code generation when context is provided |
 
 ---
 
-## Opus 4.5: Plan Creation
+## Opus 4.6: Plan Creation
 
 Use for analyzing requirements, researching codebase patterns, and documenting implementation context.
 
@@ -48,7 +48,7 @@ Before handing off to Composer, ensure the plan includes:
 
 ---
 
-## Opus 4.5: Code Example Validation
+## Opus 4.6: Code Example Validation
 
 **Before finalizing any plan, validate all code examples against `CODE_GUIDELINES.md` and `biome.json`.**
 
@@ -97,6 +97,10 @@ For every code block in the plan, verify:
 4. **Add corrected examples** as reference for Composer
 
 Plans with non-compliant code examples create implementation debt. Fix in planning phase, not implementation.
+
+### ADR & Plan Drift Reconciliation
+
+If the plan deviates from the ADR, check the codebase and reconcile the plan and ADRs accordingly.
 
 ---
 
