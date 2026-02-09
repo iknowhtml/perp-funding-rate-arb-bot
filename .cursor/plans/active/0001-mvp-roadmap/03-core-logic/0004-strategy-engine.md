@@ -85,41 +85,37 @@ export interface EnterHedgeParams {
 
 Create `src/domains/strategy/trend-analysis.ts`:
 
-**Recommended**: Use `technicalindicators` library for SMA, EMA, and standard deviation calculations:
+Implement SMA and standard deviation as pure bigint functions — no external dependency needed
+(see ADR-0014 for rationale):
 
 ```typescript
-import { SMA, EMA, SD } from "technicalindicators";
-
-/**
- * Calculate average using technicalindicators SMA
- * For bigint arrays, convert to number for calculation, then back to bigint
- */
-export const calculateAverage = (rates: bigint[]): bigint => {
-  if (rates.length === 0) return 0n;
-  const numbers = rates.map((r) => Number(r));
-  const smaResult = SMA.calculate({ period: numbers.length, values: numbers });
-  return BigInt(Math.round(smaResult[0] ?? 0));
+/** Integer square root via Newton's method */
+export const bigintSqrt = (value: bigint): bigint => {
+  if (value < 0n) throw new Error("Square root of negative number");
+  if (value < 2n) return value;
+  let x = value;
+  let y = (x + 1n) / 2n;
+  while (y < x) {
+    x = y;
+    y = (x + value / x) / 2n;
+  }
+  return x;
 };
 
-/**
- * Calculate standard deviation using technicalindicators SD
- */
-export const calculateStandardDeviation = (rates: bigint[]): bigint => {
-  if (rates.length < 2) return 0n;
-  const numbers = rates.map((r) => Number(r));
-  const sdResult = SD.calculate({ period: numbers.length, values: numbers });
-  return BigInt(Math.round(sdResult[0] ?? 0));
+/** Simple moving average over bigint values (no precision loss) */
+export const calculateSma = (values: readonly bigint[]): bigint => {
+  if (values.length === 0) return 0n;
+  const sum = values.reduce((acc, val) => acc + val, 0n);
+  return sum / BigInt(values.length);
 };
 
-/**
- * Calculate exponential moving average for trend detection
- */
-export const calculateEMA = (rates: bigint[], period: number): bigint => {
-  if (rates.length === 0) return 0n;
-  const numbers = rates.map((r) => Number(r));
-  const emaResult = EMA.calculate({ period, values: numbers });
-  const lastEma = emaResult[emaResult.length - 1];
-  return BigInt(Math.round(lastEma ?? 0));
+/** Population standard deviation over bigint values */
+export const calculateStdDev = (values: readonly bigint[]): bigint => {
+  if (values.length < 2) return 0n;
+  const mean = calculateSma(values);
+  const squaredDiffs = values.reduce((acc, v) => acc + (v - mean) ** 2n, 0n);
+  const variance = squaredDiffs / BigInt(values.length);
+  return bigintSqrt(variance);
 };
 
 export const analyzeFundingRateTrend = (
@@ -129,7 +125,7 @@ export const analyzeFundingRateTrend = (
   if (snapshots.length < window) {
     return {
       snapshots,
-      averageRateBps: calculateAverage(snapshots.map((s) => s.currentRateBps)),
+      averageRateBps: calculateSma(snapshots.map((s) => s.currentRateBps)),
       volatilityBps: 0n,
       trend: "stable",
       regime: "low_stable",
@@ -139,13 +135,12 @@ export const analyzeFundingRateTrend = (
   const recent = snapshots.slice(-window);
   const rates = recent.map((s) => s.currentRateBps);
   
-  // Use technicalindicators for calculations
-  const averageRateBps = calculateAverage(rates);
-  const volatilityBps = calculateStandardDeviation(rates);
+  const averageRateBps = calculateSma(rates);
+  const volatilityBps = calculateStdDev(rates);
   
   // Trend: compare first half vs second half using SMA
-  const firstHalf = calculateAverage(rates.slice(0, Math.floor(window / 2)));
-  const secondHalf = calculateAverage(rates.slice(Math.floor(window / 2)));
+  const firstHalf = calculateSma(rates.slice(0, Math.floor(window / 2)));
+  const secondHalf = calculateSma(rates.slice(Math.floor(window / 2)));
   const trend = secondHalf > firstHalf + 5n
     ? "increasing"
     : secondHalf < firstHalf - 5n
@@ -164,11 +159,12 @@ export const analyzeFundingRateTrend = (
 };
 ```
 
-**Why `technicalindicators`?**
-- Battle-tested library with 100+ indicators
-- Handles edge cases correctly (empty arrays, NaN values)
-- More indicators available if strategy evolves (RSI, MACD, Bollinger Bands)
-- Well-maintained with TypeScript types
+**Why native bigint instead of `technicalindicators`?**
+- SMA and stddev are ~5 lines each — trivial to implement and test
+- Avoids lossy `bigint → number → bigint` conversion
+- `technicalindicators` last published 2020 — stale for a Node >=22 / ESM project
+- Zero dependency surface for two arithmetic functions
+- If EMA/MACD/Bollinger Bands are needed later, reassess at that point
 
 ### 3. Entry Signal Generation
 
@@ -332,24 +328,13 @@ src/domains/strategy/
 
 ## Dependencies
 
-```bash
-# Recommended: Use battle-tested technical analysis library
-pnpm add technicalindicators
-
-# Type definitions (if needed)
-pnpm add -D @types/technicalindicators
-```
-
-**Why `technicalindicators`?**
-- 100+ technical indicators (SMA, EMA, RSI, MACD, Bollinger Bands, etc.)
-- Battle-tested with proper edge case handling
-- TypeScript support
-- Extensible if strategy evolves to use more indicators
+No external dependencies for trend analysis. SMA and standard deviation are implemented as
+pure bigint functions (see ADR-0014 for rationale).
 
 ## Validation
 
-- [ ] Trend analysis calculates averages correctly
-- [ ] **`technicalindicators` library used for SMA/EMA/SD calculations**
+- [ ] Trend analysis calculates averages correctly (native bigint SMA)
+- [ ] Standard deviation uses pure bigint implementation (no external dependency)
 - [ ] Regime detection classifies correctly
 - [ ] Entry signals generated when conditions met
 - [ ] Exit signals generated when conditions met
