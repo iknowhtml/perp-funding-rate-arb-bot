@@ -18,6 +18,8 @@ description: Create, implement, and manage development plans. Use Opus 4.6 for p
 
 Use for analyzing requirements, researching codebase patterns, and documenting implementation context.
 
+Analyze the tasks and determine what can be done in parallel with subagents. Perform in parallel where possible.
+
 ### Context Checklist
 
 Before handing off to Composer, ensure the plan includes:
