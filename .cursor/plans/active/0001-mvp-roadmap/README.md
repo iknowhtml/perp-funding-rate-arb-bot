@@ -419,24 +419,24 @@ drizzle-kit, vitest, tsx, typescript, @biomejs/biome
 
 | ADR | Title | Status |
 |-----|-------|--------|
-| [ADR-0001](../../../../../adrs/0001-bot-architecture.md) | Bot Architecture | Accepted |
-| [ADR-0002](../../../../../adrs/0002-hexagonal-inspired-architecture.md) | Hexagonal-Inspired Architecture | Accepted |
-| [ADR-0003](../../../../../adrs/0003-validation-strategy.md) | Validation Strategy (Valibot) | Accepted |
-| [ADR-0004](../../../../../adrs/0004-backend-framework-hono.md) | Backend Framework (Hono) | Accepted |
-| [ADR-0005](../../../../../adrs/0005-database-strategy.md) | Database Strategy | Accepted |
-| [ADR-0006](../../../../../adrs/0006-drizzle-orm.md) | Drizzle ORM | Accepted |
-| [ADR-0007](../../../../../adrs/0007-infrastructure-flyio.md) | Infrastructure (Fly.io) | Accepted |
-| [ADR-0008](../../../../../adrs/0008-monitoring-observability.md) | Monitoring & Observability | Accepted |
-| [ADR-0009](../../../../../adrs/0009-dev-tooling.md) | Dev Tooling | Accepted |
-| [ADR-0010](../../../../../adrs/0010-exchange-adapters.md) | Exchange Adapters | Accepted |
-| [ADR-0011](../../../../../adrs/0011-exchange-rate-limiting.md) | Exchange Rate Limiting | Accepted |
-| [ADR-0012](../../../../../adrs/0012-state-machines.md) | State Machines | Accepted |
-| [ADR-0013](../../../../../adrs/0013-risk-management.md) | Risk Management Engine | Accepted |
-| [ADR-0014](../../../../../adrs/0014-funding-rate-strategy.md) | Funding Rate Strategy | Accepted |
-| [ADR-0015](../../../../../adrs/0015-execution-safety-slippage.md) | Execution Safety & Slippage | Accepted |
-| [ADR-0016](../../../../../adrs/0016-backtesting-simulation.md) | Backtesting & Simulation | Accepted |
-| [ADR-0017](../../../../../adrs/0017-task-scheduler.md) | Task Scheduler | Accepted |
-| [ADR-0018](../../../../../adrs/0018-serial-execution-queue.md) | Serial Execution Queue | Accepted |
+| [ADR-0001](../../../../adrs/0001-bot-architecture.md) | Bot Architecture | Accepted |
+| [ADR-0002](../../../../adrs/0002-hexagonal-inspired-architecture.md) | Hexagonal-Inspired Architecture | Accepted |
+| [ADR-0003](../../../../adrs/0003-validation-strategy.md) | Validation Strategy (Valibot) | Accepted |
+| [ADR-0004](../../../../adrs/0004-backend-framework-hono.md) | Backend Framework (Hono) | Accepted |
+| [ADR-0005](../../../../adrs/0005-database-strategy.md) | Database Strategy | Accepted |
+| [ADR-0006](../../../../adrs/0006-drizzle-orm.md) | Drizzle ORM | Accepted |
+| [ADR-0007](../../../../adrs/0007-infrastructure-flyio.md) | Infrastructure (Fly.io) | Accepted |
+| [ADR-0008](../../../../adrs/0008-monitoring-observability.md) | Monitoring & Observability | Accepted |
+| [ADR-0009](../../../../adrs/0009-dev-tooling.md) | Dev Tooling | Accepted |
+| [ADR-0010](../../../../adrs/0010-exchange-adapters.md) | Exchange Adapters | Accepted |
+| [ADR-0011](../../../../adrs/0011-exchange-rate-limiting.md) | Exchange Rate Limiting | Accepted |
+| [ADR-0012](../../../../adrs/0012-state-machines.md) | State Machines | Accepted |
+| [ADR-0013](../../../../adrs/0013-risk-management.md) | Risk Management Engine | Accepted |
+| [ADR-0014](../../../../adrs/0014-funding-rate-strategy.md) | Funding Rate Strategy | Accepted |
+| [ADR-0015](../../../../adrs/0015-execution-safety-slippage.md) | Execution Safety & Slippage | Accepted |
+| [ADR-0016](../../../../adrs/0016-backtesting-simulation.md) | Backtesting & Simulation | Accepted |
+| [ADR-0017](../../../../adrs/0017-task-scheduler.md) | Task Scheduler | Accepted |
+| [ADR-0018](../../../../adrs/0018-serial-execution-queue.md) | Serial Execution Queue | Accepted |
 
 ### External Documentation
 - [Drizzle ORM](https://orm.drizzle.team/)

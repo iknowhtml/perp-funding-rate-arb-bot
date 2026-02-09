@@ -34,7 +34,7 @@ Implement production deployment infrastructure using:
 - Fly.io for hosting
 - Automated database migrations on startup
 
-Reference: [ADR-0007: Infrastructure — Fly.io](../../../../adrs/0007-infrastructure-flyio.md)
+Reference: [ADR-0007: Infrastructure — Fly.io](../../../../../adrs/0007-infrastructure-flyio.md)
 
 ## Tasks
 
@@ -368,4 +368,4 @@ jobs:
 ## References
 
 - [MVP Roadmap](../README.md)
-- [ADR-0007: Infrastructure — Fly.io](../../../../adrs/0007-infrastructure-flyio.md)
+- [ADR-0007: Infrastructure — Fly.io](../../../../../adrs/0007-infrastructure-flyio.md)

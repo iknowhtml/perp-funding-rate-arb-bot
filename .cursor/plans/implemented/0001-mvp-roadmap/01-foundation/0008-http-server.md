@@ -14,7 +14,7 @@ todos:
 isProject: false
 ---
 
-> **Note**: This plan is part of Phase 1 (Foundation) in [MVP Roadmap](../../active/0001-mvp-roadmap/README.md).
+> **Note**: This plan is part of Phase 1 (Foundation) in [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md).
 
 # HTTP Server
 
@@ -195,7 +195,7 @@ src/server/
 
 ## References
 
-- [MVP Roadmap](../README.md)
-- [ADR-0004: Backend Framework Hono](../../../../adrs/0004-backend-framework-hono.md)
-- [ADR-0008: Monitoring Observability](../../../../adrs/0008-monitoring-observability.md)
+- [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md)
+- [ADR-0004: Backend Framework Hono](../../../../../adrs/0004-backend-framework-hono.md)
+- [ADR-0008: Monitoring Observability](../../../../../adrs/0008-monitoring-observability.md)
 - [Hono Documentation](https://hono.dev/)

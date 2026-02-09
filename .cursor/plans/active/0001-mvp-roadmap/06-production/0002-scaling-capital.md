@@ -292,5 +292,5 @@ Target metrics for full production capital ($300K):
 ## References
 
 - [MVP Roadmap](../README.md)
-- [ADR-0013: Risk Management Engine](../../../../adrs/0013-risk-management.md)
-- [ADR-0015: Execution Safety & Slippage](../../../../adrs/0015-execution-safety-slippage.md)
+- [ADR-0013: Risk Management Engine](../../../../../adrs/0013-risk-management.md)
+- [ADR-0015: Execution Safety & Slippage](../../../../../adrs/0015-execution-safety-slippage.md)

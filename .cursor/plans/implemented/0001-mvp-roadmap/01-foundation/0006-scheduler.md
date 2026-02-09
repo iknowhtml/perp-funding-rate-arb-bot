@@ -20,7 +20,7 @@ todos:
 isProject: false
 ---
 
-> **Note**: This plan is part of Phase 1 (Foundation) in [MVP Roadmap](../../active/0001-mvp-roadmap/README.md).
+> **Note**: This plan is part of Phase 1 (Foundation) in [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md).
 
 # Scheduler
 
@@ -28,7 +28,7 @@ isProject: false
 
 Implement a robust task scheduler that supports interval-based execution, graceful cancellation, cleanup, and error handling with retry logic. This will be used for periodic tasks like evaluation loops and reconciliation.
 
-**Decision**: Custom implementation using Node.js `setInterval` with coordination layer for concurrency and retries. See [ADR-0017: Task Scheduler Implementation](../../../../adrs/0017-task-scheduler.md) for rationale.
+**Decision**: Custom implementation using Node.js `setInterval` with coordination layer for concurrency and retries. See [ADR-0017: Task Scheduler Implementation](../../../../../adrs/0017-task-scheduler.md) for rationale.
 
 ## Tasks
 
@@ -192,6 +192,6 @@ src/worker/
 
 ## References
 
-- [MVP Roadmap](../README.md)
-- [ADR-0001: Bot Architecture](../../../../adrs/0001-bot-architecture.md)
-- [ADR-0017: Task Scheduler Implementation](../../../../adrs/0017-task-scheduler.md)
+- [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md)
+- [ADR-0001: Bot Architecture](../../../../../adrs/0001-bot-architecture.md)
+- [ADR-0017: Task Scheduler Implementation](../../../../../adrs/0017-task-scheduler.md)

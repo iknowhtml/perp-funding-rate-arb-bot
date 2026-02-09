@@ -14,7 +14,7 @@ todos:
 isProject: false
 ---
 
-> **Note**: This plan is part of Phase 1 (Foundation) in [MVP Roadmap](../../active/0001-mvp-roadmap/README.md).
+> **Note**: This plan is part of Phase 1 (Foundation) in [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md).
 
 # Logging
 
@@ -221,6 +221,6 @@ src/lib/logger/
 
 ## References
 
-- [MVP Roadmap](../README.md)
-- [ADR-0008: Monitoring Observability](../../../../adrs/0008-monitoring-observability.md)
-- [CODE_GUIDELINES.md](../../../../CODE_GUIDELINES.md)
+- [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md)
+- [ADR-0008: Monitoring Observability](../../../../../adrs/0008-monitoring-observability.md)
+- [CODE_GUIDELINES.md](../../../../../CODE_GUIDELINES.md)

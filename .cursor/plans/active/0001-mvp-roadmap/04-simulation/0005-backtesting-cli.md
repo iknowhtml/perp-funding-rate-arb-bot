@@ -35,7 +35,7 @@ Implement a command-line interface for running backtests that:
 3. Exports trades and daily P&L to CSV
 4. Exports full results to JSON
 
-Reference: [ADR-0016: Backtesting & Simulation](../../../../adrs/0016-backtesting-simulation.md)
+Reference: [ADR-0016: Backtesting & Simulation](../../../../../adrs/0016-backtesting-simulation.md)
 
 ## Tasks
 
@@ -411,4 +411,4 @@ src/commands/backtest/
 ## References
 
 - [MVP Roadmap](../README.md)
-- [ADR-0016: Backtesting & Simulation](../../../../adrs/0016-backtesting-simulation.md)
+- [ADR-0016: Backtesting & Simulation](../../../../../adrs/0016-backtesting-simulation.md)

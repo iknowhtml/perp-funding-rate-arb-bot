@@ -38,7 +38,7 @@ Implement comprehensive Prometheus metrics for:
 - System health (latency, error rates)
 - Risk (position size, margin utilization, liquidation distance)
 
-Reference: [ADR-0008: Monitoring & Observability](../../../../adrs/0008-monitoring-observability.md)
+Reference: [ADR-0008: Monitoring & Observability](../../../../../adrs/0008-monitoring-observability.md)
 
 ## Tasks
 
@@ -468,4 +468,4 @@ src/lib/metrics/
 ## References
 
 - [MVP Roadmap](../README.md)
-- [ADR-0008: Monitoring & Observability](../../../../adrs/0008-monitoring-observability.md)
+- [ADR-0008: Monitoring & Observability](../../../../../adrs/0008-monitoring-observability.md)

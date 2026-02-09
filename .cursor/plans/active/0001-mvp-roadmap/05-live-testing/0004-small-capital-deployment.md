@@ -258,5 +258,5 @@ fly scale count 0
 ## References
 
 - [MVP Roadmap](../README.md)
-- [ADR-0013: Risk Management Engine](../../../../adrs/0013-risk-management.md)
-- [ADR-0008: Monitoring & Observability](../../../../adrs/0008-monitoring-observability.md)
+- [ADR-0013: Risk Management Engine](../../../../../adrs/0013-risk-management.md)
+- [ADR-0008: Monitoring & Observability](../../../../../adrs/0008-monitoring-observability.md)

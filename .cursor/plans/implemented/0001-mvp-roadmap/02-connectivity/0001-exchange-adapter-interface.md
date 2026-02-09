@@ -20,7 +20,7 @@ todos:
 isProject: false
 ---
 
-> **Note**: This plan is part of Phase 2 (Connectivity) in [MVP Roadmap](../../active/0001-mvp-roadmap/README.md).
+> **Note**: This plan is part of Phase 2 (Connectivity) in [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md).
 
 # Exchange Adapter Interface
 
@@ -159,7 +159,7 @@ No new dependencies required. Uses existing:
 
 ## References
 
-- [MVP Roadmap](../../active/0001-mvp-roadmap/README.md)
-- [ADR-0010: Exchange Adapters](../../../../adrs/0010-exchange-adapters.md)
-- [ADR-0002: Hexagonal-Inspired Architecture](../../../../adrs/0002-hexagonal-inspired-architecture.md)
-- [CODE_GUIDELINES.md](../../../../CODE_GUIDELINES.md) — BigInt for financial math
+- [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md)
+- [ADR-0010: Exchange Adapters](../../../../../adrs/0010-exchange-adapters.md)
+- [ADR-0002: Hexagonal-Inspired Architecture](../../../../../adrs/0002-hexagonal-inspired-architecture.md)
+- [CODE_GUIDELINES.md](../../../../../CODE_GUIDELINES.md) — BigInt for financial math

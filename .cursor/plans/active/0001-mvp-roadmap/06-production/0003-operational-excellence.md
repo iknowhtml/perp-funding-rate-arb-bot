@@ -525,4 +525,4 @@ docs/
 ## References
 
 - [MVP Roadmap](../README.md)
-- [ADR-0008: Monitoring & Observability](../../../../adrs/0008-monitoring-observability.md)
+- [ADR-0008: Monitoring & Observability](../../../../../adrs/0008-monitoring-observability.md)

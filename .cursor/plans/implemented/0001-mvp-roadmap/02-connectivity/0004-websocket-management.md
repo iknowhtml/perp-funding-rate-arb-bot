@@ -23,7 +23,7 @@ todos:
 isProject: false
 ---
 
-> **Note**: This plan is part of Phase 2 (Connectivity) in [MVP Roadmap](../../active/0001-mvp-roadmap/README.md).
+> **Note**: This plan is part of Phase 2 (Connectivity) in [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md).
 
 # WebSocket Management
 
@@ -719,7 +719,7 @@ const dedupeCache = new LRUCache<string, true>({
 
 ## References
 
-- [MVP Roadmap](../README.md)
-- [ADR-0001: Bot Architecture](../../../../adrs/0001-bot-architecture.md) — WebSocket data plane, reconciler pattern
-- [ADR-0009: Monitoring & Observability](../../../../adrs/0009-monitoring-observability.md) — Health checks
+- [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md)
+- [ADR-0001: Bot Architecture](../../../../../adrs/0001-bot-architecture.md) — WebSocket data plane, reconciler pattern
+- [ADR-0008: Monitoring & Observability](../../../../../adrs/0008-monitoring-observability.md) — Health checks
 - [Rate Limiter Backoff](../../../../src/lib/rate-limiter/backoff.ts) — Reuse for reconnection

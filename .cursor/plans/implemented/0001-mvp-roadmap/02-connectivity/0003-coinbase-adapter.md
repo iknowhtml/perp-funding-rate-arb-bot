@@ -32,7 +32,7 @@ todos:
 isProject: false
 ---
 
-> **Note**: This plan is part of Phase 2 (Connectivity) in [MVP Roadmap](../README.md).
+> **Note**: This plan is part of Phase 2 (Connectivity) in [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md).
 
 # Coinbase Advanced Trade Adapter
 
@@ -547,8 +547,8 @@ pnpm add @coinbase-sample/advanced-trade-sdk-ts
 
 ## References
 
-- [MVP Roadmap](../README.md)
-- [ADR-0010: Exchange Adapters](../../../../adrs/0010-exchange-adapters.md)
+- [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md)
+- [ADR-0010: Exchange Adapters](../../../../../adrs/0010-exchange-adapters.md)
 - [Coinbase Advanced Trade SDK](https://github.com/coinbase-samples/advanced-sdk-ts)
 - [Coinbase Advanced Trade API](https://docs.cdp.coinbase.com/advanced-trade/docs/welcome)
 - [Coinbase API Authentication](https://docs.cdp.coinbase.com/advanced-trade/docs/rest-api-auth) (ES256 JWT)

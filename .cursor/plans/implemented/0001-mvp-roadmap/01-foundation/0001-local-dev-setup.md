@@ -17,7 +17,7 @@ todos:
 isProject: false
 ---
 
-> **Note**: This plan is part of Phase 1 (Foundation) in [MVP Roadmap](../../active/0001-mvp-roadmap/README.md).
+> **Note**: This plan is part of Phase 1 (Foundation) in [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md).
 
 # Local Development Setup
 
@@ -156,6 +156,6 @@ pnpm db:down
 
 ## References
 
-- [MVP Roadmap](../../active/0001-mvp-roadmap/README.md)
-- [ADR-0005: Database Strategy](../../../../adrs/0005-database-strategy.md)
-- [ADR-0006: Drizzle ORM](../../../../adrs/0006-drizzle-orm.md)
+- [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md)
+- [ADR-0005: Database Strategy](../../../../../adrs/0005-database-strategy.md)
+- [ADR-0006: Drizzle ORM](../../../../../adrs/0006-drizzle-orm.md)

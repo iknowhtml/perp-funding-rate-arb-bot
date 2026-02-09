@@ -23,7 +23,7 @@ todos:
 isProject: false
 ---
 
-> **Note**: This plan is part of Phase 2 (Connectivity) in [MVP Roadmap](../../active/0001-mvp-roadmap/README.md).
+> **Note**: This plan is part of Phase 2 (Connectivity) in [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md).
 
 # Rate Limiting
 
@@ -185,8 +185,8 @@ Existing:
 
 ## References
 
-- [MVP Roadmap](../../active/0001-mvp-roadmap/README.md)
-- [ADR-0011: Exchange Rate Limiting](../../../../adrs/0011-exchange-rate-limiting.md)
+- [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md)
+- [ADR-0011: Exchange Rate Limiting](../../../../../adrs/0011-exchange-rate-limiting.md)
 - [Coinbase Rate Limits](https://docs.cdp.coinbase.com/advanced-trade/docs/rest-api-rate-limits)
 - [Binance Rate Limits](https://binance-docs.github.io/apidocs/futures/en/#limits)
 - [Cockatiel](https://github.com/connor4312/cockatiel)

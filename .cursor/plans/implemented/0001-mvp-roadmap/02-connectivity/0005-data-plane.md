@@ -23,7 +23,7 @@ todos:
 isProject: false
 ---
 
-> **Note**: This plan is part of Phase 2 (Connectivity) in [MVP Roadmap](../README.md).
+> **Note**: This plan is part of Phase 2 (Connectivity) in [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md).
 
 # Data Plane
 
@@ -267,6 +267,6 @@ src/worker/
 
 ## References
 
-- [MVP Roadmap](../README.md)
-- [ADR-0001: Bot Architecture](../../../../adrs/0001-bot-architecture.md) — Data plane design
-- [ADR-0008: Monitoring & Observability](../../../../adrs/0008-monitoring-observability.md) — Health status
+- [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md)
+- [ADR-0001: Bot Architecture](../../../../../adrs/0001-bot-architecture.md) — Data plane design
+- [ADR-0008: Monitoring & Observability](../../../../../adrs/0008-monitoring-observability.md) — Health status

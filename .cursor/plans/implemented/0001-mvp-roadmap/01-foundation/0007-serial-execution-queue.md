@@ -14,7 +14,7 @@ todos:
 isProject: false
 ---
 
-> **Note**: This plan is part of Phase 1 (Foundation) in [MVP Roadmap](../../active/0001-mvp-roadmap/README.md).
+> **Note**: This plan is part of Phase 1 (Foundation) in [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md).
 
 # Serial Execution Queue
 
@@ -22,7 +22,7 @@ isProject: false
 
 Implement a serial execution queue that ensures only one job runs at a time. This is critical for trading operations to prevent race conditions and ensure order execution happens sequentially.
 
-**Decision**: Use `p-queue` library with a thin wrapper for domain-specific job status tracking. See [ADR-0018](../../../../adrs/0018-serial-execution-queue.md) for rationale.
+**Decision**: Use `p-queue` library with a thin wrapper for domain-specific job status tracking. See [ADR-0018](../../../../../adrs/0018-serial-execution-queue.md) for rationale.
 
 ## Tasks
 
@@ -119,7 +119,7 @@ src/worker/
 
 ## References
 
-- [MVP Roadmap](../README.md)
-- [ADR-0001: Bot Architecture](../../../../adrs/0001-bot-architecture.md)
-- [ADR-0018: Serial Execution Queue](../../../../adrs/0018-serial-execution-queue.md) - Decision to use p-queue
-- [ADR-0017: Task Scheduler](../../../../adrs/0017-task-scheduler.md) - Periodic tasks (different use case)
+- [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md)
+- [ADR-0001: Bot Architecture](../../../../../adrs/0001-bot-architecture.md)
+- [ADR-0018: Serial Execution Queue](../../../../../adrs/0018-serial-execution-queue.md) - Decision to use p-queue
+- [ADR-0017: Task Scheduler](../../../../../adrs/0017-task-scheduler.md) - Periodic tasks (different use case)
