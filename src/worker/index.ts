@@ -16,6 +16,12 @@ export {
 } from "./freshness";
 
 export {
+  startWorker,
+  type StartWorkerConfig,
+  type WorkerHandle,
+} from "./start-worker";
+
+export {
   createStateStore,
   type BotState,
   type StateStore,

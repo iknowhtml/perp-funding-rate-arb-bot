@@ -250,9 +250,7 @@ describe("createDataPlane", () => {
       // Wait for initial poll to complete
       await vi.runOnlyPendingTimersAsync();
 
-      expect(mockLogger.error).toHaveBeenCalledWith("Funding rate poll failed", {
-        error: expect.any(Error),
-      });
+      expect(mockLogger.error).toHaveBeenCalledWith("Funding rate poll failed", expect.any(Error));
     });
 
     it("should not start if already running", async () => {
