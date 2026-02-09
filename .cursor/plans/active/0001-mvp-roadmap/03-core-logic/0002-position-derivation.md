@@ -34,7 +34,7 @@ Implement position state derivation from account data. The position is not store
 - Recent fills since last fetch
 - Reconciler corrections
 
-Reference: [ADR-0001: Bot Architecture](../../../../../adrs/0001-bot-architecture.md)
+Reference: [ADR-0001: Bot Architecture](../../../../adrs/0001-bot-architecture.md)
 
 ## Tasks
 
