@@ -51,6 +51,13 @@ export {
   tickerSchema,
 } from "./types";
 
+// Factory function
+export { createExchangeAdapter } from "./factory";
+
+// Config validation
+export { AdapterConfigSchema, isAdapterConfig, parseAdapterConfig } from "./config";
+export type { AdapterConfig } from "./config";
+
 // Exchange-specific rate limit configurations
 export { COINBASE_RATE_LIMITS } from "./coinbase";
 export {
@@ -59,3 +66,9 @@ export {
   getBinanceEndpointWeight,
 } from "./binance";
 export { BYBIT_RATE_LIMITS } from "./bybit";
+
+// Adapter factory functions
+export { createCoinbaseAdapter } from "./coinbase";
+export type { CoinbaseAdapterConfig } from "./coinbase";
+export { createPaperAdapter } from "./paper";
+export type { PaperAdapterConfig } from "./paper";

@@ -4,19 +4,19 @@ overview: Create factory function for instantiating exchange adapters based on c
 todos:
   - id: factory-function
     content: Implement createExchangeAdapter factory function
-    status: pending
+    status: completed
   - id: config-validation
     content: Add Valibot schemas for adapter configuration
-    status: pending
+    status: completed
   - id: paper-adapter-stub
     content: Create paper trading adapter stub (full implementation in Phase 4)
-    status: pending
+    status: completed
   - id: tests
     content: Add unit tests for factory function
-    status: pending
+    status: completed
   - id: lifecycle-management
     content: Move plan to implemented/ directory after completion (update todos, check validation boxes, update roadmap link, move file, delete from active/)
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -227,14 +227,14 @@ No new dependencies required.
 
 ## Validation
 
-- [ ] Factory creates correct adapter type
-- [ ] Configuration validation rejects invalid configs
-- [ ] Missing required fields throw appropriate errors
-- [ ] Paper adapter initializes with correct balances
-- [ ] Unit tests pass
+- [x] Factory creates correct adapter type
+- [x] Configuration validation rejects invalid configs
+- [x] Missing required fields throw appropriate errors
+- [x] Paper adapter initializes with correct balances
+- [x] Unit tests pass
 
 ## References
 
-- [MVP Roadmap](../README.md)
+- [MVP Roadmap](../../active/0001-mvp-roadmap/README.md)
 - [ADR-0010: Exchange Adapters](../../../../adrs/0010-exchange-adapters.md)
 - [ADR-0002: Hexagonal-Inspired Architecture](../../../../adrs/0002-hexagonal-inspired-architecture.md) — Ports and adapters

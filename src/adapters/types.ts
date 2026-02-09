@@ -7,7 +7,10 @@
 import * as v from "valibot";
 
 // Helper schemas
-const bigintSchema = v.custom<bigint>((input) => typeof input === "bigint", "Expected bigint");
+export const bigintSchema = v.custom<bigint>(
+  (input) => typeof input === "bigint",
+  "Expected bigint",
+);
 
 const dateSchema = v.custom<Date>((input) => input instanceof Date, "Expected Date");
 
