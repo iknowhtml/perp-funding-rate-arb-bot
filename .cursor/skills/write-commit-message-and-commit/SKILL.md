@@ -1,20 +1,20 @@
 ---
-name: write-commit-message
+name: write-commit-message-and-commit
 description: Generate commit messages from staged changes using conventional commit format. Use when the user asks to write a commit message, create a commit, or draft commit content.
 ---
 
 # Write Commit Message
 
-Generate a commit message from staged changes, following conventional commit conventions and the project's established patterns.
+Generate a commit message based on changes made to the codebase, following conventional commit conventions and the project's established patterns. If the code changes are plan implementations, review the plan and the code changes, then create a commit with the generated commit message. Otherwise take a look at the code changes and create a commit message based on the changes.
 
 ## Workflow
 
-1. **Gather context** (run in parallel):
+1. **Gather context** (run in parallel if code changes are not plan implementations):
    - `git status --short` — list staged files
    - `git diff --cached --stat` — changed files summary
    - `git diff --cached` — full diff for understanding scope
 
-2. **Classify the change** based on the diff content. Choose the most specific type.
+2. **Classify the change** based on the diff content. Choose the most specific type. If the code changes are plan implementations, review the plan and the code changes, then classify the change based on the plan. Otherwise take a look at the code changes and classify the change based on the changes.
 
 3. **Write the commit subject** (conventional commit format, max 50-72 characters).
 
@@ -34,9 +34,9 @@ Generate a commit message from staged changes, following conventional commit con
 
 - **Max 50 characters** (preferred) or **72 characters** (hard limit)
 - Use imperative mood ("Add", "Fix", "Refactor" — not "Added", "Fixes")
-- Lowercase after the colon (no capital first letter)
+- Capitalize the first letter of the subject line after the colon
 - No trailing period
-- Complete sentence describing what the commit does
+- Complete sentence describing what the commit does, focusing on what, not how
 
 ### Commit Types
 
@@ -88,7 +88,7 @@ These are based on the project's actual commit history.
 
 **Commit message:**
 ```
-feat(adapters): implement adapter factory
+feat: Implement adapter factory
 
 Add factory function for creating exchange adapters from config.
 Enables runtime adapter selection by exchange name.
@@ -102,7 +102,7 @@ Enables runtime adapter selection by exchange name.
 
 **Commit message:**
 ```
-refactor: replace magic numbers with constants for decimal handling
+refactor: Replace magic numbers with constants for decimal handling
 
 Extract magic numbers to named constants (BPS_PER_UNIT, baseUnitScale()).
 Make decimal scaling asset-agnostic instead of hardcoded to 8 decimals.
@@ -116,7 +116,7 @@ Enables correct handling across assets (BTC=8, ETH=18, USDC=6, etc.).
 
 **Commit message:**
 ```
-fix(worker): prevent terminal error when called with no commands
+fix(worker): Prevent terminal error when called with no commands
 
 When running the CLI without arguments, help was displayed but the
 command exited with code 1, showing a "Command failed" error. Now exits
@@ -130,7 +130,7 @@ with code 0 when help is displayed, preventing the false error message.
 
 **Commit message:**
 ```
-docs(plans): update position derivation for asset-agnostic handling
+docs: Update position derivation plan for asset-agnostic handling
 
 Update plan to parameterize decimal scaling per asset instead of
 hardcoding 8 decimals. Replace BASE_UNIT_SCALE constant with
@@ -146,7 +146,7 @@ baseUnitScale(decimals) helper function.
 
 **Commit message:**
 ```
-refactor: implement asset adapter pattern for amount handling
+refactor: Implement asset adapter pattern for amount handling
 
 Replace ChainAdapter.amountAdapter property with getAmountAdapter(asset)
 factory method to support multi-asset transactions with correct decimal
@@ -160,7 +160,7 @@ handling per asset (e.g., USDC 6 decimals vs ETH 18 decimals).
 
 **Commit message:**
 ```
-test: fix failing tests
+test: Fix failing tests
 
 Update test assertions to match updated normalizer constants.
 ```
@@ -175,14 +175,15 @@ Update test assertions to match updated normalizer constants.
 ```
 chore: update dependencies
 
-Update @turnkey/sdk-server to ^5.0.2 and add hono for webhook server.
+Update dependencies to the latest versions.
 ```
 
 ## Best Practices
 
 1. **One logical change per commit** — if you have multiple unrelated changes, split into multiple commits
-2. **Be specific** — "fix: handle null balance" is better than "fix: bug"
-3. **Focus on what, not how** — "extract magic number to constant" not "create BPS_PER_UNIT variable"
+2. **Be specific** — "fix: Handle null balance" is better than "fix: bug"
+3. **Focus on what, not how** — "Extract magic number to constant" not "Create BPS_PER_UNIT variable"
 4. **Keep it concise** — if you need more than 3-4 lines in the body, consider splitting the commit
-5. **Use present tense** — "add feature" not "added feature"
+5. **Use present tense** — "Add feature" not "Added feature"
 6. **Reference related work** — mention ADRs, plans, or issues when relevant
+
