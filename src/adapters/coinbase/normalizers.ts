@@ -15,10 +15,13 @@ import {
   CoinbaseProductSchema,
 } from "./schemas";
 
+/** Number of basis points per unit (1 = 10000 bps) */
+const BPS_PER_UNIT = 10000;
+
 /** Parse decimal string to bigint basis points (1 bps = 0.0001 = 0.01%) */
 export const parseRateToBps = (rate: string): bigint => {
   const decimal = Number.parseFloat(rate);
-  return BigInt(Math.round(decimal * 10000)); // 0.0001 → 1n
+  return BigInt(Math.round(decimal * BPS_PER_UNIT)); // 0.0001 → 1n
 };
 
 /** Parse decimal string to bigint with given scale */

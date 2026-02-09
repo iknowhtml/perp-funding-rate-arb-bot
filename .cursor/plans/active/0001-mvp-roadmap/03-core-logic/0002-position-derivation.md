@@ -34,7 +34,7 @@ Implement position state derivation from account data. The position is not store
 - Recent fills since last fetch
 - Reconciler corrections
 
-Reference: [ADR-0001: Bot Architecture](../../../../adrs/0001-bot-architecture.md)
+Reference: [ADR-0001: Bot Architecture](../../../../../adrs/0001-bot-architecture.md)
 
 ## Tasks
 
@@ -105,9 +105,10 @@ export const derivePosition = (
   // 3. Apply pending fills
   const adjustedPosition = applyPendingFills(perpPosition, pendingFills);
   
-  // 4. Derive metrics
-  const notionalCents = calculateNotional(adjustedPosition, marketState.markPriceCents);
-  const unrealizedPnL = calculateUnrealizedPnL(adjustedPosition, marketState.markPriceCents);
+  // 4. Derive metrics (decimals comes from asset config, e.g. BTC=8, ETH=18, USDC=6)
+  const { decimals } = marketState;
+  const notionalCents = calculateNotional(adjustedPosition, marketState.markPriceCents, decimals);
+  const unrealizedPnL = calculateUnrealizedPnL(adjustedPosition, marketState.markPriceCents, decimals);
   
   return {
     open: adjustedPosition !== null && adjustedPosition.sizeCents > 0n,
@@ -119,21 +120,30 @@ export const derivePosition = (
 ### 3. Position Metrics Calculation
 
 ```typescript
+/** Compute 10^n as bigint for a given decimal count */
+export const baseUnitScale = (decimals: number): bigint => 10n ** BigInt(decimals);
+
+/** Basis points per unit (1 = 10000 bps) */
+const BPS_PER_UNIT = 10000n;
+
 export const calculateNotional = (
   position: ExchangePosition | null,
   markPriceCents: bigint,
+  decimals: number,
 ): bigint => {
   if (!position) return 0n;
-  return (position.sizeBase * markPriceCents) / 100000000n; // Adjust for decimals
+  return (position.sizeBase * markPriceCents) / baseUnitScale(decimals);
 };
 
 export const calculateUnrealizedPnL = (
   position: ExchangePosition | null,
   markPriceCents: bigint,
+  decimals: number,
 ): bigint => {
   if (!position) return 0n;
-  const entryValue = (position.sizeBase * position.entryPriceCents) / 100000000n;
-  const currentValue = (position.sizeBase * markPriceCents) / 100000000n;
+  const scale = baseUnitScale(decimals);
+  const entryValue = (position.sizeBase * position.entryPriceCents) / scale;
+  const currentValue = (position.sizeBase * markPriceCents) / scale;
   return position.side === "LONG" 
     ? currentValue - entryValue 
     : entryValue - currentValue;
@@ -143,8 +153,8 @@ export const calculateMarginUtilization = (
   marginUsedCents: bigint,
   equityCents: bigint,
 ): bigint => {
-  if (equityCents === 0n) return 10000n; // 100%
-  return (marginUsedCents * 10000n) / equityCents;
+  if (equityCents === 0n) return BPS_PER_UNIT; // 100%
+  return (marginUsedCents * BPS_PER_UNIT) / equityCents;
 };
 
 export const calculateLiquidationDistance = (
@@ -152,11 +162,11 @@ export const calculateLiquidationDistance = (
   liquidationPriceCents: bigint | null,
   side: "LONG" | "SHORT" | null,
 ): bigint => {
-  if (!liquidationPriceCents || !side) return 10000n; // 100% buffer
+  if (!liquidationPriceCents || !side) return BPS_PER_UNIT; // 100% buffer
   
   return side === "SHORT"
-    ? ((markPriceCents - liquidationPriceCents) * 10000n) / markPriceCents
-    : ((liquidationPriceCents - markPriceCents) * 10000n) / markPriceCents;
+    ? ((markPriceCents - liquidationPriceCents) * BPS_PER_UNIT) / markPriceCents
+    : ((liquidationPriceCents - markPriceCents) * BPS_PER_UNIT) / markPriceCents;
 };
 ```
 
@@ -186,7 +196,7 @@ export const reconcilePosition = (
   // Check size mismatch
   if (derivedPosition.perpQuantityBase !== (exchangePosition?.sizeBase ?? 0n)) {
     const diff = derivedPosition.perpQuantityBase - (exchangePosition?.sizeBase ?? 0n);
-    const diffBps = (diff * 10000n) / (derivedPosition.perpQuantityBase || 1n);
+    const diffBps = (diff * BPS_PER_UNIT) / (derivedPosition.perpQuantityBase || 1n);
     
     if (diffBps > tolerance.sizeBps || diffBps < -tolerance.sizeBps) {
       inconsistencies.push({
