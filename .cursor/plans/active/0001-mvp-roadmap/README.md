@@ -217,10 +217,11 @@ drizzle-kit, vitest, tsx, typescript, @biomejs/biome
   - [ ] Inconsistency detection
   - [ ] State correction logic
 
-- [ ] **Evaluation Loop** — [Active Plan](./03-core-logic/0007-evaluation-loop.md)
-  - [ ] 2-second evaluation tick (ADR-0001)
-  - [ ] Risk assessment → Strategy evaluation → Execution
-  - [ ] State health checks (stale data detection)
+- [x] **Evaluation Loop** — [Implemented Plan](../../implemented/0001-mvp-roadmap/03-core-logic/0007-evaluation-loop.md)
+  - [x] 2-second evaluation tick (ADR-0001)
+  - [x] Risk assessment → Strategy evaluation → Execution
+  - [x] State health checks (stale data response)
+  - [x] Startup sequence (initial reconciliation)
 
 ### Validation
 

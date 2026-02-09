@@ -4,11 +4,11 @@ A funding rate arbitrage bot that captures yield from perpetual futures funding 
 
 ## Status
 
-**Phase 3: Core Logic** — 17/27 plans implemented
+**Phase 3: Core Logic** — 7/7 plans implemented
 
 - ✅ **Phase 1: Foundation** (8/8 complete) — Infrastructure, database, logging, scheduler, queue, HTTP server
 - ✅ **Phase 2: Connectivity** (6/6 complete) — Exchange adapters, rate limiting, WebSocket management, data plane
-- 🚧 **Phase 3: Core Logic** (3/7 complete) — State machines, position derivation, risk engine implemented; strategy engine, execution engine, reconciler, evaluation loop pending
+- ✅ **Phase 3: Core Logic** (7/7 complete) — State machines, position derivation, risk engine, strategy engine, execution engine, reconciler, evaluation loop
 - ⏳ **Phase 4: Simulation** (0/5) — Paper trading adapter exists; backtesting framework pending
 - ⏳ **Phase 5: Live Testing** (0/4) — Not started
 - ⏳ **Phase 6: Production** (0/3) — Not started
@@ -45,7 +45,7 @@ The bot uses a single-process, event-driven architecture with in-memory state:
 ┌───────┴────────┐  ┌────────┴────────┐  ┌───────────────┐
 │  DATA PLANE    │  │   RECONCILER    │  │ DECISION LOOP │
 │  (WS + REST)   │  │   (REST poll)   │  │  (evaluate)   │
-│  ✅ IMPLEMENTED │  │  🚧 PARTIAL     │  │  ⏳ PENDING    │
+│  ✅ IMPLEMENTED │  │  ✅ IMPLEMENTED  │  │  ✅ IMPLEMENTED │
 └────────────────┘  └─────────────────┘  └───────┬───────┘
                                                  │
                                                  ▼
@@ -60,14 +60,13 @@ The bot uses a single-process, event-driven architecture with in-memory state:
 - Data plane (WebSocket + REST) with health monitoring
 - In-memory state store with position derivation
 - Risk evaluation engine
-- State machines (hedge and order lifecycle)
-- Serial execution queue
-
-**Pending components:**
 - Strategy engine (entry/exit signal generation)
-- Execution engine (order placement logic)
-- Evaluation loop (main decision pipeline)
-- Full reconciler integration
+- State machines (hedge and order lifecycle)
+- Execution engine (enter/exit hedge, fill confirmation, slippage validation)
+- Reconciler (periodic reconciliation with exchange)
+- Evaluation loop (health → risk → strategy → execution queue, 2s tick)
+- Serial execution queue
+- Startup sequence (initial reconciliation before evaluation)
 
 See [`adrs/`](adrs/) for detailed architecture decisions.
 
@@ -273,6 +272,11 @@ src/
 │   │   ├── evaluate.ts        # Risk evaluation logic
 │   │   ├── position-sizing.ts  # Position sizing calculations
 │   │   └── emergency.ts       # Emergency exit logic
+│   ├── strategy/              # Funding rate strategy (entry/exit signals)
+│   │   ├── evaluate.ts        # Strategy evaluation and trading intent
+│   │   ├── entry-signal.ts    # Entry signal generation
+│   │   ├── exit-signal.ts     # Exit signal generation
+│   │   └── trend-analysis.ts  # Funding rate trend analysis
 │   └── state/                 # State machines
 │       ├── hedge-state.ts     # Hedge state machine
 │       ├── order-state.ts     # Order state machine
@@ -306,7 +310,22 @@ src/
     ├── data-plane.ts          # Data plane (WebSocket + REST)
     ├── state.ts               # In-memory state store
     ├── freshness.ts           # State freshness checks
-    ├── start-worker.ts        # Worker startup
+    ├── start-worker.ts        # Worker startup and evaluation loop
+    ├── evaluator/             # Evaluation pipeline
+    │   ├── health.ts          # Health evaluation (stale data response)
+    │   ├── evaluate.ts        # Main pipeline (health → risk → strategy → queue)
+    │   ├── startup.ts         # Startup sequence (initial reconciliation)
+    │   └── index.ts
+    ├── execution/             # Execution engine (enter/exit hedge)
+    │   ├── enter-hedge.ts     # Perp short + spot buy
+    │   ├── exit-hedge.ts      # Spot sell + perp close
+    │   ├── fill-confirmation.ts
+    │   ├── slippage.ts        # Slippage estimation and validation
+    │   ├── drift.ts           # Hedge drift detection and correction
+    │   └── types.ts
+    ├── reconciler/            # State reconciliation with exchange
+    │   ├── reconcile.ts      # Fetch truth and correct drift
+    │   └── types.ts
     └── websocket/             # WebSocket management
         ├── websocket.ts       # Connection manager with reconnection
         ├── message-queue.ts   # Bounded inbound message queue

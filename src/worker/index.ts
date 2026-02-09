@@ -3,6 +3,16 @@
  */
 
 export {
+  evaluate,
+  runStartupSequence,
+  type EvaluatorDeps,
+  type HealthAction,
+  type HealthResponse,
+  type HealthSnapshot,
+  type StartupDeps,
+} from "./evaluator";
+
+export {
   createDataPlane,
   type DataPlane,
   type DataPlaneConfig,
