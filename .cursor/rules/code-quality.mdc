@@ -48,8 +48,40 @@ After adding or modifying TypeScript code:
 
 **MANDATORY**: After generating any code, you MUST:
 1. **Remove all type casts** (`as Type`) - use type guards or Valibot validation instead
-2. **Run code review** using the code-reviewer subagent before considering the task complete
-3. **Fix all violations** before marking the task as done
+2. **Remove unnecessary code** - delete duplicate definitions, unused imports, and old implementations after refactoring
+3. **Run code review** using the code-reviewer subagent before considering the task complete
+4. **Fix all violations** before marking the task as done
+
+## CRITICAL: After Refactoring
+
+**ALWAYS clean up unnecessary code after refactoring:**
+
+1. **Remove old implementations:**
+   - Delete custom implementations when replacing with built-in/library functions
+   - Remove duplicate schema definitions when consolidating to shared utilities
+   - Remove unused helper functions and variables
+
+2. **Clean up imports:**
+   - Remove unused imports (Biome will flag these)
+   - Update import paths when moving to shared libraries
+   - Consolidate imports from the same module
+
+3. **Verify cleanup:**
+   ```bash
+   # Check for duplicate definitions
+   grep -r "const dateSchema\|const bigintSchema" src/ | grep -v "node_modules" | grep -v ".test.ts"
+   
+   # Check for unused imports
+   pnpm biome check .
+   
+   # Run tests to ensure nothing broke
+   pnpm test:run
+   ```
+
+4. **Update documentation:**
+   - Update rules that reference old patterns
+   - Update import examples in comments
+   - Update ADRs if architectural decisions changed
 
 ## 🚨 CRITICAL: After Completing a Plan - MANDATORY MOVEMENT 🚨
 

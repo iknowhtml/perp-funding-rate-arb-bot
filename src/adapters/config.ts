@@ -6,8 +6,6 @@
 
 import * as v from "valibot";
 
-import { bigintSchema } from "./types";
-
 export const AdapterConfigSchema = v.variant("exchange", [
   v.object({
     exchange: v.literal("coinbase"),
@@ -26,7 +24,7 @@ export const AdapterConfigSchema = v.variant("exchange", [
   }),
   v.object({
     exchange: v.literal("paper"),
-    initialBalances: v.optional(v.record(v.string(), bigintSchema)),
+    initialBalances: v.optional(v.record(v.string(), v.bigint())),
   }),
 ]);
 

@@ -6,8 +6,6 @@
 
 import * as v from "valibot";
 
-import { bigintSchema } from "@/adapters/types";
-
 // --- Risk Levels and Actions ---
 
 /**
@@ -118,8 +116,6 @@ export type AlertCallback = (action: EmergencyAction) => Promise<void>;
 
 // --- Valibot Schemas ---
 
-const dateSchema = v.custom<Date>((input) => input instanceof Date, "Expected Date");
-
 export const riskLevelSchema = v.picklist([
   "SAFE",
   "CAUTION",
@@ -131,12 +127,12 @@ export const riskLevelSchema = v.picklist([
 export const riskActionSchema = v.picklist(["ALLOW", "PAUSE", "EXIT", "BLOCK"] as const);
 
 export const riskMetricsSchema = v.object({
-  notionalQuote: bigintSchema,
-  leverageBps: bigintSchema,
-  marginUtilizationBps: bigintSchema,
-  liquidationDistanceBps: bigintSchema,
-  dailyPnlQuote: bigintSchema,
-  drawdownBps: bigintSchema,
+  notionalQuote: v.bigint(),
+  leverageBps: v.bigint(),
+  marginUtilizationBps: v.bigint(),
+  liquidationDistanceBps: v.bigint(),
+  dailyPnlQuote: v.bigint(),
+  drawdownBps: v.bigint(),
 });
 
 export const riskAssessmentSchema = v.object({
@@ -155,7 +151,7 @@ export const emergencyActionTypeSchema = v.picklist([
 export const emergencyActionSchema = v.object({
   type: emergencyActionTypeSchema,
   reason: v.string(),
-  timestamp: dateSchema,
+  timestamp: v.date(),
 });
 
 // --- Type Guards ---

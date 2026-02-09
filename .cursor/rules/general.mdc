@@ -46,6 +46,63 @@ alwaysApply: true
 2. **Deterministic**: Logic should be testable and reproducible
 3. **Auditable**: Every action should be traceable
 4. **ADR-Driven**: Reference ADRs for architectural patterns
+5. **DRY (Don't Repeat Yourself)**: Always check for existing utilities before creating new ones
+6. **Clean Up After Refactoring**: Always remove unnecessary code, unused imports, and duplicate definitions after refactoring
+
+## Check for Existing Utilities
+
+**BEFORE creating any utility function, schema, or helper:**
+
+1. **Search the codebase** for similar functionality:
+   - Use `grep` to search for function names, schema names, or patterns
+   - Check `src/lib/` for shared utilities
+   - Check domain-specific directories for existing patterns
+
+2. **Check shared libraries:**
+   - **Schemas**: Use Valibot's built-in schemas directly (`v.bigint()`, `v.date()`, etc.) - no need for wrappers
+   - **Common types**: Check `src/adapters/types.ts` for shared type definitions
+   - **Utilities**: Check `src/lib/` for existing utility functions
+
+3. **If found**: Import and reuse the existing utility
+4. **If not found**: Create in appropriate shared location (`src/lib/` for utilities)
+   - **Note**: For Valibot schemas, use built-ins directly (`v.bigint()`, `v.date()`, etc.) - no wrappers needed
+
+**Common duplicates to avoid:**
+- `dateSchema` → Use `v.date()` directly from Valibot
+- `bigintSchema` → Use `v.bigint()` directly from Valibot
+- Date parsing/formatting → Check `src/lib/` for existing utilities
+- Math functions → Check for existing implementations before creating new ones
+
+## Clean Up After Refactoring
+
+**ALWAYS remove unnecessary code after refactoring:**
+
+1. **After replacing implementations:**
+   - Remove old custom implementations when using built-in/library functions
+   - Remove duplicate definitions when consolidating to shared utilities
+   - Remove unused imports and variables
+
+2. **After schema/library changes:**
+   - Use Valibot's built-in schemas directly (`v.date()`, `v.bigint()`) - no wrappers needed
+   - Remove old import paths when updating to use built-ins directly
+   - Verify no duplicate definitions remain
+
+3. **Verification steps:**
+   ```bash
+   # Check for duplicate definitions
+   grep -r "const dateSchema\|const bigintSchema" src/ | grep -v "node_modules"
+   
+   # Check for unused imports
+   pnpm biome check .  # Will flag unused imports
+   
+   # Run tests to ensure nothing broke
+   pnpm test:run
+   ```
+
+4. **Update documentation:**
+   - Update rules/docs that reference old patterns
+   - Update import examples in comments
+   - Update ADRs if architectural decisions changed
 
 ## TypeScript Rules
 

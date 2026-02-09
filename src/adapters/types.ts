@@ -6,14 +6,6 @@
 
 import * as v from "valibot";
 
-// Helper schemas
-export const bigintSchema = v.custom<bigint>(
-  (input) => typeof input === "bigint",
-  "Expected bigint",
-);
-
-const dateSchema = v.custom<Date>((input) => input instanceof Date, "Expected Date");
-
 // Enums
 export type OrderSide = "BUY" | "SELL";
 
@@ -143,9 +135,9 @@ export const positionSideSchema = v.picklist(["LONG", "SHORT"] as const);
 
 export const balanceSchema = v.object({
   asset: v.string(),
-  availableBase: bigintSchema,
-  heldBase: bigintSchema,
-  totalBase: bigintSchema,
+  availableBase: v.bigint(),
+  heldBase: v.bigint(),
+  totalBase: v.bigint(),
 });
 
 export const exchangeOrderSchema = v.object({
@@ -155,12 +147,12 @@ export const exchangeOrderSchema = v.object({
   side: orderSideSchema,
   type: orderTypeSchema,
   status: exchangeOrderStatusSchema,
-  quantityBase: bigintSchema,
-  filledQuantityBase: bigintSchema,
-  priceQuote: v.nullable(bigintSchema),
-  avgFillPriceQuote: v.nullable(bigintSchema),
-  createdAt: dateSchema,
-  updatedAt: dateSchema,
+  quantityBase: v.bigint(),
+  filledQuantityBase: v.bigint(),
+  priceQuote: v.nullable(v.bigint()),
+  avgFillPriceQuote: v.nullable(v.bigint()),
+  createdAt: v.date(),
+  updatedAt: v.date(),
 });
 
 export const fillSchema = v.object({
@@ -169,60 +161,60 @@ export const fillSchema = v.object({
   exchangeOrderId: v.string(),
   symbol: v.string(),
   side: orderSideSchema,
-  quantityBase: bigintSchema,
-  priceQuote: bigintSchema,
-  feeQuote: bigintSchema,
+  quantityBase: v.bigint(),
+  priceQuote: v.bigint(),
+  feeQuote: v.bigint(),
   feeAsset: v.string(),
-  timestamp: dateSchema,
+  timestamp: v.date(),
 });
 
 export const positionSchema = v.object({
   symbol: v.string(),
   side: positionSideSchema,
-  sizeBase: bigintSchema,
-  entryPriceQuote: bigintSchema,
-  markPriceQuote: bigintSchema,
-  liquidationPriceQuote: v.nullable(bigintSchema),
-  unrealizedPnlQuote: bigintSchema,
-  leverageBps: bigintSchema,
-  marginQuote: bigintSchema,
+  sizeBase: v.bigint(),
+  entryPriceQuote: v.bigint(),
+  markPriceQuote: v.bigint(),
+  liquidationPriceQuote: v.nullable(v.bigint()),
+  unrealizedPnlQuote: v.bigint(),
+  leverageBps: v.bigint(),
+  marginQuote: v.bigint(),
 });
 
 export const tickerSchema = v.object({
   symbol: v.string(),
-  bidPriceQuote: bigintSchema,
-  askPriceQuote: bigintSchema,
-  lastPriceQuote: bigintSchema,
-  volumeBase: bigintSchema,
-  timestamp: dateSchema,
+  bidPriceQuote: v.bigint(),
+  askPriceQuote: v.bigint(),
+  lastPriceQuote: v.bigint(),
+  volumeBase: v.bigint(),
+  timestamp: v.date(),
 });
 
 export const fundingRateSchema = v.object({
   symbol: v.string(),
-  rateBps: bigintSchema,
-  nextFundingTime: dateSchema,
-  timestamp: dateSchema,
+  rateBps: v.bigint(),
+  nextFundingTime: v.date(),
+  timestamp: v.date(),
 });
 
 export const orderBookLevelSchema = v.object({
-  priceQuote: bigintSchema,
-  quantityBase: bigintSchema,
+  priceQuote: v.bigint(),
+  quantityBase: v.bigint(),
 });
 
 export const orderBookSchema = v.object({
   symbol: v.string(),
   bids: v.array(orderBookLevelSchema),
   asks: v.array(orderBookLevelSchema),
-  timestamp: dateSchema,
+  timestamp: v.date(),
 });
 
 export const createOrderParamsSchema = v.object({
   symbol: v.string(),
   side: orderSideSchema,
   type: orderTypeSchema,
-  quantityBase: bigintSchema,
-  priceQuote: v.optional(bigintSchema),
-  stopPriceQuote: v.optional(bigintSchema),
+  quantityBase: v.bigint(),
+  priceQuote: v.optional(v.bigint()),
+  stopPriceQuote: v.optional(v.bigint()),
   timeInForce: v.optional(v.picklist(["GTC", "IOC", "FOK"] as const)),
   reduceOnly: v.optional(v.boolean()),
 });

@@ -6,9 +6,7 @@
 
 import * as v from "valibot";
 
-import { bigintSchema, positionSideSchema } from "@/adapters/types";
-
-const dateSchema = v.custom<Date>((input) => input instanceof Date, "Expected Date");
+import { positionSideSchema } from "@/adapters/types";
 
 /**
  * Source of position data.
@@ -99,28 +97,28 @@ export const inconsistencySeveritySchema = v.picklist(["warning", "critical"] as
 
 export const inconsistencySchema = v.object({
   field: v.string(),
-  expected: bigintSchema,
-  actual: bigintSchema,
+  expected: v.bigint(),
+  actual: v.bigint(),
   severity: inconsistencySeveritySchema,
 });
 
 export const derivedPositionSchema = v.object({
   open: v.boolean(),
   side: v.nullable(positionSideSchema),
-  spotQuantityBase: bigintSchema,
-  perpQuantityBase: bigintSchema,
-  notionalQuote: bigintSchema,
-  entryTime: v.nullable(dateSchema),
-  entryPriceQuote: v.nullable(bigintSchema),
-  entryFundingRateBps: v.nullable(bigintSchema),
-  markPriceQuote: bigintSchema,
-  unrealizedPnlQuote: bigintSchema,
-  fundingAccruedQuote: bigintSchema,
-  marginUsedQuote: bigintSchema,
-  marginBufferBps: bigintSchema,
-  liquidationPriceQuote: v.nullable(bigintSchema),
-  liquidationDistanceBps: bigintSchema,
-  lastUpdated: dateSchema,
+  spotQuantityBase: v.bigint(),
+  perpQuantityBase: v.bigint(),
+  notionalQuote: v.bigint(),
+  entryTime: v.nullable(v.date()),
+  entryPriceQuote: v.nullable(v.bigint()),
+  entryFundingRateBps: v.nullable(v.bigint()),
+  markPriceQuote: v.bigint(),
+  unrealizedPnlQuote: v.bigint(),
+  fundingAccruedQuote: v.bigint(),
+  marginUsedQuote: v.bigint(),
+  marginBufferBps: v.bigint(),
+  liquidationPriceQuote: v.nullable(v.bigint()),
+  liquidationDistanceBps: v.bigint(),
+  lastUpdated: v.date(),
   source: positionSourceSchema,
 });
 

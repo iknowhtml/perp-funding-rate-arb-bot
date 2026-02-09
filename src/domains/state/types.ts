@@ -6,8 +6,6 @@
 
 import * as v from "valibot";
 
-const dateSchema = v.custom<Date>((input) => input instanceof Date, "Expected Date");
-
 /**
  * Result type for state machine transitions.
  *
@@ -45,7 +43,7 @@ export const isTransitionOk = <T>(
  */
 export const stateTransitionSchema = v.object({
   id: v.string(),
-  timestamp: dateSchema,
+  timestamp: v.date(),
   entityType: v.picklist(["order", "hedge"] as const),
   entityId: v.string(),
   fromState: v.string(),

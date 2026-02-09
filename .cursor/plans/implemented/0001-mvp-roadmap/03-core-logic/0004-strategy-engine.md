@@ -4,29 +4,29 @@ overview: Implement funding rate analysis and strategy engine for entry/exit sig
 todos:
   - id: funding-rate-types
     content: Define funding rate types and configuration
-    status: pending
+    status: completed
   - id: trend-analysis
     content: Implement funding rate trend analysis (moving averages, volatility)
-    status: pending
+    status: completed
   - id: entry-signals
     content: Implement entry signal generation
-    status: pending
+    status: completed
   - id: exit-signals
     content: Implement exit signal generation
-    status: pending
+    status: completed
   - id: strategy-evaluation
     content: Implement main strategy evaluation function
-    status: pending
+    status: completed
   - id: tests
     content: Add unit tests for strategy engine
-    status: pending
+    status: completed
   - id: lifecycle-management
     content: Move plan to implemented/ directory after completion (update todos, check validation boxes, update roadmap link, move file, delete from active/)
-    status: pending
+    status: completed
 isProject: false
 ---
 
-> **Note**: This plan is part of Phase 3 (Core Logic) in [MVP Roadmap](../README.md).
+> **Note**: This plan is part of Phase 3 (Core Logic) in [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md).
 
 # Strategy Engine
 
@@ -333,13 +333,13 @@ pure bigint functions (see ADR-0014 for rationale).
 
 ## Validation
 
-- [ ] Trend analysis calculates averages correctly (native bigint SMA)
-- [ ] Standard deviation uses pure bigint implementation (no external dependency)
-- [ ] Regime detection classifies correctly
-- [ ] Entry signals generated when conditions met
-- [ ] Exit signals generated when conditions met
-- [ ] Strategy respects risk assessment
-- [ ] Unit tests pass
+- [x] Trend analysis calculates averages correctly (native bigint SMA)
+- [x] Standard deviation uses pure bigint implementation (no external dependency)
+- [x] Regime detection classifies correctly
+- [x] Entry signals generated when conditions met
+- [x] Exit signals generated when conditions met
+- [x] Strategy respects risk assessment
+- [x] Unit tests pass
 
 ## References
 
