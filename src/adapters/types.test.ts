@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   isBalance,
   isCreateOrderParams,
+  isExchangeOrder,
   isFill,
   isFundingRate,
-  isOrder,
   isOrderBook,
   isOrderBookLevel,
   isPosition,
@@ -32,7 +32,7 @@ describe("type guards", () => {
     });
   });
 
-  describe("isOrder", () => {
+  describe("isExchangeOrder", () => {
     it("should return true for valid order", () => {
       const order = {
         id: "order-123",
@@ -48,13 +48,13 @@ describe("type guards", () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      expect(isOrder(order)).toBe(true);
+      expect(isExchangeOrder(order)).toBe(true);
     });
 
     it("should return false for invalid order", () => {
-      expect(isOrder(null)).toBe(false);
-      expect(isOrder({})).toBe(false);
-      expect(isOrder({ id: "order-123" })).toBe(false);
+      expect(isExchangeOrder(null)).toBe(false);
+      expect(isExchangeOrder({})).toBe(false);
+      expect(isExchangeOrder({ id: "order-123" })).toBe(false);
     });
   });
 
