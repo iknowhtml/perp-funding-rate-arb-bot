@@ -4,7 +4,7 @@
 
 **All plans MUST include lifecycle management as a todo item.**
 
-When creating a new plan, use the template at `plans/PLAN_TEMPLATE.md` which includes:
+When creating a new plan, use the template at `.cursor/plans/PLAN_TEMPLATE.md` which includes:
 
 - Standard plan structure
 - **Lifecycle management todo** (`id: lifecycle-management`) that must be completed when finishing the plan
@@ -24,17 +24,17 @@ The lifecycle management todo ensures that moving plans to `implemented/` is par
 # 1. Update plan file: todos to completed, validation boxes [x], roadmap link
 
 # 2. Move plan:
-mkdir -p plans/implemented/<ROADMAP>/<PHASE>
-mv plans/active/<ROADMAP>/<PHASE>/<PLAN>.md \
-   plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md
+mkdir -p .cursor/plans/implemented/<ROADMAP>/<PHASE>
+mv .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md \
+   .cursor/plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md
 
 # 3. MANDATORY: Delete from active:
-test -f plans/active/<ROADMAP>/<PHASE>/<PLAN>.md && \
-  rm -f plans/active/<ROADMAP>/<PHASE>/<PLAN>.md || echo "OK"
+test -f .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md && \
+  rm -f .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md || echo "OK"
 
 # 4. Verify:
-test -f plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md && \
-  ! test -f plans/active/<ROADMAP>/<PHASE>/<PLAN>.md && \
+test -f .cursor/plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md && \
+  ! test -f .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md && \
   echo "SUCCESS" || echo "ERROR"
 ```
 
@@ -42,7 +42,7 @@ test -f plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md && \
 
 ## 🚨 ABSOLUTELY MANDATORY - NO EXCEPTIONS EVER 🚨
 
-**CRITICAL RULE**: When ANY plan from `plans/active/` is implemented, completed, or marked as done, you **MUST IMMEDIATELY** move it to `implemented/`.
+**CRITICAL RULE**: When ANY plan from `.cursor/plans/active/` is implemented, completed, or marked as done, you **MUST IMMEDIATELY** move it to `implemented/`.
 
 ### Trigger Phrases - Move Plan When User Says:
 
@@ -90,21 +90,21 @@ test -f plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md && \
 
 **STEP 1**: After `mv` command, IMMEDIATELY run:
 ```bash
-test -f plans/active/<path> && rm plans/active/<path> || echo "OK"
+test -f .cursor/plans/active/<path> && rm .cursor/plans/active/<path> || echo "OK"
 ```
 
 **STEP 2**: Verify deletion with:
 ```bash
-test -f plans/implemented/<path> && \
-  ! test -f plans/active/<path> && \
+test -f .cursor/plans/implemented/<path> && \
+  ! test -f .cursor/plans/active/<path> && \
   echo "SUCCESS: File only in implemented/" || \
-  (test -f plans/active/<path> && rm plans/active/<path> && echo "DELETED duplicate")
+  (test -f .cursor/plans/active/<path> && rm .cursor/plans/active/<path> && echo "DELETED duplicate")
 ```
 
 **STEP 3**: If file still exists in `active/` after `mv`, DELETE IT IMMEDIATELY:
 ```bash
 # This should never happen, but if it does, delete immediately:
-rm plans/active/<path>
+rm .cursor/plans/active/<path>
 ```
 
 ### Absolute Rules:
@@ -122,7 +122,7 @@ rm plans/active/<path>
 Plans follow a lifecycle with three states:
 
 ```
-plans/
+.cursor/plans/
 ├── active/              # Plans currently being worked on
 │   └── <roadmap-id>/
 │       └── <phase-id>/
@@ -150,8 +150,8 @@ plans/
 
 3. **Move the file** from `active/` to `implemented/` maintaining the exact directory structure
    ```bash
-   mv plans/active/<roadmap-id>/<phase-id>/<plan-id>.md \
-      plans/implemented/<roadmap-id>/<phase-id>/<plan-id>.md
+   mv .cursor/plans/active/<roadmap-id>/<phase-id>/<plan-id>.md \
+      .cursor/plans/implemented/<roadmap-id>/<phase-id>/<plan-id>.md
    ```
 
 4. **🚨 CRITICAL STEP - MANDATORY DELETION FROM ACTIVE/ 🚨**
@@ -159,14 +159,14 @@ plans/
    - **NO EXCEPTIONS** - even if `mv` should have removed it, verify and delete
    - **MANDATORY COMMAND** - run this immediately after `mv`:
      ```bash
-     test -f plans/active/<path> && rm plans/active/<path> || echo "OK"
+     test -f .cursor/plans/active/<path> && rm .cursor/plans/active/<path> || echo "OK"
      ```
    - **IF FILE STILL EXISTS IN ACTIVE**: Delete it immediately with `rm` command - this is a CRITICAL ERROR
    - The file should **ONLY** exist in `implemented/` after the move - NEVER in both locations
    - **VERIFY DELETION** - confirm file does NOT exist in `active/`:
      ```bash
-     ! test -f plans/active/<path> && echo "SUCCESS: File removed from active/" || \
-       (rm plans/active/<path> && echo "DELETED duplicate from active/")
+     ! test -f .cursor/plans/active/<path> && echo "SUCCESS: File removed from active/" || \
+       (rm .cursor/plans/active/<path> && echo "DELETED duplicate from active/")
      ```
 
 ## Example Workflow
@@ -175,31 +175,31 @@ After implementing `active/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.m
 
 ```bash
 # 1. Create directory structure
-mkdir -p plans/implemented/0001-mvp-roadmap/01-foundation
+mkdir -p .cursor/plans/implemented/0001-mvp-roadmap/01-foundation
 
 # 2. Copy and update the plan file (mark todos as completed)
 # 3. Move from active to implemented
-mv plans/active/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md \
-   plans/implemented/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md
+mv .cursor/plans/active/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md \
+   .cursor/plans/implemented/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md
 
 # 4. 🚨 MANDATORY: ALWAYS delete from active/ after moving - THIS IS CRITICAL 🚨
 # NO EXCEPTIONS - ALWAYS verify and delete if it still exists
 # The mv command should remove it, but NEVER trust - ALWAYS verify and delete
-test -f plans/active/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md && \
-  (rm plans/active/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md && \
+test -f .cursor/plans/active/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md && \
+  (rm .cursor/plans/active/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md && \
    echo "DELETED: File removed from active/") || \
   echo "OK: File correctly removed from active/"
 
 # 4b. MANDATORY VERIFICATION - File must NOT exist in active/
-if [ -f plans/active/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md ]; then
+if [ -f .cursor/plans/active/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md ]; then
   echo "ERROR: File STILL exists in active/ after deletion attempt - FORCING deletion"
-  rm -f plans/active/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md
+  rm -f .cursor/plans/active/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md
   echo "FORCE DELETED from active/"
 fi
 
 # 5. Verify final state - file should ONLY exist in implemented/
-test -f plans/implemented/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md && \
-  ! test -f plans/active/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md && \
+test -f .cursor/plans/implemented/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md && \
+  ! test -f .cursor/plans/active/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md && \
   echo "SUCCESS: Plan correctly moved" || \
   echo "ERROR: Plan file state is incorrect"
 ```
@@ -240,27 +240,27 @@ When moving a plan from `active/` to `implemented/`, update relative paths:
 
 2. **Create directory structure**:
    ```bash
-   mkdir -p plans/implemented/<roadmap-id>/<phase-id>
+   mkdir -p .cursor/plans/implemented/<roadmap-id>/<phase-id>
    ```
 
 3. **Move the file**:
    ```bash
-   mv plans/active/<roadmap-id>/<phase-id>/<plan-id>.md \
-      plans/implemented/<roadmap-id>/<phase-id>/<plan-id>.md
+   mv .cursor/plans/active/<roadmap-id>/<phase-id>/<plan-id>.md \
+      .cursor/plans/implemented/<roadmap-id>/<phase-id>/<plan-id>.md
    ```
 
 4. **MANDATORY: ALWAYS delete from active/ after moving**:
    ```bash
    # CRITICAL STEP - ALWAYS RUN THIS AFTER mv:
-   test -f plans/active/<path> && rm plans/active/<path> || echo "OK"
+   test -f .cursor/plans/active/<path> && rm .cursor/plans/active/<path> || echo "OK"
    ```
 
 5. **MANDATORY verification**:
    ```bash
-   test -f plans/implemented/<path> && \
-     ! test -f plans/active/<path> && \
+   test -f .cursor/plans/implemented/<path> && \
+     ! test -f .cursor/plans/active/<path> && \
      echo "SUCCESS: Plan moved correctly" || \
-     (test -f plans/active/<path> && rm plans/active/<path> && echo "DELETED duplicate")
+     (test -f .cursor/plans/active/<path> && rm .cursor/plans/active/<path> && echo "DELETED duplicate")
    ```
 
 **CRITICAL RULES:**
@@ -279,28 +279,28 @@ If a plan needs to be moved manually:
 PLAN_PATH="0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md"
 
 # Create directory in implemented
-mkdir -p "plans/implemented/$(dirname "$PLAN_PATH")"
+mkdir -p ".cursor/plans/implemented/$(dirname "$PLAN_PATH")"
 
 # Move the file (not copy - verify it's removed from active)
-mv "plans/active/$PLAN_PATH" "plans/implemented/$PLAN_PATH"
+mv ".cursor/plans/active/$PLAN_PATH" ".cursor/plans/implemented/$PLAN_PATH"
 
 # 🚨 CRITICAL: Verify the move and ENFORCE deletion from active 🚨
 # The file MUST NOT exist in active/ after moving - NO EXCEPTIONS
 # ALWAYS delete from active/ - even if mv should have removed it
-test -f "plans/active/$PLAN_PATH" && \
-  (rm "plans/active/$PLAN_PATH" && \
+test -f ".cursor/plans/active/$PLAN_PATH" && \
+  (rm ".cursor/plans/active/$PLAN_PATH" && \
    echo "DELETED: File removed from active/") || \
   echo "OK: File correctly removed from active/"
 
 # MANDATORY VERIFICATION - File must NOT exist in active/
-if [ -f "plans/active/$PLAN_PATH" ]; then
+if [ -f ".cursor/plans/active/$PLAN_PATH" ]; then
   echo "ERROR: File STILL exists in active/ - FORCING deletion"
-  rm -f "plans/active/$PLAN_PATH"
+  rm -f ".cursor/plans/active/$PLAN_PATH"
   echo "FORCE DELETED from active/"
 fi
 
 # Final verification - file should ONLY exist in implemented/
-if [ -f "plans/implemented/$PLAN_PATH" ] && [ ! -f "plans/active/$PLAN_PATH" ]; then
+if [ -f ".cursor/plans/implemented/$PLAN_PATH" ] && [ ! -f ".cursor/plans/active/$PLAN_PATH" ]; then
   echo "SUCCESS: Plan correctly moved to implemented/"
 else
   echo "ERROR: Plan file state is incorrect - investigate immediately"

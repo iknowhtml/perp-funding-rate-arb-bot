@@ -8,9 +8,9 @@ alwaysApply: true
 
 ## 🚨 FIRST: CHECK IF WORKING ON A PLAN 🚨
 
-**BEFORE doing anything else, check: Am I implementing a plan from `plans/active/`?**
+**BEFORE doing anything else, check: Am I implementing a plan from `.cursor/plans/active/`?**
 
-**When creating a new plan**, use the template at `plans/PLAN_TEMPLATE.md` which includes:
+**When creating a new plan**, use the template at `.cursor/plans/PLAN_TEMPLATE.md` which includes:
 - Standard plan structure
 - **Lifecycle management todo** (`id: lifecycle-management`) that must be completed
 - Proper frontmatter format
@@ -21,9 +21,9 @@ alwaysApply: true
 □ 1. Mark all todos as `status: completed` in plan frontmatter (including lifecycle-management)
 □ 2. Check all validation boxes `[x]` in plan
 □ 3. Update roadmap link to `../../active/<roadmap-id>/README.md`
-□ 4. mkdir -p plans/implemented/<roadmap-id>/<phase-id>
-□ 5. mv plans/active/<path> plans/implemented/<path>
-□ 6. test -f plans/active/<path> && rm -f plans/active/<path>
+□ 4. mkdir -p .cursor/plans/implemented/<roadmap-id>/<phase-id>
+□ 5. mv .cursor/plans/active/<path> .cursor/plans/implemented/<path>
+□ 6. test -f .cursor/plans/active/<path> && rm -f .cursor/plans/active/<path>
 □ 7. Verify: file ONLY in implemented/, NOT in active/
 ```
 
@@ -345,7 +345,7 @@ Run checks after:
 
 🚨 **ABSOLUTELY MANDATORY - NO EXCEPTIONS** 🚨
 
-**CRITICAL RULE**: When ANY plan from `plans/active/` is implemented, completed, or finished, you **MUST IMMEDIATELY** move it to `implemented/`.
+**CRITICAL RULE**: When ANY plan from `.cursor/plans/active/` is implemented, completed, or finished, you **MUST IMMEDIATELY** move it to `implemented/`.
 
 **THIS APPLIES WHENEVER:**
 - User asks to "implement" a plan
@@ -359,24 +359,24 @@ Run checks after:
 1. Update plan todos to `status: completed`
 2. Check all validation boxes `[x]`
 3. Update roadmap link to point to `../../active/<roadmap-id>/README.md`
-4. Create directory: `mkdir -p plans/implemented/<roadmap-id>/<phase-id>`
-5. Move file: `mv plans/active/<path> plans/implemented/<path>`
+4. Create directory: `mkdir -p .cursor/plans/implemented/<roadmap-id>/<phase-id>`
+5. Move file: `mv .cursor/plans/active/<path> .cursor/plans/implemented/<path>`
 6. **CRITICAL STEP**: **ALWAYS delete from `active/` immediately after moving**:
    ```bash
    # After mv, ALWAYS run:
-   test -f plans/active/<path> && rm plans/active/<path> || echo "OK"
+   test -f .cursor/plans/active/<path> && rm .cursor/plans/active/<path> || echo "OK"
    ```
 7. **MANDATORY verification**: File must ONLY exist in `implemented/`, NOT in `active/`
    ```bash
-   test -f plans/implemented/<path> && \
-     ! test -f plans/active/<path> && \
+   test -f .cursor/plans/implemented/<path> && \
+     ! test -f .cursor/plans/active/<path> && \
      echo "SUCCESS" || \
-     (test -f plans/active/<path> && rm plans/active/<path> && echo "DELETED duplicate")
+     (test -f .cursor/plans/active/<path> && rm .cursor/plans/active/<path> && echo "DELETED duplicate")
    ```
 8. **If file still exists in `active/` after move, DELETE IT IMMEDIATELY** - this is a critical error:
    ```bash
    # Force deletion if it still exists:
-   test -f plans/active/<path> && rm -f plans/active/<path> && echo "FORCE DELETED"
+   test -f .cursor/plans/active/<path> && rm -f .cursor/plans/active/<path> && echo "FORCE DELETED"
    ```
 
 **🚨 CRITICAL REMINDER: File MUST be removed from `active/` - NO EXCEPTIONS 🚨**
