@@ -11,6 +11,7 @@ import type { Env } from "@/lib/env";
 import type { Logger } from "@/lib/logger";
 
 import { createDataPlane } from "./data-plane";
+import { DEFAULT_RECONCILER_CONFIG, runReconcile } from "./reconciler";
 import { createStateStore } from "./state";
 
 /**
@@ -33,6 +34,7 @@ export interface WorkerHandle {
  * Default trading symbols to subscribe to.
  */
 const DEFAULT_SYMBOLS = ["BTC-USD"];
+const DEFAULT_PERP_SYMBOL = "BTC-USD";
 
 /**
  * Start the worker: create adapter, state store, data plane, and begin
@@ -63,8 +65,26 @@ export const startWorker = async (config: StartWorkerConfig): Promise<WorkerHand
 
   await dataPlane.start();
 
+  // Start reconciler on a periodic interval
+  const reconcilerConfig = {
+    ...DEFAULT_RECONCILER_CONFIG,
+    perpSymbol: DEFAULT_PERP_SYMBOL,
+  };
+
+  const reconcile = (): Promise<void> =>
+    runReconcile(adapter, stateStore, reconcilerConfig, logger).then(
+      () => undefined,
+      (err) =>
+        logger.error("Reconciliation failed", err instanceof Error ? err : new Error(String(err))),
+    );
+
+  const reconcileInterval = setInterval(() => {
+    void reconcile();
+  }, reconcilerConfig.intervalMs);
+
   return {
     shutdown: async (): Promise<void> => {
+      clearInterval(reconcileInterval);
       await dataPlane.stop();
       logger.info("Worker shut down");
     },

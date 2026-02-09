@@ -36,6 +36,15 @@ export {
 } from "./freshness";
 
 export {
+  DEFAULT_RECONCILER_CONFIG,
+  ReconcilerConfigSchema,
+  runReconcile,
+  type BalanceInconsistency,
+  type ReconcilerConfig,
+  type ReconcilerResult,
+} from "./reconciler";
+
+export {
   startWorker,
   type StartWorkerConfig,
   type WorkerHandle,

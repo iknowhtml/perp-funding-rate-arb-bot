@@ -4,25 +4,25 @@ overview: Implement periodic reconciliation with exchange REST API to correct st
 todos:
   - id: reconciler-types
     content: Define reconciler types and interfaces
-    status: pending
+    status: completed
   - id: fetch-truth
     content: Implement truth fetching from exchange REST API
-    status: pending
+    status: completed
   - id: inconsistency-detection
     content: Implement inconsistency detection logic
-    status: pending
+    status: completed
   - id: state-correction
     content: Implement state correction logic
-    status: pending
+    status: completed
   - id: scheduled-reconcile
     content: Integrate reconciler with scheduler (60s interval)
-    status: pending
+    status: completed
   - id: tests
     content: Add unit tests for reconciler
-    status: pending
+    status: completed
   - id: lifecycle-management
     content: Move plan to implemented/ directory after completion (update todos, check validation boxes, update roadmap link, move file, delete from active/)
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -312,13 +312,13 @@ No new dependencies required.
 
 ## Validation
 
-- [ ] Truth fetched correctly from REST API
-- [ ] Position inconsistencies detected
-- [ ] Balance inconsistencies detected
-- [ ] State corrected from REST truth
-- [ ] Critical inconsistencies trigger alerts
-- [ ] Reconciler runs on 60s schedule
-- [ ] Unit tests pass
+- [x] Truth fetched correctly from REST API
+- [x] Position inconsistencies detected
+- [x] Balance inconsistencies detected
+- [x] State corrected from REST truth
+- [x] Critical inconsistencies trigger alerts
+- [x] Reconciler runs on 60s schedule
+- [x] Unit tests pass
 
 ## References
 
