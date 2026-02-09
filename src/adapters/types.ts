@@ -19,7 +19,7 @@ export type OrderSide = "BUY" | "SELL";
 
 export type OrderType = "MARKET" | "LIMIT" | "STOP" | "STOP_LIMIT";
 
-export type OrderStatus =
+export type ExchangeOrderStatus =
   | "PENDING"
   | "OPEN"
   | "PARTIALLY_FILLED"
@@ -41,13 +41,13 @@ export interface Balance {
   totalBase: bigint; // Total balance
 }
 
-export interface Order {
+export interface ExchangeOrder {
   id: string;
   exchangeOrderId: string;
   symbol: string;
   side: OrderSide;
   type: OrderType;
-  status: OrderStatus;
+  status: ExchangeOrderStatus;
   quantityBase: bigint;
   filledQuantityBase: bigint;
   priceQuote: bigint | null; // null for market orders
@@ -129,7 +129,7 @@ export const orderSideSchema = v.picklist(["BUY", "SELL"] as const);
 
 export const orderTypeSchema = v.picklist(["MARKET", "LIMIT", "STOP", "STOP_LIMIT"] as const);
 
-export const orderStatusSchema = v.picklist([
+export const exchangeOrderStatusSchema = v.picklist([
   "PENDING",
   "OPEN",
   "PARTIALLY_FILLED",
@@ -148,13 +148,13 @@ export const balanceSchema = v.object({
   totalBase: bigintSchema,
 });
 
-export const orderSchema = v.object({
+export const exchangeOrderSchema = v.object({
   id: v.string(),
   exchangeOrderId: v.string(),
   symbol: v.string(),
   side: orderSideSchema,
   type: orderTypeSchema,
-  status: orderStatusSchema,
+  status: exchangeOrderStatusSchema,
   quantityBase: bigintSchema,
   filledQuantityBase: bigintSchema,
   priceQuote: v.nullable(bigintSchema),
@@ -230,7 +230,8 @@ export const createOrderParamsSchema = v.object({
 // Type Guards (using Valibot)
 export const isBalance = (value: unknown): value is Balance => v.is(balanceSchema, value);
 
-export const isOrder = (value: unknown): value is Order => v.is(orderSchema, value);
+export const isExchangeOrder = (value: unknown): value is ExchangeOrder =>
+  v.is(exchangeOrderSchema, value);
 
 export const isFill = (value: unknown): value is Fill => v.is(fillSchema, value);
 
@@ -261,10 +262,10 @@ export interface ExchangeAdapter {
   getBalances(): Promise<Balance[]>;
 
   // Orders
-  createOrder(params: CreateOrderParams): Promise<Order>;
+  createOrder(params: CreateOrderParams): Promise<ExchangeOrder>;
   cancelOrder(orderId: string): Promise<void>;
-  getOrder(orderId: string): Promise<Order | null>;
-  getOpenOrders(symbol?: string): Promise<Order[]>;
+  getOrder(orderId: string): Promise<ExchangeOrder | null>;
+  getOpenOrders(symbol?: string): Promise<ExchangeOrder[]>;
 
   // Positions (for perpetuals)
   getPosition(symbol: string): Promise<Position | null>;

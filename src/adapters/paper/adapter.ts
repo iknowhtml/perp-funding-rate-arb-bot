@@ -12,8 +12,8 @@ import type {
   Balance,
   CreateOrderParams,
   ExchangeAdapter,
+  ExchangeOrder,
   FundingRate,
-  Order,
   OrderBook,
   Position,
   Ticker,
@@ -71,7 +71,7 @@ export const createPaperAdapter = (config: PaperAdapterConfig): ExchangeAdapter 
     getBalances: async (): Promise<Balance[]> => Array.from(balances.values()),
 
     // Stub implementations - full implementation in Phase 4
-    createOrder: async (_params: CreateOrderParams): Promise<Order> => {
+    createOrder: async (_params: CreateOrderParams): Promise<ExchangeOrder> => {
       throw new ExchangeError("Paper trading createOrder not implemented yet", "UNKNOWN", "paper");
     },
 
@@ -79,9 +79,9 @@ export const createPaperAdapter = (config: PaperAdapterConfig): ExchangeAdapter 
       throw new ExchangeError("Paper trading cancelOrder not implemented yet", "UNKNOWN", "paper");
     },
 
-    getOrder: async (_orderId: string): Promise<Order | null> => null,
+    getOrder: async (_orderId: string): Promise<ExchangeOrder | null> => null,
 
-    getOpenOrders: async (_symbol?: string): Promise<Order[]> => [],
+    getOpenOrders: async (_symbol?: string): Promise<ExchangeOrder[]> => [],
 
     getPosition: async (_symbol: string): Promise<Position | null> => null,
 

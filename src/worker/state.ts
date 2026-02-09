@@ -4,7 +4,14 @@
  * @see {@link ../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
-import type { Balance, FundingRate, Order, OrderBook, Position, Ticker } from "@/adapters/types";
+import type {
+  Balance,
+  ExchangeOrder,
+  FundingRate,
+  OrderBook,
+  Position,
+  Ticker,
+} from "@/adapters/types";
 
 /**
  * Bot state interface containing all market data, account data, and health tracking.
@@ -18,7 +25,7 @@ export interface BotState {
   // Account data
   balances: Map<string, Balance>;
   positions: Map<string, Position>;
-  openOrders: Map<string, Order>;
+  openOrders: Map<string, ExchangeOrder>;
 
   // Health tracking
   lastTickerUpdate: Date | null;
@@ -37,7 +44,7 @@ export interface StateStore {
   updateFundingRate(fundingRate: FundingRate): void;
   updateBalances(balances: Balance[]): void;
   updatePositions(positions: Position[]): void;
-  updateOrders(orders: Order[]): void;
+  updateOrders(orders: ExchangeOrder[]): void;
   setWsConnected(connected: boolean): void;
   reset(): void;
 }
@@ -109,8 +116,8 @@ export const createStateStore = (): StateStore => {
       };
     },
 
-    updateOrders: (orders: Order[]): void => {
-      const ordersMap = new Map<string, Order>();
+    updateOrders: (orders: ExchangeOrder[]): void => {
+      const ordersMap = new Map<string, ExchangeOrder>();
       for (const order of orders) {
         ordersMap.set(order.id, order);
       }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Balance, FundingRate, Order, Position, Ticker } from "@/adapters/types";
+import type { Balance, ExchangeOrder, FundingRate, Position, Ticker } from "@/adapters/types";
 
 import { createStateStore } from "./state";
 
@@ -143,7 +143,7 @@ describe("createStateStore", () => {
   describe("updateOrders", () => {
     it("should update orders map and lastAccountUpdate", () => {
       const store = createStateStore();
-      const orders: Order[] = [
+      const orders: ExchangeOrder[] = [
         {
           id: "order-1",
           exchangeOrderId: "ex-1",
