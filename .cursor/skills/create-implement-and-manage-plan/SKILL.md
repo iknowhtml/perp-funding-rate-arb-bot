@@ -143,7 +143,7 @@ Every plan MUST include `lifecycle-management` as the final todo.
 
 When all todos are complete:
 
-**Important**: Move the **original plan file** that's referenced in the roadmap (e.g., `.cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md`), not standalone plan files created elsewhere. If work relates to an existing roadmap plan, update and move that plan, not a separate one.
+**Important**: Move the **original plan file** that's referenced in the roadmap (e.g., `plans/active/<ROADMAP>/<PHASE>/<PLAN>.md`), not standalone plan files created elsewhere. If work relates to an existing roadmap plan, update and move that plan, not a separate one.
 
 ### Why `cp` + `git rm`, not `mv`
 
@@ -157,8 +157,8 @@ Use `git rm -f` instead of plain `rm -f` so the deletion is both performed and s
 
 ```bash
 # ALL IN ONE SHELL COMMAND - do not split into separate calls
-ACTIVE=".cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md" && \
-IMPL=".cursor/plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md" && \
+ACTIVE="plans/active/<ROADMAP>/<PHASE>/<PLAN>.md" && \
+IMPL="plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md" && \
 mkdir -p "$(dirname "$IMPL")" && \
 cp "$ACTIVE" "$IMPL" && \
 git rm -f "$ACTIVE" && \
@@ -178,7 +178,7 @@ echo "FAILED: verify manually"
 
 **The file must ONLY exist in `implemented/` when done. Never in both locations. Never skip the `git rm` step.**
 
-**Example**: If implementing "co-locate exchange code" work that relates to the rate-limiting plan at `.cursor/plans/active/0001-mvp-roadmap/02-connectivity/0002-rate-limiting.md`, move **that plan** to `implemented/`, not a separate standalone plan file.
+**Example**: If implementing "co-locate exchange code" work that relates to the rate-limiting plan at `plans/active/0001-mvp-roadmap/02-connectivity/0002-rate-limiting.md`, move **that plan** to `implemented/`, not a separate standalone plan file.
 
 ---
 

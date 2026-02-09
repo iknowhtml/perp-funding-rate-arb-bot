@@ -8,24 +8,24 @@ alwaysApply: true
 
 ## 🚨 PLAN COMPLETION CHECKLIST - RUN THIS FIRST 🚨
 
-**If you just finished implementing a plan from `.cursor/plans/active/`, STOP and run this checklist NOW:**
+**If you just finished implementing a plan from `plans/active/`, STOP and run this checklist NOW:**
 
-**Note**: All plans include a `lifecycle-management` todo (see `.cursor/plans/PLAN_TEMPLATE.md`) that must be marked `completed` as part of this workflow.
+**Note**: All plans include a `lifecycle-management` todo (see `plans/PLAN_TEMPLATE.md`) that must be marked `completed` as part of this workflow.
 
 ```bash
 # 1. Update plan frontmatter: todos to status: completed (including lifecycle-management)
 # 2. Check all validation boxes [x]
 # 3. Update roadmap link to ../../active/<roadmap-id>/README.md
 # 4. Create directory and move:
-mkdir -p .cursor/plans/implemented/<ROADMAP>/<PHASE>
-mv .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md \
-   .cursor/plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md
+mkdir -p plans/implemented/<ROADMAP>/<PHASE>
+mv plans/active/<ROADMAP>/<PHASE>/<PLAN>.md \
+   plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md
 # 5. MANDATORY: Delete from active (verify removal):
-test -f .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md && \
-  rm -f .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md
+test -f plans/active/<ROADMAP>/<PHASE>/<PLAN>.md && \
+  rm -f plans/active/<ROADMAP>/<PHASE>/<PLAN>.md
 # 6. Verify final state:
-test -f .cursor/plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md && \
-  ! test -f .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md && \
+test -f plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md && \
+  ! test -f plans/active/<ROADMAP>/<PHASE>/<PLAN>.md && \
   echo "SUCCESS" || echo "ERROR: Fix immediately"
 ```
 
@@ -85,7 +85,7 @@ After adding or modifying TypeScript code:
 
 ## 🚨 CRITICAL: After Completing a Plan - MANDATORY MOVEMENT 🚨
 
-**ABSOLUTELY MANDATORY - NO EXCEPTIONS**: After implementing, completing, or finishing ANY plan from `.cursor/plans/active/`, you **MUST IMMEDIATELY** move it to `implemented/`.
+**ABSOLUTELY MANDATORY - NO EXCEPTIONS**: After implementing, completing, or finishing ANY plan from `plans/active/`, you **MUST IMMEDIATELY** move it to `implemented/`.
 
 **TRIGGER CONDITIONS** (move plan if ANY of these are true):
 - ✅ User asks to "implement" a plan
@@ -104,36 +104,36 @@ After adding or modifying TypeScript code:
 
 2. **Create directory structure**:
    ```bash
-   mkdir -p .cursor/plans/implemented/<roadmap-id>/<phase-id>
+   mkdir -p plans/implemented/<roadmap-id>/<phase-id>
    ```
 
 3. **Move the plan file**:
    ```bash
-   mv .cursor/plans/active/<roadmap-id>/<phase-id>/<plan-id>.md \
-      .cursor/plans/implemented/<roadmap-id>/<phase-id>/<plan-id>.md
+   mv plans/active/<roadmap-id>/<phase-id>/<plan-id>.md \
+      plans/implemented/<roadmap-id>/<phase-id>/<plan-id>.md
    ```
 
 4. **🚨 CRITICAL STEP - MANDATORY DELETION FROM ACTIVE/ 🚨**: **ALWAYS delete from `active/` immediately after moving**:
    ```bash
    # After mv command, ALWAYS run this - NO EXCEPTIONS:
-   test -f .cursor/plans/active/<path> && rm .cursor/plans/active/<path> || echo "OK"
+   test -f plans/active/<path> && rm plans/active/<path> || echo "OK"
    ```
    - **CRITICAL**: The file must ONLY exist in `implemented/` - NEVER in both locations
    - **NO EXCEPTIONS** - even if `mv` should have removed it, verify and delete
    - **MANDATORY** - this step is not optional under any circumstances
    - **If file still exists in active/ after mv, DELETE IT IMMEDIATELY** - this is a critical error
-   - **Force deletion if needed**: `test -f .cursor/plans/active/<path> && rm -f .cursor/plans/active/<path>`
+   - **Force deletion if needed**: `test -f plans/active/<path> && rm -f plans/active/<path>`
 
 5. **Verify completion** (MANDATORY):
    ```bash
-   test -f .cursor/plans/implemented/<path> && \
-     ! test -f .cursor/plans/active/<path> && \
+   test -f plans/implemented/<path> && \
+     ! test -f plans/active/<path> && \
      echo "SUCCESS" || \
-     (test -f .cursor/plans/active/<path> && rm -f .cursor/plans/active/<path> && echo "DELETED duplicate")
+     (test -f plans/active/<path> && rm -f plans/active/<path> && echo "DELETED duplicate")
    ```
    - File exists in `implemented/`
    - **File does NOT exist in `active/`** - if it does, DELETE IT IMMEDIATELY with `rm -f`
-   - **Final check**: Run `! test -f .cursor/plans/active/<path> && echo "VERIFIED: File removed from active/"`
+   - **Final check**: Run `! test -f plans/active/<path> && echo "VERIFIED: File removed from active/"`
    - All todos marked completed
    - All validation boxes checked
 

@@ -10,7 +10,7 @@ Read these before making changes:
 - **`README.md`** — Architecture overview, tech stack, project structure, configuration
 - **`adrs/`** — 18 Architecture Decision Records. Check before implementing features.
 - **`lefthook.yml`** — Git hooks (pre-commit: Biome + Gitleaks; pre-push: Biome CI + typecheck + tests)
-- **`.cursor/plans/active/0001-mvp-roadmap/README.md`** — Implementation roadmap and current progress
+- **`plans/active/0001-mvp-roadmap/README.md`** — Implementation roadmap and current progress
 
 ## Commands
 

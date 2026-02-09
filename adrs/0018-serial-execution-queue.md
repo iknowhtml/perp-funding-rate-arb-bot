@@ -158,4 +158,4 @@ For MVP, `p-queue` is the right choice - battle-tested, simple, and provides all
 - [ADR-0001: Bot Architecture](0001-bot-architecture.md) - Overall bot design, serial queue requirement
 - [ADR-0017: Task Scheduler Implementation](0017-task-scheduler.md) - Periodic tasks (different use case)
 - [p-queue GitHub](https://github.com/sindresorhus/p-queue) - Library documentation
-- [Serial Queue Plan](../../.cursor/plans/active/0001-mvp-roadmap/01-foundation/0007-serial-execution-queue.md) - Implementation details
+- [Serial Queue Plan](../plans/implemented/0001-mvp-roadmap/01-foundation/0007-serial-execution-queue.md) - Implementation details

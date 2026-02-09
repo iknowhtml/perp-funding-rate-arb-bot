@@ -57,7 +57,7 @@ Optional. Use the primary module or domain affected:
 - Adapter names: `coinbase`, `deribit`
 - Domain modules: `position`, `strategy`, `risk`
 - Infrastructure: `worker`, `config`, `adapters`
-- Plans: `plans` (for `.cursor/plans/` changes)
+- Plans: `plans` (for `plans/` changes)
 
 If the change spans multiple scopes, omit the scope.
 
@@ -98,7 +98,7 @@ Enables runtime adapter selection by exchange name.
 
 **Staged changes:**
 - `src/adapters/coinbase/normalizers.ts` — extract magic number to constant
-- `.cursor/plans/.../0002-position-derivation.md` — update plan to use dynamic decimal scaling
+- `plans/.../0002-position-derivation.md` — update plan to use dynamic decimal scaling
 
 **Commit message:**
 ```
@@ -126,7 +126,7 @@ with code 0 when help is displayed, preventing the false error message.
 ### Documentation only
 
 **Staged changes:**
-- `.cursor/plans/active/.../0002-position-derivation.md` — update plan
+- `plans/active/.../0002-position-derivation.md` — update plan
 
 **Commit message:**
 ```

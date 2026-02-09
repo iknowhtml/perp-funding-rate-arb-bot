@@ -171,5 +171,5 @@ For MVP, the custom scheduler is sufficient and keeps the system simple.
 ## References
 
 - [ADR-0001: Bot Architecture](0001-bot-architecture.md) - Overall bot design
-- [Scheduler Plan](../../.cursor/plans/active/0001-mvp-roadmap/01-foundation/0006-scheduler.md) - Implementation details
+- [Scheduler Plan](../plans/implemented/0001-mvp-roadmap/01-foundation/0006-scheduler.md) - Implementation details
 - [Better Stack: Node.js Schedulers Comparison](https://betterstack.com/community/guides/scaling-nodejs/best-nodejs-schedulers/) - Library evaluation
