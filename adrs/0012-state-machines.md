@@ -38,12 +38,12 @@ export type OrderStatus =
 
 export type HedgeState =
   | { phase: "IDLE" }
-  | { phase: "ENTERING_PERP"; intentId: string }
-  | { phase: "ENTERING_SPOT"; perpFilled: boolean }
-  | { phase: "ACTIVE"; notionalCents: bigint; spotQtySats: bigint; perpQtySats: bigint }
-  | { phase: "EXITING_SPOT" }
-  | { phase: "EXITING_PERP" }
-  | { phase: "CLOSED"; pnlCents: bigint };
+  | { phase: "ENTERING_PERP"; intentId: string; symbol: string }
+  | { phase: "ENTERING_SPOT"; perpFilled: boolean; symbol: string }
+  | { phase: "ACTIVE"; symbol: string; notionalQuote: bigint; spotQtyBase: bigint; perpQtyBase: bigint }
+  | { phase: "EXITING_SPOT"; symbol: string }
+  | { phase: "EXITING_PERP"; symbol: string }
+  | { phase: "CLOSED"; symbol: string; pnlQuote: bigint };
 ```
 
 ### 2. Explicit Transition Tables
@@ -84,8 +84,8 @@ export const transitionOrder = (
 export type OrderEvent =
   | { type: "SUBMIT"; orderId: string }
   | { type: "ACK"; exchangeOrderId: string }
-  | { type: "PARTIAL_FILL"; filledQty: bigint; avgPrice: bigint }
-  | { type: "FILL"; filledQty: bigint; avgPrice: bigint }
+  | { type: "PARTIAL_FILL"; filledQtyBase: bigint; avgPriceQuote: bigint }
+  | { type: "FILL"; filledQtyBase: bigint; avgPriceQuote: bigint }
   | { type: "CANCEL"; reason: string }
   | { type: "REJECT"; error: string }
   | { type: "TIMEOUT"; reason: string }; // ACK timeout or fill timeout

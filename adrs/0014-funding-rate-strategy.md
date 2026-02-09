@@ -70,7 +70,7 @@ export interface Position {
   entryFundingRateBps: bigint;
   entryTrend: "increasing" | "decreasing" | "stable";
   entryRegime: "high_stable" | "high_volatile" | "low_stable" | "low_volatile";
-  sizeCents: bigint;
+  sizeQuote: bigint;
   side: "LONG" | "SHORT";
 }
 ```
@@ -87,10 +87,10 @@ export const parseRateToBps = (rate: string): bigint => {
   return BigInt(Math.round(rateNum * 10000)); // Convert to basis points
 };
 
-// Parse price string to bigint (in smallest unit, e.g., cents or satoshis)
+// Parse price string to bigint (in smallest quote unit)
 export const parsePrice = (price: string): bigint => {
   const priceNum = Number.parseFloat(price);
-  // Assuming prices are in USD, convert to cents
+  // Convert to smallest quote unit (e.g., USD cents)
   return BigInt(Math.round(priceNum * 100));
 };
 
@@ -316,7 +316,7 @@ export const calculateRealizedYield = (
   // Funding is paid every 8 hours, so calculate how many periods
   const fundingPeriods = Math.floor(holdTimeHours / 8);
   // Use entry funding rate for calculation
-  return (position.sizeCents * position.entryFundingRateBps * BigInt(fundingPeriods)) / 10000n;
+  return (position.sizeQuote * position.entryFundingRateBps * BigInt(fundingPeriods)) / 10000n;
 };
 
 export const generateExitSignal = (
@@ -424,11 +424,11 @@ export const evaluateStrategy = (
     const entrySignal = generateEntrySignal(state.fundingRate, history, config);
     if (entrySignal && risk.action === "ALLOW") {
       // Calculate position size (helper function - see ADR-0013 for risk-based sizing)
-      const maxPositionSize = risk.metrics.positionSizeUsd * 100n; // Convert to cents
+      const maxPositionSizeQuote = risk.metrics.positionSizeUsd * 100n; // Convert to smallest quote unit
       return {
         type: "ENTER_HEDGE",
         params: {
-          sizeCents: maxPositionSize,
+          sizeQuote: maxPositionSizeQuote,
           expectedYieldBps: entrySignal.expectedYieldBps,
           confidence: entrySignal.confidence,
         },

@@ -84,16 +84,16 @@ CREATE INDEX idx_historical_order_books_symbol_snapshot ON historical_order_book
 export interface BacktestConfig {
   startDate: Date;
   endDate: Date;
-  initialCapitalCents: bigint;
+  initialCapitalQuote: bigint;
   strategyConfig: StrategyConfig;
   riskConfig: RiskConfig;
   slippageConfig: SlippageConfig;
 }
 
 export interface BacktestResult {
-  initialCapitalCents: bigint;
-  finalCapitalCents: bigint;
-  totalPnLCents: bigint;
+  initialCapitalQuote: bigint;
+  finalCapitalQuote: bigint;
+  totalPnLQuote: bigint;
   totalReturnBps: bigint;
   sharpeRatio: number;
   maxDrawdownBps: bigint;
@@ -101,7 +101,7 @@ export interface BacktestResult {
   totalTrades: number;
   averageHoldTimeHours: number;
   trades: BacktestTrade[];
-  dailyPnL: Array<{ date: Date; pnlCents: bigint }>;
+  dailyPnL: Array<{ date: Date; pnlQuote: bigint }>;
 }
 
 export interface BacktestTrade {
@@ -109,11 +109,11 @@ export interface BacktestTrade {
   exitTime: Date;
   entryPrice: bigint;
   exitPrice: bigint;
-  sizeCents: bigint;
-  pnlCents: bigint;
+  sizeQuote: bigint;
+  pnlQuote: bigint;
   returnBps: bigint;
-  fundingReceivedCents: bigint;
-  slippageCostCents: bigint;
+  fundingReceivedQuote: bigint;
+  slippageCostQuote: bigint;
   reason: string;
 }
 ```
@@ -135,7 +135,7 @@ export interface PriceSnapshot {
 }
 
 export interface BacktestState {
-  capitalCents: bigint;
+  capitalQuote: bigint;
   position: BacktestPosition | null;
   fundingHistory: FundingRateSnapshot[];
   prices: Map<string, bigint>;
@@ -146,8 +146,8 @@ export interface BacktestPosition {
   entryFundingRateBps: bigint;
   spotEntryPrice: bigint;
   perpEntryPrice: bigint;
-  sizeCents: bigint;
-  marginUsedCents: bigint;
+  sizeQuote: bigint;
+  marginUsedQuote: bigint;
 }
 
 export interface BacktestEvent {
@@ -162,8 +162,8 @@ export interface BacktestEvent {
 
 ```typescript
 // Calculate margin requirement
-export const calculateMargin = (sizeCents: bigint, leverageBps: bigint): bigint => {
-  return (sizeCents * 10000n) / leverageBps;
+export const calculateMargin = (sizeQuote: bigint, leverageBps: bigint): bigint => {
+  return (sizeQuote * 10000n) / leverageBps;
 };
 
 // Calculate mid price from order book
@@ -216,7 +216,7 @@ export const createBacktestEngine = (
   dataLoader: HistoricalDataLoader,
 ): BacktestEngine => {
   let state: BacktestState = {
-    capitalCents: config.initialCapitalCents,
+    capitalQuote: config.initialCapitalQuote,
     position: null,
     fundingHistory: [],
     prices: new Map(),
@@ -264,7 +264,7 @@ export const createBacktestEngine = (
     if (!orderBook) {
       return; // Skip if no order book data
     }
-    const slippageEstimate = estimateSlippage(orderBook, "BUY", intent.params.sizeCents, config.slippageConfig.maxSlippageBps);
+    const slippageEstimate = estimateSlippage(orderBook, "BUY", intent.params.sizeQuote, config.slippageConfig.maxSlippageBps);
 
     if (!slippageEstimate.canExecute) {
       return; // Skip entry due to slippage
@@ -275,7 +275,7 @@ export const createBacktestEngine = (
     const perpEntryPrice = event.perpPrice - (event.perpPrice * slippageEstimate.slippageBps) / 10000n;
 
     // 3. Calculate margin requirement
-    const marginRequired = calculateMargin(intent.params.sizeCents, config.riskConfig.maxLeverageBps);
+    const marginRequired = calculateMargin(intent.params.sizeQuote, config.riskConfig.maxLeverageBps);
 
     // 4. Update state
     state = {
@@ -285,10 +285,10 @@ export const createBacktestEngine = (
         entryFundingRateBps: event.fundingRateBps,
         spotEntryPrice,
         perpEntryPrice,
-        sizeCents: intent.params.sizeCents,
-        marginUsedCents: marginRequired,
+        sizeQuote: intent.params.sizeQuote,
+        marginUsedQuote: marginRequired,
       },
-      capitalCents: state.capitalCents - marginRequired,
+      capitalQuote: state.capitalQuote - marginRequired,
     };
   };
 
@@ -307,28 +307,28 @@ export const createBacktestEngine = (
     if (!orderBook) {
       return; // Skip if no order book data
     }
-    const slippageEstimate = estimateSlippage(orderBook, "SELL", position.sizeCents, config.slippageConfig.maxSlippageBps);
+    const slippageEstimate = estimateSlippage(orderBook, "SELL", position.sizeQuote, config.slippageConfig.maxSlippageBps);
 
     // 2. Calculate execution prices
     const spotExitPrice = event.spotPrice - (event.spotPrice * slippageEstimate.slippageBps) / 10000n;
     const perpExitPrice = event.perpPrice + (event.perpPrice * slippageEstimate.slippageBps) / 10000n;
 
     // 3. Calculate P&L
-    const spotPnL = (spotExitPrice - position.spotEntryPrice) * position.sizeCents / position.spotEntryPrice;
-    const perpPnL = (position.perpEntryPrice - perpExitPrice) * position.sizeCents / position.perpEntryPrice;
+    const spotPnL = (spotExitPrice - position.spotEntryPrice) * position.sizeQuote / position.spotEntryPrice;
+    const perpPnL = (position.perpEntryPrice - perpExitPrice) * position.sizeQuote / position.perpEntryPrice;
     const netPnL = spotPnL + perpPnL; // Should be ~0 (delta-neutral)
 
     // 4. Calculate funding received
     const holdTimeHours = (event.timestamp.getTime() - position.entryTime.getTime()) / (1000 * 60 * 60);
-    const fundingReceivedCents = (position.sizeCents * position.entryFundingRateBps * BigInt(Math.floor(holdTimeHours))) / (10000n * 8n);
+    const fundingReceivedQuote = (position.sizeQuote * position.entryFundingRateBps * BigInt(Math.floor(holdTimeHours))) / (10000n * 8n);
 
     // 5. Calculate slippage cost
-    const entrySlippageCost = (position.sizeCents * slippageEstimate.slippageBps) / 10000n;
-    const exitSlippageCost = (position.sizeCents * slippageEstimate.slippageBps) / 10000n;
+    const entrySlippageCost = (position.sizeQuote * slippageEstimate.slippageBps) / 10000n;
+    const exitSlippageCost = (position.sizeQuote * slippageEstimate.slippageBps) / 10000n;
     const totalSlippageCost = entrySlippageCost + exitSlippageCost;
 
     // 6. Net P&L
-    const tradePnL = fundingReceivedCents - totalSlippageCost;
+    const tradePnL = fundingReceivedQuote - totalSlippageCost;
 
     // 7. Record trade
     const trade: BacktestTrade = {
@@ -336,11 +336,11 @@ export const createBacktestEngine = (
       exitTime: event.timestamp,
       entryPrice: position.spotEntryPrice,
       exitPrice: spotExitPrice,
-      sizeCents: position.sizeCents,
-      pnlCents: tradePnL,
-      returnBps: (tradePnL * 10000n) / position.sizeCents,
-      fundingReceivedCents,
-      slippageCostCents: totalSlippageCost,
+      sizeQuote: position.sizeQuote,
+      pnlQuote: tradePnL,
+      returnBps: (tradePnL * 10000n) / position.sizeQuote,
+      fundingReceivedQuote,
+      slippageCostQuote: totalSlippageCost,
       reason: intent.reason ?? "unknown",
     };
 
@@ -349,15 +349,15 @@ export const createBacktestEngine = (
     // 8. Update state
     state = {
       ...state,
-      capitalCents: state.capitalCents + position.marginUsedCents + tradePnL,
+      capitalQuote: state.capitalQuote + position.marginUsedQuote + tradePnL,
       position: null,
     };
   };
 
   const calculateResults = (): BacktestResult => {
-    const totalPnL = trades.reduce((sum, t) => sum + t.pnlCents, 0n);
-    const finalCapital = config.initialCapitalCents + totalPnL;
-    const totalReturnBps = (totalPnL * 10000n) / config.initialCapitalCents;
+    const totalPnL = trades.reduce((sum, t) => sum + t.pnlQuote, 0n);
+    const finalCapital = config.initialCapitalQuote + totalPnL;
+    const totalReturnBps = (totalPnL * 10000n) / config.initialCapitalQuote;
 
     // Calculate Sharpe ratio (simplified: annualized return / volatility)
     const returns = trades.map((t) => Number(t.returnBps) / 10000);
@@ -367,12 +367,12 @@ export const createBacktestEngine = (
     const sharpeRatio = stdDev > 0 ? avgReturn / stdDev : 0;
 
     // Calculate max drawdown
-    let peak = config.initialCapitalCents;
+    let peak = config.initialCapitalQuote;
     let maxDrawdown = 0n;
-    let currentCapital = config.initialCapitalCents;
+    let currentCapital = config.initialCapitalQuote;
 
     for (const trade of trades) {
-      currentCapital += trade.pnlCents;
+      currentCapital += trade.pnlQuote;
       if (currentCapital > peak) {
         peak = currentCapital;
       }
@@ -383,7 +383,7 @@ export const createBacktestEngine = (
     }
 
     // Calculate win rate
-    const winningTrades = trades.filter((t) => t.pnlCents > 0n).length;
+    const winningTrades = trades.filter((t) => t.pnlQuote > 0n).length;
     const winRate = trades.length > 0 ? winningTrades / trades.length : 0;
 
     // Calculate average hold time
@@ -396,9 +396,9 @@ export const createBacktestEngine = (
       : 0;
 
     return {
-      initialCapitalCents: config.initialCapitalCents,
-      finalCapitalCents: finalCapital,
-      totalPnLCents: totalPnL,
+      initialCapitalQuote: config.initialCapitalQuote,
+      finalCapitalQuote: finalCapital,
+      totalPnLQuote: totalPnL,
       totalReturnBps,
       sharpeRatio,
       maxDrawdownBps: maxDrawdown,
@@ -408,7 +408,7 @@ export const createBacktestEngine = (
       trades,
       dailyPnL: Array.from(dailyPnL.entries()).map(([date, pnl]) => ({
         date: new Date(date),
-        pnlCents: pnl,
+        pnlQuote: pnl,
       })),
     };
   };
@@ -624,7 +624,7 @@ export const backtestCommand = async (options: BacktestOptions): Promise<void> =
   const config: BacktestConfig = {
     startDate: new Date(options.startDate),
     endDate: new Date(options.endDate),
-    initialCapitalCents: BigInt(options.initialCapital) * 100n,
+    initialCapitalQuote: BigInt(options.initialCapital) * 100n,
     strategyConfig: loadStrategyConfig(options.strategyConfig),
     riskConfig: loadRiskConfig(options.riskConfig),
     slippageConfig: loadSlippageConfig(options.slippageConfig),
@@ -637,9 +637,9 @@ export const backtestCommand = async (options: BacktestOptions): Promise<void> =
   const result = await engine.run();
 
   console.log("\n=== Backtest Results ===");
-  console.log(`Initial Capital: $${(result.initialCapitalCents / 100n).toString()}`);
-  console.log(`Final Capital: $${(result.finalCapitalCents / 100n).toString()}`);
-  console.log(`Total P&L: $${(result.totalPnLCents / 100n).toString()}`);
+  console.log(`Initial Capital: $${(result.initialCapitalQuote / 100n).toString()}`);
+  console.log(`Final Capital: $${(result.finalCapitalQuote / 100n).toString()}`);
+  console.log(`Total P&L: $${(result.totalPnLQuote / 100n).toString()}`);
   console.log(`Total Return: ${(result.totalReturnBps / 100n).toString()}%`);
   console.log(`Sharpe Ratio: ${result.sharpeRatio.toFixed(2)}`);
   console.log(`Max Drawdown: ${(result.maxDrawdownBps / 100n).toString()}%`);

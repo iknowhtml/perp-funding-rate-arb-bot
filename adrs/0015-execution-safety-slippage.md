@@ -425,8 +425,8 @@ Hedge drift occurs when perp and spot notional values don't match after executio
 export const MAX_DRIFT_BPS = 50n; // 0.5% maximum acceptable drift
 
 export interface HedgeDrift {
-  perpNotionalCents: bigint;
-  spotNotionalCents: bigint;
+  perpNotionalQuote: bigint;
+  spotNotionalQuote: bigint;
   driftBps: bigint;
   needsCorrection: boolean;
 }
@@ -447,8 +447,8 @@ export const calculateHedgeDrift = (
     : 0n;
 
   return {
-    perpNotionalCents: perpNotional,
-    spotNotionalCents: spotNotional,
+    perpNotionalQuote: perpNotional,
+    spotNotionalQuote: spotNotional,
     driftBps,
     needsCorrection: driftBps > MAX_DRIFT_BPS,
   };
@@ -460,7 +460,7 @@ export const correctDrift = async (
   symbol: string,
   logger: Logger,
 ): Promise<void> => {
-  const diff = drift.perpNotionalCents - drift.spotNotionalCents;
+  const diff = drift.perpNotionalQuote - drift.spotNotionalQuote;
   
   logger.warn("Correcting hedge drift", { drift, diff });
   
@@ -518,7 +518,7 @@ executionCircuitBreaker.onStateChange((state) => {
 import pRetry from "p-retry";
 import pTimeout from "p-timeout";
 
-const executeEnterHedge = async (sizeCents: bigint) => {
+const executeEnterHedge = async (sizeQuote: bigint) => {
   // 0. Check circuit breaker
   if (executionCircuitBreaker.state === "open") {
     return { aborted: true, reason: "execution_circuit_breaker_open" };
@@ -528,7 +528,7 @@ const executeEnterHedge = async (sizeCents: bigint) => {
   const orderBook = await exchange.getOrderBook(symbol);
   
   // 2. Calculate optimal size based on liquidity
-  const optimalSize = calculateOptimalPositionSize(sizeCents, orderBook, slippageConfig);
+  const optimalSize = calculateOptimalPositionSize(sizeQuote, orderBook, slippageConfig);
   
   // 3. Validate execution
   const validation = await validateExecution(

@@ -259,7 +259,7 @@ Risk is checked twice:
 #### ENTER_HEDGE Job
 
 ```typescript
-const executeEnterHedge = async (sizeCents: bigint) => {
+const executeEnterHedge = async (sizeQuote: bigint) => {
   // 1. Check risk again (esp. margin/liquidation)
   const risk = riskEngine.evaluate(state);
   if (risk.level === "DANGER") {

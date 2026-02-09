@@ -63,8 +63,8 @@ export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 export type OrderEvent =
   | { type: "SUBMIT"; orderId: string }
   | { type: "ACK"; exchangeOrderId: string }
-  | { type: "PARTIAL_FILL"; filledQty: bigint; avgPrice: bigint }
-  | { type: "FILL"; filledQty: bigint; avgPrice: bigint }
+  | { type: "PARTIAL_FILL"; filledQtyBase: bigint; avgPriceQuote: bigint }
+  | { type: "FILL"; filledQtyBase: bigint; avgPriceQuote: bigint }
   | { type: "CANCEL"; reason: string }
   | { type: "REJECT"; error: string };
 
@@ -83,12 +83,12 @@ Create `src/domains/state/hedge-state.ts`:
 ```typescript
 export type HedgeState =
   | { phase: "IDLE" }
-  | { phase: "ENTERING_PERP"; intentId: string }
-  | { phase: "ENTERING_SPOT"; perpFilled: boolean }
-  | { phase: "ACTIVE"; notionalCents: bigint; spotQtySats: bigint; perpQtySats: bigint }
-  | { phase: "EXITING_SPOT" }
-  | { phase: "EXITING_PERP" }
-  | { phase: "CLOSED"; pnlCents: bigint };
+  | { phase: "ENTERING_PERP"; intentId: string; symbol: string }
+  | { phase: "ENTERING_SPOT"; perpFilled: boolean; symbol: string }
+  | { phase: "ACTIVE"; symbol: string; notionalQuote: bigint; spotQtyBase: bigint; perpQtyBase: bigint }
+  | { phase: "EXITING_SPOT"; symbol: string }
+  | { phase: "EXITING_PERP"; symbol: string }
+  | { phase: "CLOSED"; symbol: string; pnlQuote: bigint };
 
 export const HEDGE_TRANSITIONS: Record<string, string[]> = {
   IDLE: ["ENTERING_PERP"],
@@ -101,12 +101,12 @@ export const HEDGE_TRANSITIONS: Record<string, string[]> = {
 };
 
 export type HedgeEvent =
-  | { type: "START_ENTRY"; intentId: string }
-  | { type: "PERP_FILLED"; filledQty: bigint }
-  | { type: "SPOT_FILLED"; filledQty: bigint }
+  | { type: "START_ENTRY"; intentId: string; symbol: string }
+  | { type: "PERP_FILLED"; filledQtyBase: bigint }
+  | { type: "SPOT_FILLED"; filledQtyBase: bigint }
   | { type: "START_EXIT"; reason: string }
   | { type: "SPOT_SOLD" }
-  | { type: "PERP_CLOSED"; pnlCents: bigint }
+  | { type: "PERP_CLOSED"; pnlQuote: bigint }
   | { type: "ABORT"; reason: string };
 
 export const transitionHedge = (
