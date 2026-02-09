@@ -130,7 +130,7 @@ todos:
     content: First task
     status: pending
   - id: lifecycle-management    # <-- MANDATORY
-    content: Move plan to implemented/
+    content: "Move plan to implemented/ (cp to implemented/, git rm -f from active/, verify deletion)"
     status: pending
 ---
 ```
@@ -145,13 +145,15 @@ When all todos are complete:
 
 **Important**: Move the **original plan file** that's referenced in the roadmap (e.g., `.cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md`), not standalone plan files created elsewhere. If work relates to an existing roadmap plan, update and move that plan, not a separate one.
 
-### Why `cp` + `rm`, not `mv`
+### Why `cp` + `git rm`, not `mv`
 
-**NEVER use `mv` to move plan files.** The `mv` command can silently fail to delete the source file (cross-device moves, IDE file watchers recreating it, or the agent interpreting `mv` as a file write instead of a shell command). Always use explicit `cp` + `rm` to guarantee deletion.
+**NEVER use `mv` to move plan files.** The `mv` command can silently fail to delete the source file (cross-device moves, IDE file watchers recreating it, or the agent interpreting `mv` as a file write instead of a shell command). Always use explicit `cp` + `git rm` to guarantee deletion and stage it in git.
 
 ### Procedure: Copy, Delete, Verify (all in one shell command)
 
 **Run all steps in a SINGLE shell command** so the agent cannot stop between copy and delete. Do NOT split these into separate tool calls.
+
+Use `git rm -f` instead of plain `rm -f` so the deletion is both performed and staged in git in one step.
 
 ```bash
 # ALL IN ONE SHELL COMMAND - do not split into separate calls
@@ -159,7 +161,7 @@ ACTIVE=".cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md" && \
 IMPL=".cursor/plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md" && \
 mkdir -p "$(dirname "$IMPL")" && \
 cp "$ACTIVE" "$IMPL" && \
-rm -f "$ACTIVE" && \
+git rm -f "$ACTIVE" && \
 test -f "$IMPL" && ! test -f "$ACTIVE" && \
 echo "SUCCESS: plan moved and deleted from active/" || \
 echo "FAILED: verify manually"
@@ -170,11 +172,11 @@ echo "FAILED: verify manually"
 1. Update plan frontmatter: all todos to `status: completed`
 2. Check all validation boxes `[x]`
 3. `cp` the file from `active/` to `implemented/`
-4. `rm -f` the file from `active/` (unconditional, not behind `test -f`)
+4. `git rm -f` the file from `active/` (stages deletion in git; unconditional, not behind `test -f`)
 5. Verify: file exists in `implemented/` AND does NOT exist in `active/`
-6. If verify fails, run `rm -f` on the active path again and re-verify
+6. If verify fails, run `git rm -f` on the active path again and re-verify
 
-**The file must ONLY exist in `implemented/` when done. Never in both locations. Never skip the `rm` step.**
+**The file must ONLY exist in `implemented/` when done. Never in both locations. Never skip the `git rm` step.**
 
 **Example**: If implementing "co-locate exchange code" work that relates to the rate-limiting plan at `.cursor/plans/active/0001-mvp-roadmap/02-connectivity/0002-rate-limiting.md`, move **that plan** to `implemented/`, not a separate standalone plan file.
 
@@ -186,10 +188,11 @@ echo "FAILED: verify manually"
 |-------|-----|
 | Extract tasks from `## Tasks` prose | Parse `frontmatter.todos` array |
 | Forget `lifecycle-management` todo | Always include as final todo |
-| **Use `mv` to move plan files** | **Use `cp` + `rm -f` (explicit copy then delete)** |
-| **Split copy/delete into separate tool calls** | **Run `cp` + `rm -f` + verify in ONE shell command** |
-| **Leave file in both locations** | **Always `rm -f` from `active/` and verify deletion** |
-| **Use conditional delete (`test -f && rm`)** | **Use unconditional `rm -f` (always safe, always runs)** |
+| **Use `mv` to move plan files** | **Use `cp` + `git rm -f` (explicit copy then delete+stage)** |
+| **Split copy/delete into separate tool calls** | **Run `cp` + `git rm -f` + verify in ONE shell command** |
+| **Leave file in both locations** | **Always `git rm -f` from `active/` and verify deletion** |
+| **Use conditional delete (`test -f && rm`)** | **Use unconditional `git rm -f` (always safe, always runs)** |
+| **Use plain `rm -f`** | **Use `git rm -f` so deletion is staged in git** |
 | Skip code-reviewer | Run after every implementation task |
 | Create standalone plans for work that relates to existing roadmap plans | Update and move the original roadmap plan |
 | Move standalone plan files instead of the referenced roadmap plan | Move the original plan file from `active/<ROADMAP>/<PHASE>/` |
