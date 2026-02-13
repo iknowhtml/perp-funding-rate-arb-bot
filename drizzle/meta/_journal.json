@@ -8,6 +8,13 @@
       "when": 1770238276813,
       "tag": "0000_burly_norrin_radd",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1771015842842,
+      "tag": "0001_brown_vapor",
+      "breakpoints": true
     }
   ]
 }
