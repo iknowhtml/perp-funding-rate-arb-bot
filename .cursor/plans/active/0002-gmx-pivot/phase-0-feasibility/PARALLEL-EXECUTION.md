@@ -21,6 +21,15 @@ Each sub-agent operates in its own **git worktree** on an isolated branch. This 
 - **PR-style merges** — first-done merges first; later merges resolve conflicts against updated main
 - **Rollback safety** — any individual agent's work can be dropped without affecting others
 
+### Cursor Worktree Initialization
+
+Cursor automatically runs `.cursor/worktrees.json` when creating worktrees. This handles:
+
+1. **`pnpm install --frozen-lockfile`** — installs dependencies from the lockfile
+2. **Copy `.env`** — copies `.env` from the root worktree (falls back to `.env.example`)
+
+No manual setup is needed per worktree — Cursor handles it on creation.
+
 ### Worktree Config
 
 All paths, branch names, batch definitions, and helper functions are centralized in

@@ -1,0 +1,6 @@
+{
+  "setup-worktree": [
+    "pnpm install --frozen-lockfile",
+    "test -f $ROOT_WORKTREE_PATH/.env && cp $ROOT_WORKTREE_PATH/.env .env || cp .env.example .env"
+  ]
+}
