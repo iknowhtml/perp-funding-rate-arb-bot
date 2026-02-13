@@ -16,6 +16,16 @@ export const envSchema = v.object({
   // Coinbase Advanced Trade API (CDP API Keys)
   COINBASE_API_KEY: v.optional(v.string()),
   COINBASE_API_SECRET: v.optional(v.string()),
+
+  // Arbitrum/GMX chain infrastructure
+  ARBITRUM_RPC_URL: v.pipe(v.string(), v.minLength(1)),
+  ARBITRUM_PRIVATE_KEY: v.optional(v.string()),
+  ARBITRUM_CHAIN_ID: v.pipe(
+    v.optional(v.string()),
+    v.transform((s) => (s === undefined || s === "" ? 42161 : Number(s))),
+    v.number(),
+  ),
+  GMX_ORACLE_URL: v.optional(v.string(), "https://arbitrum-api.gmxinfra.io"),
 });
 
 export type Env = v.InferOutput<typeof envSchema>;

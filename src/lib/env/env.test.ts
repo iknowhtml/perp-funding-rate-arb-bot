@@ -14,11 +14,16 @@ describe("parseEnv", () => {
     process.env = originalEnv;
   });
 
+  const BASE_ENV = {
+    DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/funding_rate_arb",
+    PORT: "3000",
+    NODE_ENV: "development" as const,
+    ARBITRUM_RPC_URL: "https://arb1.arbitrum.io/rpc",
+  };
+
   it("should parse valid environment variables", () => {
     process.env = {
-      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/funding_rate_arb",
-      PORT: "3000",
-      NODE_ENV: "development",
+      ...BASE_ENV,
       LOG_LEVEL: "debug",
     };
 
@@ -32,7 +37,7 @@ describe("parseEnv", () => {
 
   it("should parse environment variables without optional LOG_LEVEL", () => {
     process.env = {
-      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/funding_rate_arb",
+      ...BASE_ENV,
       PORT: "8080",
       NODE_ENV: "production",
     };
@@ -49,6 +54,7 @@ describe("parseEnv", () => {
     process.env = {
       PORT: "3000",
       NODE_ENV: "development",
+      ARBITRUM_RPC_URL: "https://arb1.arbitrum.io/rpc",
     };
 
     expect(() => parseEnv()).toThrow();
@@ -56,28 +62,24 @@ describe("parseEnv", () => {
 
   it("should fail when DATABASE_URL is empty", () => {
     process.env = {
+      ...BASE_ENV,
       DATABASE_URL: "",
-      PORT: "3000",
-      NODE_ENV: "development",
     };
 
     expect(() => parseEnv()).toThrow();
   });
 
   it("should fail when PORT is missing", () => {
-    process.env = {
-      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/funding_rate_arb",
-      NODE_ENV: "development",
-    };
+    const { PORT: _p, ...rest } = BASE_ENV;
+    process.env = rest;
 
     expect(() => parseEnv()).toThrow();
   });
 
   it("should fail when PORT is not a number", () => {
     process.env = {
-      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/funding_rate_arb",
+      ...BASE_ENV,
       PORT: "not-a-number",
-      NODE_ENV: "development",
     };
 
     expect(() => parseEnv()).toThrow();
@@ -85,9 +87,8 @@ describe("parseEnv", () => {
 
   it("should fail when PORT is less than 1", () => {
     process.env = {
-      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/funding_rate_arb",
+      ...BASE_ENV,
       PORT: "0",
-      NODE_ENV: "development",
     };
 
     expect(() => parseEnv()).toThrow();
@@ -95,9 +96,8 @@ describe("parseEnv", () => {
 
   it("should fail when PORT is greater than 65535", () => {
     process.env = {
-      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/funding_rate_arb",
+      ...BASE_ENV,
       PORT: "65536",
-      NODE_ENV: "development",
     };
 
     expect(() => parseEnv()).toThrow();
@@ -105,8 +105,9 @@ describe("parseEnv", () => {
 
   it("should fail when NODE_ENV is missing", () => {
     process.env = {
-      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/funding_rate_arb",
-      PORT: "3000",
+      DATABASE_URL: BASE_ENV.DATABASE_URL,
+      PORT: BASE_ENV.PORT,
+      ARBITRUM_RPC_URL: BASE_ENV.ARBITRUM_RPC_URL,
     };
 
     expect(() => parseEnv()).toThrow();
@@ -114,8 +115,7 @@ describe("parseEnv", () => {
 
   it("should fail when NODE_ENV is invalid", () => {
     process.env = {
-      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/funding_rate_arb",
-      PORT: "3000",
+      ...BASE_ENV,
       NODE_ENV: "invalid",
     };
 
@@ -124,9 +124,7 @@ describe("parseEnv", () => {
 
   it("should fail when LOG_LEVEL is invalid", () => {
     process.env = {
-      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/funding_rate_arb",
-      PORT: "3000",
-      NODE_ENV: "development",
+      ...BASE_ENV,
       LOG_LEVEL: "invalid",
     };
 
@@ -138,9 +136,7 @@ describe("parseEnv", () => {
 
     for (const level of validLevels) {
       process.env = {
-        DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/funding_rate_arb",
-        PORT: "3000",
-        NODE_ENV: "development",
+        ...BASE_ENV,
         LOG_LEVEL: level,
       };
 
@@ -154,8 +150,7 @@ describe("parseEnv", () => {
 
     for (const nodeEnv of validEnvs) {
       process.env = {
-        DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/funding_rate_arb",
-        PORT: "3000",
+        ...BASE_ENV,
         NODE_ENV: nodeEnv,
       };
 
