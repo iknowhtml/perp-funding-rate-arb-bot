@@ -33,7 +33,8 @@ No manual setup is needed per worktree — Cursor handles it on creation.
 ### Worktree Config
 
 All paths, branch names, batch definitions, and helper functions are centralized in
-[`worktree-config.sh`](./worktree-config.sh). Source it before running any batch commands:
+[`worktree-config.sh`](./worktree-config.sh), which sources the generic library at
+[`.cursor/scripts/worktree-lib.sh`](../../../../scripts/worktree-lib.sh). Source the config before running any batch commands:
 
 ```bash
 source .cursor/plans/active/0002-gmx-pivot/phase-0-feasibility/worktree-config.sh

@@ -1,0 +1,25 @@
+---
+description: Constraints for parallel worktree-based agent execution
+globs: ["**/worktrees/**", "**/PARALLEL-EXECUTION.md", "**/worktree-config.sh"]
+alwaysApply: true
+---
+
+# Worktree Parallel Execution
+
+When orchestrating parallel agent execution via worktrees:
+
+- **Max 4 subagents per batch** (Cursor limitation)
+- Each subagent MUST work in its own git worktree
+- Subagent prompts MUST be self-contained (no conversation context)
+- File ownership MUST NOT overlap within a batch
+- Merge order: batch N fully merged before batch N+1 starts
+- Always verify (typecheck + tests + biome) after merging each batch
+- Use `.cursor/scripts/worktree-lib.sh` for worktree management
+- Use `.cursor/worktrees.json` for Cursor auto-initialization
+
+When working INSIDE a worktree (branch starts with batch prefix like `phase0/`):
+
+- Only modify files assigned to your agent
+- Always commit on your branch before finishing
+- Run biome + typecheck before committing
+- Follow conventional commit format from the execution plan
