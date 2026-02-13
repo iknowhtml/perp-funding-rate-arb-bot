@@ -1,9 +1,22 @@
 ---
 name: create-implement-and-manage-plan
-description: Create, implement, and manage development plans. Use Opus 4.6 for plan creation/context gathering, Composer for implementation.
+description: Create, implement, and manage development plans. Use Opus 4.6 for plan creation/context gathering, Composer for implementation. For multi-plan parallel execution, hand off to create-parallel-execution-plan + execute-parallel-plan.
 ---
 
 # Plan Management
+
+## Parallel vs Sequential: When to Use Which
+
+| Scenario | Path | Skills |
+|----------|------|--------|
+| **Single plan** (one feature, one deliverable) | Sequential | This skill: create plan → implement task-by-task on main |
+| **2+ related plans** that can run in parallel (e.g. phase-0: chain infra, data collector, impact sampler) | Parallel | This skill creates plans → **create-parallel-execution-plan** generates PARALLEL-EXECUTION.md + worktree-config.sh → **execute-parallel-plan** runs batches |
+
+**Parallel path**: After you have 2+ plans (or a META-PLAN.md with dependency graph), use `create-parallel-execution-plan` to generate execution artifacts, then `execute-parallel-plan` to orchestrate worktree-based batch execution. See ADR-0028 for the full pipeline.
+
+**Sequential path**: This skill covers plan creation, code validation, and implementation task-by-task. Same code-review and lifecycle rules apply.
+
+---
 
 ## Model Selection
 
@@ -106,7 +119,9 @@ If the plan deviates from the ADR, check the codebase and reconcile the plan and
 
 ---
 
-## Composer: Implementation
+## Composer: Implementation (Sequential Path)
+
+When implementing a **single plan** on main (no worktrees):
 
 ### Workflow
 

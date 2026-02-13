@@ -92,6 +92,12 @@ Use the execution-plan-template.md. Fill in:
 1. **worktree-config.sh** — In the plan directory (e.g. `.cursor/plans/active/<roadmap>/<phase>/worktree-config.sh`)
 2. **PARALLEL-EXECUTION.md** — In the same directory as worktree-config.sh
 
+## Relationship to Other Skills
+
+- **create-implement-and-manage-plan**: Produces the input plans (Stage 2 of ADR-0028). Use it first to create plans; when 2+ plans can run in parallel, use this skill to generate execution artifacts.
+- **execute-parallel-plan**: Consumes the output of this skill. Runs the batch execution.
+- **ADR-0028**: Documents the full pipeline. Stages 3–4 are automated by this skill.
+
 ## Reference
 
 - Library: `.cursor/scripts/worktree-lib.sh`

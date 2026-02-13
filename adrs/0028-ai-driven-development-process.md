@@ -376,10 +376,32 @@ Not every task benefits from the full pipeline. Define a complexity threshold:
 
 ---
 
+## Cursor Skills Mapping
+
+Each pipeline stage maps to Cursor skills and tooling:
+
+| Stage | Skill / Tool | Notes |
+|-------|--------------|-------|
+| 2. Plan creation | `create-implement-and-manage-plan` | Opus 4.6 for context; produces plans with todos. Use for both single-plan (sequential) and multi-plan (parallel) paths. |
+| 3. Execution graph | `create-parallel-execution-plan` | Dependency analysis, batches, file ownership. Generates META-PLAN-like structure. |
+| 4. Batch plan | `create-parallel-execution-plan` | PARALLEL-EXECUTION.md, worktree-config.sh, agent prompts. |
+| 5a. Sequential impl | `create-implement-and-manage-plan` | Task-by-task on main. Single plan. |
+| 5b. Parallel impl | `execute-parallel-plan` | Worktree batches, merge, verify. Multi-plan. |
+| 6. Quality gate | `review-code-quality` + typecheck + biome | Run after implementation. |
+
+**Single plan** → `create-implement-and-manage-plan` (plan + sequential impl).
+
+**Multi-plan parallel** → `create-implement-and-manage-plan` (plans) → `create-parallel-execution-plan` (artifacts) → `execute-parallel-plan` (run).
+
+---
+
 ## References
 
 - Current META-PLAN example: `.cursor/plans/active/0002-gmx-pivot/phase-0-feasibility/META-PLAN.md`
 - Current PARALLEL-EXECUTION example: `.cursor/plans/active/0002-gmx-pivot/phase-0-feasibility/PARALLEL-EXECUTION.md`
 - Current worktree config: `.cursor/plans/active/0002-gmx-pivot/phase-0-feasibility/worktree-config.sh`
+- Generic worktree library: `.cursor/scripts/worktree-lib.sh`
+- Skills: `create-implement-and-manage-plan`, `create-parallel-execution-plan`, `execute-parallel-plan`
+- Rule: `.cursor/rules/worktree-execution.mdc`
 - Plan lifecycle: `.cursor/rules/plan-lifecycle.mdc`
 - Code guidelines: `CODE_GUIDELINES.md`
