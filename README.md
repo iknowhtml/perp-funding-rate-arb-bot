@@ -4,14 +4,10 @@ A funding rate arbitrage bot that captures yield from perpetual futures funding 
 
 ## Status
 
-**Phase 3: Core Logic** — 7/7 plans implemented
-
-- ✅ **Phase 1: Foundation** (8/8 complete) — Infrastructure, database, logging, scheduler, queue, HTTP server
-- ✅ **Phase 2: Connectivity** (6/6 complete) — Exchange adapters, rate limiting, WebSocket management, data plane
-- ✅ **Phase 3: Core Logic** (7/7 complete) — State machines, position derivation, risk engine, strategy engine, execution engine, reconciler, evaluation loop
-- ⏳ **Phase 4: Simulation** (0/5) — Paper trading adapter exists; backtesting framework pending
-- ⏳ **Phase 5: Live Testing** (0/4) — Not started
-- ⏳ **Phase 6: Production** (0/3) — Not started
+- **CEX foundation (Phases 1–3)** — Complete: infrastructure, adapters, core logic, evaluation loop. Reused by GMX pivot.
+- **CEX Phases 4–6** — Superseded by GMX Pivot roadmap.
+- **GMX Pivot Phase 0** — Complete: chain infra (viem), data collector, impact sampler.
+- **GMX Pivot Phases 1–2** — Pending: MVP execution, optimization.
 
 ## How It Works
 
@@ -22,6 +18,8 @@ This bot captures funding yield by:
 1. **Shorting the perpetual** (receiving funding payments)
 2. **Buying spot** (hedging directional risk)
 3. **Maintaining delta neutrality** (earning yield regardless of price direction)
+
+**Current direction:** GMX v2 on-chain perps on Arbitrum — regime-based entry/exit using 4h moving average funding rate, with GM token yield as part of the hedge model. CEX foundation (Coinbase) remains implemented for reference.
 
 ### Design Principles
 
@@ -68,6 +66,8 @@ The bot uses a single-process, event-driven architecture with in-memory state:
 - Serial execution queue
 - Startup sequence (initial reconciliation before evaluation)
 
+**GMX data pipeline:** `lib/chain/` (Arbitrum RPC via viem), `adapters/gmx/` (market data reader), `worker/data-collector.ts` (market snapshots → DB), `worker/impact-sampler.ts` (execution estimates). Tables: `market_snapshot`, `execution_estimate`.
+
 See [`adrs/`](adrs/) for detailed architecture decisions.
 
 ## Tech Stack
@@ -79,6 +79,7 @@ See [`adrs/`](adrs/) for detailed architecture decisions.
 | **Database** | PostgreSQL, Drizzle ORM 0.45 | Schema-first migrations, type-safe queries |
 | **Validation** | Valibot 1.0 | Runtime schema validation |
 | **Exchange SDK** | Coinbase Advanced Trade SDK | Official Coinbase integration |
+| **Chain** | viem 2.45, @gmx-io/sdk 1.5 | Arbitrum RPC, GMX v2 contract ABIs |
 | **Resilience** | Cockatiel 3.2, p-queue 9.1 | Circuit breaker, retry logic, serial execution |
 | **Testing** | Vitest 2.1 | Unit and integration tests |
 | **Linting** | Biome 1.9 | Fast linting and formatting |
@@ -120,7 +121,7 @@ Copy `.env.example` to `.env` and configure your settings:
 cp .env.example .env
 ```
 
-See [Configuration](#configuration) for all available environment variables.
+See [Configuration](#configuration) for environment variable categories.
 
 ### Database
 
@@ -149,60 +150,13 @@ pnpm db:push
 pnpm db:studio
 ```
 
-**Database connection:**
-- Host: `localhost`
-- Port: `5433`
-- User: `postgres`
-- Password: `postgres`
-- Database: `funding_rate_arb`
+Tables: `orders`, `market_snapshot` (GMX market data), `execution_estimate` (GMX execution impact). Connection details in `.env.example` and `docker-compose.yml`.
 
 ## Configuration
 
-All configuration is via environment variables. See `.env.example` for the complete template.
+All configuration is via environment variables. See `.env.example` for the complete template with descriptions and defaults.
 
-### Database
-
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | Yes | - |
-
-### Exchange
-
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `EXCHANGE_API_KEY` | Generic exchange API key | No | - |
-| `EXCHANGE_API_SECRET` | Generic exchange API secret | No | - |
-| `COINBASE_API_KEY` | Coinbase CDP API key | No | - |
-| `COINBASE_API_SECRET` | Coinbase CDP API secret | No | - |
-| `TRADING_PAIR` | Trading pair (e.g., BTC-USDT) | No | `BTC-USDT` |
-
-### Trading Parameters
-
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `MIN_FUNDING_RATE_BPS` | Minimum funding rate threshold (basis points, e.g., 10 = 0.10%) | No | `10` |
-| `MAX_POSITION_SIZE_USD` | Maximum position size in USD | No | `10000` |
-| `MAX_LEVERAGE_BPS` | Maximum leverage (basis points, e.g., 30000 = 3x) | No | `30000` |
-| `MAX_SLIPPAGE_BPS` | Maximum slippage tolerance (basis points, e.g., 50 = 0.50%) | No | `50` |
-
-### Risk Management
-
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `STOP_LOSS_PERCENT` | Stop loss percentage (e.g., 5 = 5%) | No | `5` |
-| `TAKE_PROFIT_PERCENT` | Take profit percentage (e.g., 10 = 10%) | No | `10` |
-
-### Operational
-
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `PORT` | HTTP server port | No | `3000` |
-| `NODE_ENV` | Node environment (development, production, test) | Yes | - |
-| `DRY_RUN` | Dry run mode (true = no real trades) | No | `true` |
-| `LOG_LEVEL` | Log level (debug, info, warn, error) | No | `debug` |
-| `EVAL_TICK_MS` | Evaluation tick interval in milliseconds | No | `2000` |
-| `FUNDING_REFRESH_MS` | Funding rate refresh interval in milliseconds | No | `30000` |
-| `ACCOUNT_REFRESH_MS` | Account refresh interval in milliseconds | No | `30000` |
+Categories: **Database**, **Exchange** (Coinbase), **Arbitrum/GMX** (chain RPC, wallet, GMX oracle), **Trading Parameters**, **Risk Management**, **Operational Settings**.
 
 ## Development
 
@@ -250,116 +204,17 @@ See [ADR-0004: Backend Framework — Hono](adrs/0004-backend-framework-hono.md) 
 
 ```
 src/
-├── index.ts                    # Application entry point
-├── adapters/                   # Exchange adapter implementations
-│   ├── types.ts               # ExchangeAdapter interface and domain types
-│   ├── errors.ts              # ExchangeError class and error codes
-│   ├── config.ts              # Adapter configuration
-│   ├── factory.ts             # Factory for creating exchange adapters
-│   ├── coinbase/              # Coinbase Advanced Trade adapter
-│   │   ├── adapter.ts         # SDK wrapper with rate limiting
-│   │   ├── normalizers.ts     # SDK → domain type converters
-│   │   ├── schemas.ts         # Valibot schemas for API responses
-│   │   └── rate-limits.ts     # Coinbase-specific rate limits
-│   └── paper/                 # Paper trading adapter (for testing)
-│       └── adapter.ts
-├── domains/                    # Domain logic
-│   ├── position/              # Position derivation and metrics
-│   │   ├── derive.ts          # Derive position from orders/fills
-│   │   ├── metrics.ts         # Position metrics (PnL, delta, etc.)
-│   │   └── reconcile.ts       # Position reconciliation
-│   ├── risk/                  # Risk evaluation engine
-│   │   ├── evaluate.ts        # Risk evaluation logic
-│   │   ├── position-sizing.ts  # Position sizing calculations
-│   │   └── emergency.ts       # Emergency exit logic
-│   ├── strategy/              # Funding rate strategy (entry/exit signals)
-│   │   ├── evaluate.ts        # Strategy evaluation and trading intent
-│   │   ├── entry-signal.ts    # Entry signal generation
-│   │   ├── exit-signal.ts     # Exit signal generation
-│   │   └── trend-analysis.ts  # Funding rate trend analysis
-│   └── state/                 # State machines
-│       ├── hedge-state.ts     # Hedge state machine
-│       ├── order-state.ts     # Order state machine
-│       └── persistence.ts     # State persistence
-├── lib/
-│   ├── config.ts              # Application configuration
-│   ├── env/                   # Environment variable validation
-│   │   ├── env.ts             # Valibot schema and parsing
-│   │   └── schema.ts          # Environment schema definition
-│   ├── logger/                # Structured logging
-│   │   └── logger.ts          # JSON/pretty logging with levels
-│   ├── db/                    # Database layer (Drizzle ORM)
-│   │   ├── schema.ts          # Table definitions
-│   │   ├── client.ts          # Database connection
-│   │   ├── ports/             # Repository interfaces
-│   │   └── adapters/          # Repository implementations
-│   └── rate-limiter/          # Rate limiting infrastructure
-│       ├── token-bucket.ts    # Token bucket implementation
-│       ├── circuit-breaker.ts # Circuit breaker (cockatiel wrapper)
-│       ├── backoff.ts         # Exponential backoff with jitter
-│       ├── request-policy.ts  # Unified rate limit + retry wrapper
-│       └── exchanges.ts       # Exchange-specific configurations
-├── server/                    # HTTP server (Hono)
-│   ├── index.ts               # Server setup and middleware
-│   └── routes/
-│       ├── health.ts          # Health check endpoint
-│       └── metrics.ts         # Prometheus metrics endpoint
-└── worker/                    # Background worker processes
-    ├── scheduler.ts           # Interval-based task scheduler
-    ├── queue.ts               # Serial execution queue (p-queue)
-    ├── data-plane.ts          # Data plane (WebSocket + REST)
-    ├── state.ts               # In-memory state store
-    ├── freshness.ts           # State freshness checks
-    ├── start-worker.ts        # Worker startup and evaluation loop
-    ├── evaluator/             # Evaluation pipeline
-    │   ├── health.ts          # Health evaluation (stale data response)
-    │   ├── evaluate.ts        # Main pipeline (health → risk → strategy → queue)
-    │   ├── startup.ts         # Startup sequence (initial reconciliation)
-    │   └── index.ts
-    ├── execution/             # Execution engine (enter/exit hedge)
-    │   ├── enter-hedge.ts     # Perp short + spot buy
-    │   ├── exit-hedge.ts      # Spot sell + perp close
-    │   ├── fill-confirmation.ts
-    │   ├── slippage.ts        # Slippage estimation and validation
-    │   ├── drift.ts           # Hedge drift detection and correction
-    │   └── types.ts
-    ├── reconciler/            # State reconciliation with exchange
-    │   ├── reconcile.ts      # Fetch truth and correct drift
-    │   └── types.ts
-    └── websocket/             # WebSocket management
-        ├── websocket.ts       # Connection manager with reconnection
-        ├── message-queue.ts   # Bounded inbound message queue
-        ├── message-parser.ts  # Validation and de-duplication
-        └── health-monitor.ts  # Per-stream health monitoring
+  adapters/     Exchange adapters (Coinbase, GMX, Paper) and shared types
+  domains/      Domain logic (position, risk, strategy, state machines)
+  lib/          Shared infra (config, db, env, logger, rate-limiter, chain)
+  server/       HTTP server (Hono) — health, metrics
+  worker/       Background processes (data plane, evaluator, execution,
+                reconciler, WebSocket, GMX data collector)
 ```
 
 ## Architecture Decisions
 
-<details>
-<summary>View all 18 Architecture Decision Records (ADRs)</summary>
-
-| ADR | Title | Status |
-|-----|-------|--------|
-| [0001](adrs/0001-bot-architecture.md) | Bot Architecture | Accepted |
-| [0002](adrs/0002-hexagonal-inspired-architecture.md) | Hexagonal-Inspired Architecture | Accepted |
-| [0003](adrs/0003-validation-strategy.md) | Validation Strategy | Accepted |
-| [0004](adrs/0004-backend-framework-hono.md) | Backend Framework — Hono | Accepted |
-| [0005](adrs/0005-database-strategy.md) | Database Strategy | Accepted |
-| [0006](adrs/0006-drizzle-orm.md) | Drizzle ORM | Accepted |
-| [0007](adrs/0007-infrastructure-flyio.md) | Infrastructure — Fly.io | Accepted |
-| [0008](adrs/0008-monitoring-observability.md) | Monitoring & Observability | Accepted |
-| [0009](adrs/0009-dev-tooling.md) | Development Tooling | Accepted |
-| [0010](adrs/0010-exchange-adapters.md) | Exchange Adapters | Accepted |
-| [0011](adrs/0011-exchange-rate-limiting.md) | Exchange Rate Limiting | Accepted |
-| [0012](adrs/0012-state-machines.md) | State Machines | Accepted |
-| [0013](adrs/0013-risk-management.md) | Risk Management Engine | Accepted |
-| [0014](adrs/0014-funding-rate-strategy.md) | Funding Rate Prediction & Strategy | Accepted |
-| [0015](adrs/0015-execution-safety-slippage.md) | Execution Safety & Slippage Modeling | Accepted |
-| [0016](adrs/0016-backtesting-simulation.md) | Backtesting & Simulation Framework | Accepted |
-| [0017](adrs/0017-task-scheduler.md) | Task Scheduler Implementation | Accepted |
-| [0018](adrs/0018-serial-execution-queue.md) | Serial Execution Queue | Accepted |
-
-</details>
+See [`adrs/`](adrs/) for all 27 Architecture Decision Records. Key decisions include bot architecture, exchange adapters, state machines, risk management, and the on-chain GMX v2 pivot (ADRs 0019–0022).
 
 ## License
 
