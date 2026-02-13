@@ -1,15 +1,15 @@
 ---
-name: evaluate-code-as-distinguished-engineer
-description: Evaluate code from a distinguished Node.js trading/arbitrage bot engineer perspective. Spawns parallel subagents for multi-perspective analysis covering architecture, library decisions (build vs buy), performance, security, and production readiness. Use when evaluating plans, reviewing implementations, or making technology decisions.
+name: review-code-as-distinguished-engineer
+description: Review code from a distinguished Node.js trading/arbitrage bot engineer perspective. Spawns parallel subagents for multi-perspective analysis covering architecture, library decisions (build vs buy), performance, security, and production readiness. Use when reviewing plans, reviewing implementations, or making technology decisions.
 ---
 
 # Distinguished Node Engineer Review
 
-Evaluate code, plans, and architecture decisions from a senior Node.js engineer perspective using parallel multi-perspective analysis.
+Review code, plans, and architecture decisions from a senior Node.js engineer perspective using parallel multi-perspective analysis.
 
 ## Quick Start
 
-When asked to evaluate code/plans as a distinguished Node engineer:
+When asked to review code/plans as a distinguished Node engineer:
 
 1. **Spawn parallel subagents** for multi-perspective evaluation
 2. **Synthesize findings** into actionable recommendations
@@ -141,7 +141,7 @@ Return actionable fixes for any non-ready items.`
 After subagents return, synthesize findings:
 
 ```markdown
-## Distinguished Node Engineer Evaluation
+## Distinguished Node Engineer Review
 
 ### Executive Summary
 [1-2 sentence overall assessment]
