@@ -14,7 +14,7 @@ todos:
 isProject: false
 ---
 
-> **Note**: This plan is part of Phase 1 (Foundation) in [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md).
+> **Note**: This plan is part of Phase 1 (Foundation) in [MVP Roadmap](../../../active/0001-mvp/README.md).
 
 # Serial Execution Queue
 
@@ -119,7 +119,7 @@ src/worker/
 
 ## References
 
-- [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md)
+- [MVP Roadmap](../../../active/0001-mvp/README.md)
 - [ADR-0001: Bot Architecture](../../../../../adrs/0001-bot-architecture.md)
 - [ADR-0018: Serial Execution Queue](../../../../../adrs/0018-serial-execution-queue.md) - Decision to use p-queue
 - [ADR-0017: Task Scheduler](../../../../../adrs/0017-task-scheduler.md) - Periodic tasks (different use case)

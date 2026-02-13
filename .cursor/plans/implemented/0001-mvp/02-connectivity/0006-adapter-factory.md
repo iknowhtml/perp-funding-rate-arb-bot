@@ -20,7 +20,7 @@ todos:
 isProject: false
 ---
 
-> **Note**: This plan is part of Phase 2 (Connectivity) in [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md).
+> **Note**: This plan is part of Phase 2 (Connectivity) in [MVP Roadmap](../../../active/0001-mvp/README.md).
 
 # Adapter Factory
 
@@ -235,6 +235,6 @@ No new dependencies required.
 
 ## References
 
-- [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md)
+- [MVP Roadmap](../../../active/0001-mvp/README.md)
 - [ADR-0010: Exchange Adapters](../../../../../adrs/0010-exchange-adapters.md)
 - [ADR-0002: Hexagonal-Inspired Architecture](../../../../../adrs/0002-hexagonal-inspired-architecture.md) — Ports and adapters

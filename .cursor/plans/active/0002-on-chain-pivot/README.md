@@ -2,7 +2,7 @@
 
 Regime-based GMX v2 funding rate arbitrage on Arbitrum (ETH/BTC). Feasibility-driven architecture.
 
-**Supersedes**: [CEX Roadmap Phases 4-6](../../deprecated/0001-mvp-roadmap/README.md)  
+**Supersedes**: [CEX Roadmap Phases 4-6](../../deprecated/0001-mvp/README.md)  
 **Reference**: [ADR-0022: Regime-Based GMX v2 Funding Arb Bot](../../../../adrs/0022-regime-based-gmx-arb.md), [ADR-0021: P&L Accounting](../../../../adrs/0021-on-chain-pnl-accounting.md), [ADR-0019: On-Chain Perps Pivot](../../../../adrs/0019-on-chain-perps-pivot.md), [ADR-0020: Contract Interaction Patterns](../../../../adrs/0020-contract-interaction-patterns.md)
 
 ## Overview
@@ -35,9 +35,9 @@ This roadmap implements a regime-based GMX v2 arbitrage bot per ADR-0022. It use
 
 ### Plans
 
-- [ ] **[0-01: Chain Infrastructure](./phase-0-feasibility/0001-chain-infrastructure.md)** — Viem client + GMX contract read helpers (reads only)
-- [ ] **[0-02: Data Collector & Storage](./phase-0-feasibility/0002-data-collector.md)** — market_snapshot, execution_estimate; hourly funding, OI, borrow rates, gas
-- [ ] **[0-03: Impact Sampler](./phase-0-feasibility/0003-impact-sampler.md)** — simulateExecuteOrder for $50k ETH/BTC; record impact bps distribution
+- [ ] **[0-01: Chain Infrastructure](../../implemented/0002-on-chain-pivot/00-feasibility/0001-chain-infrastructure.md)** — Viem client + GMX contract read helpers (reads only)
+- [ ] **[0-02: Data Collector & Storage](../../implemented/0002-on-chain-pivot/00-feasibility/0002-data-collector.md)** — market_snapshot, execution_estimate; hourly funding, OI, borrow rates, gas
+- [ ] **[0-03: Impact Sampler](../../implemented/0002-on-chain-pivot/00-feasibility/0003-impact-sampler.md)** — simulateExecuteOrder for $50k ETH/BTC; record impact bps distribution
 
 ### Validation
 
@@ -55,20 +55,20 @@ This roadmap implements a regime-based GMX v2 arbitrage bot per ADR-0022. It use
 
 ### Plans
 
-- [ ] **[1-01: Transaction Lifecycle](./phase-1-mvp-execution/0001-transaction-lifecycle.md)** — Build → simulate → send → confirm pipeline
-- [ ] **[1-02: GMX Adapter Types + CEX Cleanup](./phase-1-mvp-execution/0002-gmx-adapter-types.md)** — position_state, pnl_snapshot types; delete CEX adapters
-- [ ] **[1-03: GMX Adapter — Reads](./phase-1-mvp-execution/0003-gmx-adapter-reads.md)** — 4h MA funding, OI skew ratio
-- [ ] **[1-04: GMX Adapter — Writes](./phase-1-mvp-execution/0004-gmx-adapter-writes.md)** — simulate-before-submit pattern
-- [ ] **[1-05: Keeper Monitoring](./phase-1-mvp-execution/0005-keeper-monitoring.md)** — 60-120s timeout, cancel on timeout
-- [ ] **[1-06: Regime Detector](./phase-1-mvp-execution/0006-regime-detector.md)** — 4h MA entry/exit signals
-- [ ] **[1-07: Cost Model](./phase-1-mvp-execution/0007-cost-model.md)** — Gas, impact, drift; break-even gate
-- [ ] **[1-08: GM Token Yield & Valuation](./phase-1-mvp-execution/0008-gm-yield-valuation.md)** — Hybrid valuation per ADR-0021
-- [ ] **[1-09: Risk Engine On-Chain](./phase-1-mvp-execution/0009-risk-engine-on-chain.md)** — Max gas, impact (5/8 bps), oracle, keeper, circuit breakers
-- [ ] **[1-10: Enter Hedge On-Chain](./phase-1-mvp-execution/0010-enter-hedge-on-chain.md)** — Enter sequence with entry gate
-- [ ] **[1-11: Exit Hedge On-Chain](./phase-1-mvp-execution/0011-exit-hedge-on-chain.md)** — Exit sequence; regime flip or yield < costs
-- [ ] **[1-12: Async Order Lifecycle](./phase-1-mvp-execution/0012-async-order-lifecycle.md)** — State machine; cancel on timeout
-- [ ] **[1-13: Reconciler](./phase-1-mvp-execution/0013-reconciler.md)** — Position, GM balance, pending orders check
-- [ ] **[1-14: Accounting & P&L Attribution](./phase-1-mvp-execution/0014-accounting-pnl.md)** — ADR-0021 full implementation
+- [ ] **[1-01: Transaction Lifecycle](./01-mvp-execution/0001-transaction-lifecycle.md)** — Build → simulate → send → confirm pipeline
+- [ ] **[1-02: GMX Adapter Types + CEX Cleanup](./01-mvp-execution/0002-gmx-adapter-types.md)** — position_state, pnl_snapshot types; delete CEX adapters
+- [ ] **[1-03: GMX Adapter — Reads](./01-mvp-execution/0003-gmx-adapter-reads.md)** — 4h MA funding, OI skew ratio
+- [ ] **[1-04: GMX Adapter — Writes](./01-mvp-execution/0004-gmx-adapter-writes.md)** — simulate-before-submit pattern
+- [ ] **[1-05: Keeper Monitoring](./01-mvp-execution/0005-keeper-monitoring.md)** — 60-120s timeout, cancel on timeout
+- [ ] **[1-06: Regime Detector](./01-mvp-execution/0006-regime-detector.md)** — 4h MA entry/exit signals
+- [ ] **[1-07: Cost Model](./01-mvp-execution/0007-cost-model.md)** — Gas, impact, drift; break-even gate
+- [ ] **[1-08: GM Token Yield & Valuation](./01-mvp-execution/0008-gm-yield-valuation.md)** — Hybrid valuation per ADR-0021
+- [ ] **[1-09: Risk Engine On-Chain](./01-mvp-execution/0009-risk-engine-on-chain.md)** — Max gas, impact (5/8 bps), oracle, keeper, circuit breakers
+- [ ] **[1-10: Enter Hedge On-Chain](./01-mvp-execution/0010-enter-hedge-on-chain.md)** — Enter sequence with entry gate
+- [ ] **[1-11: Exit Hedge On-Chain](./01-mvp-execution/0011-exit-hedge-on-chain.md)** — Exit sequence; regime flip or yield < costs
+- [ ] **[1-12: Async Order Lifecycle](./01-mvp-execution/0012-async-order-lifecycle.md)** — State machine; cancel on timeout
+- [ ] **[1-13: Reconciler](./01-mvp-execution/0013-reconciler.md)** — Position, GM balance, pending orders check
+- [ ] **[1-14: Accounting & P&L Attribution](./01-mvp-execution/0014-accounting-pnl.md)** — ADR-0021 full implementation
 
 ### Validation
 
@@ -89,27 +89,27 @@ This roadmap implements a regime-based GMX v2 arbitrage bot per ADR-0022. It use
 
 | Plan | Status |
 |------|--------|
-| [2-01: GMX Paper Trading Adapter](./phase-2-optimization/simulation/0001-paper-trading-adapter.md) | [ ] |
-| [2-02: Historical Data Ingestion](./phase-2-optimization/simulation/0002-historical-data-ingestion.md) | [ ] |
-| [2-03: Backtesting Engine](./phase-2-optimization/simulation/0003-backtesting-engine.md) | [ ] |
-| [2-04: Backtesting CLI](./phase-2-optimization/simulation/0004-backtesting-cli.md) | [ ] |
+| [2-01: GMX Paper Trading Adapter](./02-optimization/simulation/0001-paper-trading-adapter.md) | [ ] |
+| [2-02: Historical Data Ingestion](./02-optimization/simulation/0002-historical-data-ingestion.md) | [ ] |
+| [2-03: Backtesting Engine](./02-optimization/simulation/0003-backtesting-engine.md) | [ ] |
+| [2-04: Backtesting CLI](./02-optimization/simulation/0004-backtesting-cli.md) | [ ] |
 
 ### Deployment
 
 | Plan | Status |
 |------|--------|
-| [2-05: Monitoring & Alerting](./phase-2-optimization/deployment/0005-monitoring-alerting.md) | [ ] |
-| [2-06: Metrics Collection](./phase-2-optimization/deployment/0006-metrics-collection.md) | [ ] |
-| [2-07: Deployment](./phase-2-optimization/deployment/0007-deployment.md) | [ ] |
-| [2-08: Small Capital Deployment](./phase-2-optimization/deployment/0008-small-capital-deployment.md) | [ ] |
+| [2-05: Monitoring & Alerting](./02-optimization/deployment/0005-monitoring-alerting.md) | [ ] |
+| [2-06: Metrics Collection](./02-optimization/deployment/0006-metrics-collection.md) | [ ] |
+| [2-07: Deployment](./02-optimization/deployment/0007-deployment.md) | [ ] |
+| [2-08: Small Capital Deployment](./02-optimization/deployment/0008-small-capital-deployment.md) | [ ] |
 
 ### Production
 
 | Plan | Status |
 |------|--------|
-| [2-09: Performance Optimization](./phase-2-optimization/production/0009-performance-optimization.md) | [ ] |
-| [2-10: Capital Scaling](./phase-2-optimization/production/0010-capital-scaling.md) | [ ] |
-| [2-11: Operational Excellence](./phase-2-optimization/production/0011-operational-excellence.md) | [ ] |
+| [2-09: Performance Optimization](./02-optimization/production/0009-performance-optimization.md) | [ ] |
+| [2-10: Capital Scaling](./02-optimization/production/0010-capital-scaling.md) | [ ] |
+| [2-11: Operational Excellence](./02-optimization/production/0011-operational-excellence.md) | [ ] |
 
 ### Validation
 

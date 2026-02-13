@@ -19,7 +19,7 @@ The lifecycle management todo ensures that moving plans to `implemented/` is par
 
 ```bash
 # Replace <ROADMAP>, <PHASE>, <PLAN> with actual values
-# Example: 0001-mvp-roadmap, 01-foundation, 0007-serial-execution-queue
+# Example: 0001-mvp, 01-foundation, 0007-serial-execution-queue
 
 # 1. Update plan file: todos to completed, validation boxes [x], roadmap link
 
@@ -37,6 +37,14 @@ test -f .cursor/plans/implemented/<ROADMAP>/<PHASE>/<PLAN>.md && \
   ! test -f .cursor/plans/active/<ROADMAP>/<PHASE>/<PLAN>.md && \
   echo "SUCCESS" || echo "ERROR"
 ```
+
+---
+
+## Plan Naming Convention
+
+- **Roadmap ID**: `NNNN-kebab-case` (e.g. `0001-mvp`, `0002-on-chain-pivot`) — no `-roadmap` suffix
+- **Phase folder**: `NN-kebab-case` (e.g. `00-feasibility`, `01-foundation`)
+- **Plan file**: `NNNN-kebab-case.md` (e.g. `0001-chain-infrastructure.md`)
 
 ---
 
@@ -140,8 +148,8 @@ Plans follow a lifecycle with three states:
 **When a plan is fully implemented:**
 
 1. **Create the directory structure** in `implemented/` mirroring `active/`
-   - Example: `active/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md`
-   - Becomes: `implemented/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md`
+   - Example: `active/0001-mvp/01-foundation/0001-local-dev-setup.md`
+   - Becomes: `implemented/0001-mvp/01-foundation/0001-local-dev-setup.md`
 
 2. **Update the plan file**:
    - Mark all todos as `status: completed`
@@ -171,35 +179,35 @@ Plans follow a lifecycle with three states:
 
 ## Example Workflow
 
-After implementing `active/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md`:
+After implementing `active/0001-mvp/01-foundation/0001-local-dev-setup.md`:
 
 ```bash
 # 1. Create directory structure
-mkdir -p .cursor/plans/implemented/0001-mvp-roadmap/01-foundation
+mkdir -p .cursor/plans/implemented/0001-mvp/01-foundation
 
 # 2. Copy and update the plan file (mark todos as completed)
 # 3. Move from active to implemented
-mv .cursor/plans/active/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md \
-   .cursor/plans/implemented/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md
+mv .cursor/plans/active/0001-mvp/01-foundation/0001-local-dev-setup.md \
+   .cursor/plans/implemented/0001-mvp/01-foundation/0001-local-dev-setup.md
 
 # 4. 🚨 MANDATORY: ALWAYS delete from active/ after moving - THIS IS CRITICAL 🚨
 # NO EXCEPTIONS - ALWAYS verify and delete if it still exists
 # The mv command should remove it, but NEVER trust - ALWAYS verify and delete
-test -f .cursor/plans/active/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md && \
-  (rm .cursor/plans/active/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md && \
+test -f .cursor/plans/active/0001-mvp/01-foundation/0001-local-dev-setup.md && \
+  (rm .cursor/plans/active/0001-mvp/01-foundation/0001-local-dev-setup.md && \
    echo "DELETED: File removed from active/") || \
   echo "OK: File correctly removed from active/"
 
 # 4b. MANDATORY VERIFICATION - File must NOT exist in active/
-if [ -f .cursor/plans/active/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md ]; then
+if [ -f .cursor/plans/active/0001-mvp/01-foundation/0001-local-dev-setup.md ]; then
   echo "ERROR: File STILL exists in active/ after deletion attempt - FORCING deletion"
-  rm -f .cursor/plans/active/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md
+  rm -f .cursor/plans/active/0001-mvp/01-foundation/0001-local-dev-setup.md
   echo "FORCE DELETED from active/"
 fi
 
 # 5. Verify final state - file should ONLY exist in implemented/
-test -f .cursor/plans/implemented/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md && \
-  ! test -f .cursor/plans/active/0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md && \
+test -f .cursor/plans/implemented/0001-mvp/01-foundation/0001-local-dev-setup.md && \
+  ! test -f .cursor/plans/active/0001-mvp/01-foundation/0001-local-dev-setup.md && \
   echo "SUCCESS: Plan correctly moved" || \
   echo "ERROR: Plan file state is incorrect"
 ```
@@ -276,7 +284,7 @@ If a plan needs to be moved manually:
 
 ```bash
 # Extract the relative path from active
-PLAN_PATH="0001-mvp-roadmap/01-foundation/0001-local-dev-setup.md"
+PLAN_PATH="0001-mvp/01-foundation/0001-local-dev-setup.md"
 
 # Create directory in implemented
 mkdir -p ".cursor/plans/implemented/$(dirname "$PLAN_PATH")"

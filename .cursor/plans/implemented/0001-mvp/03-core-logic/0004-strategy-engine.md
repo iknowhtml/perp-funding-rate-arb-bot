@@ -26,7 +26,7 @@ todos:
 isProject: false
 ---
 
-> **Note**: This plan is part of Phase 3 (Core Logic) in [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md).
+> **Note**: This plan is part of Phase 3 (Core Logic) in [MVP Roadmap](../../../active/0001-mvp/README.md).
 
 # Strategy Engine
 

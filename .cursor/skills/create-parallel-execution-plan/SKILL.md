@@ -101,5 +101,5 @@ Use the execution-plan-template.md. Fill in:
 ## Reference
 
 - Library: `.cursor/scripts/worktree-lib.sh`
-- Example: `.cursor/plans/implemented/0002-gmx-pivot/phase-0-feasibility/`
+- Example: `.cursor/plans/implemented/0002-on-chain-pivot/00-feasibility/`
 - Templates: `execution-plan-template.md`, `config-template.sh`

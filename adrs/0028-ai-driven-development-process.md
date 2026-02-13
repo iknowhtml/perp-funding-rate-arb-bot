@@ -397,9 +397,9 @@ Each pipeline stage maps to Cursor skills and tooling:
 
 ## References
 
-- Current META-PLAN example: `.cursor/plans/active/0002-gmx-pivot/phase-0-feasibility/META-PLAN.md`
-- Current PARALLEL-EXECUTION example: `.cursor/plans/active/0002-gmx-pivot/phase-0-feasibility/PARALLEL-EXECUTION.md`
-- Current worktree config: `.cursor/plans/active/0002-gmx-pivot/phase-0-feasibility/worktree-config.sh`
+- Current META-PLAN example: `.cursor/plans/implemented/0002-on-chain-pivot/00-feasibility/META-PLAN.md`
+- Current PARALLEL-EXECUTION example: `.cursor/plans/implemented/0002-on-chain-pivot/00-feasibility/PARALLEL-EXECUTION.md`
+- Current worktree config: `.cursor/plans/implemented/0002-on-chain-pivot/00-feasibility/worktree-config.sh`
 - Generic worktree library: `.cursor/scripts/worktree-lib.sh`
 - Skills: `create-implement-and-manage-plan`, `create-parallel-execution-plan`, `execute-parallel-plan`
 - Rule: `.cursor/rules/worktree-execution.mdc`

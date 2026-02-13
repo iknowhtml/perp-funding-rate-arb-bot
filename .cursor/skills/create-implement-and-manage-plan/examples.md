@@ -72,14 +72,14 @@ Implement JWT-based user authentication...
 ## Example 2: Implementing a Plan
 
 ### User Request
-"Implement `.cursor/plans/active/0001-mvp-roadmap/02-connectivity/0002-rate-limiting.md`"
+"Implement `.cursor/plans/active/0001-mvp/02-connectivity/0002-rate-limiting.md`"
 
 ### Correct Response
 
 **Step 1: Read and parse the plan**
 
 ```bash
-cat .cursor/plans/active/0001-mvp-roadmap/02-connectivity/0002-rate-limiting.md
+cat .cursor/plans/active/0001-mvp/02-connectivity/0002-rate-limiting.md
 ```
 
 **Step 2: Extract frontmatter todos** (THE SOURCE OF TRUTH):
@@ -132,16 +132,16 @@ Execute lifecycle-management immediately:
 # 3. Update roadmap link
 
 # 4. Move:
-mkdir -p .cursor/plans/implemented/0001-mvp-roadmap/02-connectivity
-mv .cursor/plans/active/0001-mvp-roadmap/02-connectivity/0002-rate-limiting.md \
-   .cursor/plans/implemented/0001-mvp-roadmap/02-connectivity/0002-rate-limiting.md
+mkdir -p .cursor/plans/implemented/0001-mvp/02-connectivity
+mv .cursor/plans/active/0001-mvp/02-connectivity/0002-rate-limiting.md \
+   .cursor/plans/implemented/0001-mvp/02-connectivity/0002-rate-limiting.md
 
 # 5. Delete from active (MANDATORY):
-rm -f .cursor/plans/active/0001-mvp-roadmap/02-connectivity/0002-rate-limiting.md
+rm -f .cursor/plans/active/0001-mvp/02-connectivity/0002-rate-limiting.md
 
 # 6. Verify:
-test -f .cursor/plans/implemented/0001-mvp-roadmap/02-connectivity/0002-rate-limiting.md && \
-  ! test -f .cursor/plans/active/0001-mvp-roadmap/02-connectivity/0002-rate-limiting.md && \
+test -f .cursor/plans/implemented/0001-mvp/02-connectivity/0002-rate-limiting.md && \
+  ! test -f .cursor/plans/active/0001-mvp/02-connectivity/0002-rate-limiting.md && \
   echo "SUCCESS"
 ```
 
@@ -174,14 +174,14 @@ Parse YAML frontmatter and extract todos array:
 
 **What went wrong:**
 ```
-$ ls .cursor/plans/*/0001-mvp-roadmap/02-connectivity/
-active/0001-mvp-roadmap/02-connectivity/0002-rate-limiting.md
-implemented/0001-mvp-roadmap/02-connectivity/0002-rate-limiting.md
+$ ls .cursor/plans/*/0001-mvp/02-connectivity/
+active/0001-mvp/02-connectivity/0002-rate-limiting.md
+implemented/0001-mvp/02-connectivity/0002-rate-limiting.md
 ```
 
 **Fix:**
 ```bash
-rm -f .cursor/plans/active/0001-mvp-roadmap/02-connectivity/0002-rate-limiting.md
+rm -f .cursor/plans/active/0001-mvp/02-connectivity/0002-rate-limiting.md
 ```
 
 ### Mistake: lifecycle-management not in task tracker

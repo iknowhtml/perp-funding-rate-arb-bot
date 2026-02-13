@@ -17,7 +17,7 @@ todos:
 isProject: false
 ---
 
-> **Note**: This plan is part of Phase 1 (Foundation) in [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md).
+> **Note**: This plan is part of Phase 1 (Foundation) in [MVP Roadmap](../../../active/0001-mvp/README.md).
 
 # Environment Configuration
 
@@ -139,6 +139,6 @@ src/lib/env/
 
 ## References
 
-- [MVP Roadmap](../../../active/0001-mvp-roadmap/README.md)
+- [MVP Roadmap](../../../active/0001-mvp/README.md)
 - [ADR-0003: Validation Strategy](../../../../../adrs/0003-validation-strategy.md)
 - [Valibot Documentation](https://valibot.dev/)

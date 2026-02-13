@@ -37,7 +37,7 @@ All paths, branch names, batch definitions, and helper functions are centralized
 [`.cursor/scripts/worktree-lib.sh`](../../../../scripts/worktree-lib.sh). Source the config before running any batch commands:
 
 ```bash
-source .cursor/plans/active/0002-gmx-pivot/phase-0-feasibility/worktree-config.sh
+source .cursor/plans/implemented/0002-on-chain-pivot/00-feasibility/worktree-config.sh
 ```
 
 Key variables defined in the config:
@@ -80,7 +80,7 @@ funding-rate-arb/
 Using the helper functions from `worktree-config.sh`:
 
 ```bash
-source .cursor/plans/active/0002-gmx-pivot/phase-0-feasibility/worktree-config.sh
+source .cursor/plans/implemented/0002-on-chain-pivot/00-feasibility/worktree-config.sh
 
 # ── SETUP (before each batch) ──────────────────────────────────────────
 wt_setup_batch 1        # Creates worktrees + branches for all agents in batch 1
@@ -243,7 +243,7 @@ No dependencies. All three write to different files.
 ### Worktree Setup
 
 ```bash
-source .cursor/plans/active/0002-gmx-pivot/phase-0-feasibility/worktree-config.sh
+source .cursor/plans/implemented/0002-on-chain-pivot/00-feasibility/worktree-config.sh
 wt_setup_batch 1
 ```
 
@@ -439,7 +439,7 @@ After all three agents complete, merge into main in completion order:
 
 ```bash
 # Source config if not already loaded
-source .cursor/plans/active/0002-gmx-pivot/phase-0-feasibility/worktree-config.sh
+source .cursor/plans/implemented/0002-on-chain-pivot/00-feasibility/worktree-config.sh
 
 wt_merge_batch 1          # Merges deps → env → db into main
 
@@ -1122,4 +1122,4 @@ wt_final_cleanup
 ```
 
 Mark all three plans as implemented and move to
-`.cursor/plans/implemented/0002-gmx-pivot/phase-0-feasibility/`.
+`.cursor/plans/implemented/0002-on-chain-pivot/00-feasibility/`.

@@ -32,7 +32,7 @@ todos:
 isProject: false
 ---
 
-> **Note**: This plan is part of Phase 3 (Core Logic) in [MVP Roadmap](../../active/0001-mvp-roadmap/README.md).
+> **Note**: This plan is part of Phase 3 (Core Logic) in [MVP Roadmap](../../active/0001-mvp/README.md).
 
 # Risk Engine
 
@@ -110,6 +110,6 @@ No new dependencies required.
 
 ## References
 
-- [MVP Roadmap](../../active/0001-mvp-roadmap/README.md)
+- [MVP Roadmap](../../active/0001-mvp/README.md)
 - [ADR-0013: Risk Management Engine](../../../../../adrs/0013-risk-management.md)
 - [ADR-0001: Bot Architecture](../../../../../adrs/0001-bot-architecture.md) — Two-phase risk check

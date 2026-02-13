@@ -4,7 +4,7 @@
 # Plan-specific batches. Sources generic library from .cursor/scripts/worktree-lib.sh
 #
 # Usage:
-#   source .cursor/plans/active/0002-gmx-pivot/phase-0-feasibility/worktree-config.sh
+#   source .cursor/plans/implemented/0002-on-chain-pivot/00-feasibility/worktree-config.sh
 #   wt_setup_batch 1
 #   wt_merge_batch 1
 #   wt_verify_batch 1

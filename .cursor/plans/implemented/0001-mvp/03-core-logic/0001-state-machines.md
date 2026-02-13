@@ -179,6 +179,6 @@ No new dependencies required.
 
 ## References
 
-- [MVP Roadmap](../../active/0001-mvp-roadmap/README.md)
+- [MVP Roadmap](../../active/0001-mvp/README.md)
 - [ADR-0012: State Machines](../../../../../adrs/0012-state-machines.md)
 - [ADR-0001: Bot Architecture](../../../../../adrs/0001-bot-architecture.md)

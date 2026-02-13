@@ -195,7 +195,7 @@ echo "FAILED: verify manually"
 
 **The file must ONLY exist in `implemented/` when done. Never in both locations. Never skip the `git rm` step.**
 
-**Example**: If implementing "co-locate exchange code" work that relates to the rate-limiting plan at `.cursor/plans/active/0001-mvp-roadmap/02-connectivity/0002-rate-limiting.md`, move **that plan** to `implemented/`, not a separate standalone plan file.
+**Example**: If implementing "co-locate exchange code" work that relates to the rate-limiting plan at `.cursor/plans/active/0001-mvp/02-connectivity/0002-rate-limiting.md`, move **that plan** to `implemented/`, not a separate standalone plan file.
 
 ---
 
