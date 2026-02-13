@@ -29,6 +29,9 @@ todos:
   - id: tests
     content: Add unit tests for client factory, health monitor, GMX read helpers
     status: pending
+  - id: smoke-tests
+    content: Add smoke tests (live RPC + REST) — validate connectivity, multicall, REST parsing, health monitor
+    status: pending
   - id: code-review
     content: Run code-reviewer subagent
     status: pending
@@ -64,12 +67,158 @@ Scope for Phase 0:
 
 ## Validation
 
-- [ ] Can connect to Arbitrum RPC and read chain state
-- [ ] Multicall batching works
-- [ ] GMX REST API fetches markets/info (funding, OI, borrow rates)
-- [ ] Reader contract reads market data and positions
-- [ ] RPC health monitor detects stale blocks
 - [ ] All code passes typecheck and biome
+- [ ] Unit tests pass (`pnpm test:run`)
+- [ ] Smoke tests pass against live Arbitrum RPC + GMX REST (`pnpm test:run --testPathPattern smoke`)
+
+## Smoke Tests
+
+Live integration tests that prove the infrastructure actually works. Gated behind `ARBITRUM_RPC_URL` env var — skipped in CI, run manually during development.
+
+File: `src/lib/chain/chain.smoke.test.ts` + `src/adapters/gmx/gmx.smoke.test.ts`
+
+### 1. RPC Connectivity (`chain.smoke.test.ts`)
+
+```typescript
+describe("Arbitrum RPC connectivity", () => {
+  it("should connect and return a valid block number", async () => {
+    const client = createArbitrumPublicClient(ARBITRUM_RPC_URL);
+    const blockNumber = await client.getBlockNumber();
+    expect(blockNumber).toBeGreaterThan(0n);
+  });
+
+  it("should confirm chain ID is 42161 (Arbitrum One)", async () => {
+    const client = createArbitrumPublicClient(ARBITRUM_RPC_URL);
+    const chainId = await client.getChainId();
+    expect(chainId).toBe(42161);
+  });
+
+  it("should return a recent block (< 60s old)", async () => {
+    const client = createArbitrumPublicClient(ARBITRUM_RPC_URL);
+    const block = await client.getBlock({ blockTag: "latest" });
+    const nowSec = BigInt(Math.floor(Date.now() / 1000));
+    const ageSec = nowSec - block.timestamp;
+    expect(ageSec).toBeLessThan(60n);
+  });
+});
+```
+
+**Validates**: env schema (`ARBITRUM_RPC_URL`), public client factory, basic RPC reads.
+
+### 2. Multicall Batching (`chain.smoke.test.ts`)
+
+```typescript
+it("should batch concurrent reads into a single multicall", async () => {
+  const client = createArbitrumPublicClient(ARBITRUM_RPC_URL);
+
+  // Fire 3 reads concurrently — viem batches them into one eth_call
+  const [blockNumber, gasPrice, chainId] = await Promise.all([
+    client.getBlockNumber(),
+    client.getGasPrice(),
+    client.getChainId(),
+  ]);
+
+  expect(blockNumber).toBeGreaterThan(0n);
+  expect(gasPrice).toBeGreaterThan(0n);
+  expect(chainId).toBe(42161);
+});
+```
+
+**Validates**: multicall config from `@gmx-io/sdk` BATCH_CONFIGS, concurrent read batching.
+
+### 3. GMX REST API — Tickers (`gmx.smoke.test.ts`)
+
+```typescript
+it("should fetch and parse /prices/tickers", async () => {
+  const tickers = await fetchGmxTickers(GMX_ORACLE_URL);
+
+  expect(tickers.length).toBeGreaterThan(0);
+
+  // Verify ETH market exists
+  const ethTicker = tickers.find((t) => t.tokenSymbol === "ETH");
+  expect(ethTicker).toBeDefined();
+  expect(ethTicker!.maxPrice).toBeGreaterThan(0n);
+  expect(ethTicker!.minPrice).toBeGreaterThan(0n);
+});
+```
+
+**Validates**: REST client, Valibot schema for ticker response, GMX oracle URL config.
+
+### 4. GMX REST API — Markets Info (`gmx.smoke.test.ts`)
+
+```typescript
+it("should fetch and parse /markets/info with funding and OI", async () => {
+  const markets = await fetchGmxMarketsInfo(GMX_ORACLE_URL);
+
+  expect(markets.length).toBeGreaterThan(0);
+
+  // Verify a market has funding/OI data
+  const ethMarket = markets.find((m) => m.marketName.includes("ETH"));
+  expect(ethMarket).toBeDefined();
+  expect(ethMarket!.longFundingRate).toBeDefined();
+  expect(ethMarket!.shortFundingRate).toBeDefined();
+  expect(ethMarket!.longOpenInterestUsd).toBeGreaterThan(0n);
+});
+```
+
+**Validates**: REST client, Valibot schema for market info, funding rate + OI parsing.
+
+### 5. Reader Contract — Market Data (`gmx.smoke.test.ts`)
+
+```typescript
+it("should read market data via Reader contract", async () => {
+  const client = createArbitrumPublicClient(ARBITRUM_RPC_URL);
+
+  const marketCount = await client.readContract({
+    address: GMX_CONTRACTS.dataStore,
+    abi: dataStoreAbi,
+    functionName: "getAddressCount",
+    args: [MARKET_LIST_KEY],
+  });
+
+  expect(marketCount).toBeGreaterThan(0n);
+});
+```
+
+**Validates**: GMX contract addresses from SDK, ABI imports, Reader contract reads.
+
+### 6. RPC Health Monitor (`chain.smoke.test.ts`)
+
+```typescript
+it("should report healthy for a live RPC", async () => {
+  const client = createArbitrumPublicClient(ARBITRUM_RPC_URL);
+  const health = await checkRpcHealth(client);
+
+  expect(health.status).toBe("healthy");
+  expect(health.blockNumber).toBeGreaterThan(0n);
+  expect(health.blockAgeSec).toBeLessThan(60n);
+  expect(health.chainId).toBe(42161);
+});
+
+it("should report unhealthy for an unreachable RPC", async () => {
+  const client = createArbitrumPublicClient("http://localhost:1");
+  const health = await checkRpcHealth(client);
+
+  expect(health.status).toBe("unhealthy");
+});
+```
+
+**Validates**: health monitor logic, stale block detection, error handling for dead RPCs.
+
+### Test Config
+
+Smoke tests use a `describe.runIf` guard so they skip when env vars are missing:
+
+```typescript
+const ARBITRUM_RPC_URL = process.env.ARBITRUM_RPC_URL;
+const GMX_ORACLE_URL = process.env.GMX_ORACLE_URL ?? "https://arbitrum-api.gmxinfra.io";
+
+describe.runIf(ARBITRUM_RPC_URL)("smoke: chain infrastructure", () => {
+  // ... tests above
+});
+```
+
+Run manually: `ARBITRUM_RPC_URL=https://arb-mainnet.g.alchemy.com/v2/xxx pnpm test:run --testPathPattern smoke`
 
 ## References
 
