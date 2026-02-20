@@ -25,6 +25,12 @@ This roadmap implements a regime-based GMX v2 arbitrage bot per ADR-0022. It use
 - **Phase 1**: Chain infra, GMX adapter, regime detector, cost model, GM yield valuation, risk engine, enter/exit execution, reconciler, accounting.
 - **Phase 2**: Simulation, deployment, production optimization.
 
+### Current state & plan–code drift (as of assessment)
+
+- **Phase 0** plan files live in `implemented/0002-on-chain-pivot/00-feasibility/` (0001, 0002, 0003). Code exists for: chain infra (`src/lib/chain/`), DB schema (`market_snapshot`, `execution_estimate`), data collector (`src/worker/data-collector.ts`), impact sampler (`src/worker/impact-sampler.ts`).
+- **Broken:** Adapter layer was removed: `src/adapters/gmx/`, `src/adapters/coinbase/`, `src/adapters/binance/`, `src/adapters/bybit/` are deleted. `src/adapters/index.ts`, `src/adapters/factory.ts`, and `src/lib/rate-limiter/index.ts` still import/export those modules; `data-collector` and `impact-sampler` import `@/adapters/gmx`. **The repo does not typecheck** until the GMX adapter is restored and CEX references are removed.
+- **Alignment:** Phase 0 validation "All code passes typecheck and biome" is currently false. **Next step:** Complete **1-02 (GMX Adapter Types + CEX Cleanup)** then **1-03 (GMX Adapter — Reads)** so that `@/adapters/gmx` exists and CEX exports are removed; then typecheck can pass and Phase 0/1 are consistent.
+
 ---
 
 ## Phase 0: Data + Simulator First (Fast Go/No-Go)

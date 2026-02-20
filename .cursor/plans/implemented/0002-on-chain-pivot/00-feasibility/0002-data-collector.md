@@ -81,6 +81,8 @@ For Phase 0 feasibility mode, the collector runs hourly (or at the above cadence
 - [ ] Gas price stored (10s cadence)
 - [ ] Collector handles REST/RPC failures gracefully
 
+**Drift:** GMX adapter (`src/adapters/gmx/`) was later removed. Phase 1-02/1-03 must restore it for a buildable tree.
+
 ## References
 
 - [ADR-0022: Regime-Based GMX v2 Funding Arb Bot](../../../../../adrs/0022-regime-based-gmx-arb.md) — Data Plane, Appendix schema

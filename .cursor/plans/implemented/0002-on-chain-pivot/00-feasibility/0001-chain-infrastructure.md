@@ -71,6 +71,8 @@ Scope for Phase 0:
 - [ ] Unit tests pass (`pnpm test:run`)
 - [ ] Smoke tests pass against live Arbitrum RPC + GMX REST (`pnpm test:run --testPathPattern smoke`)
 
+**Drift:** GMX adapter (`src/adapters/gmx/`) was later removed. Phase 1-02/1-03 must restore it for a buildable tree.
+
 ## Smoke Tests
 
 Live integration tests that prove the infrastructure actually works. Gated behind `ARBITRUM_RPC_URL` env var — skipped in CI, run manually during development.

@@ -67,6 +67,8 @@ If impact exceeds these thresholds at $50k notional, profitability is at risk. P
 - [ ] Go/no-go criteria configurable
 - [ ] Success: median < 3 bps, p90 < 8 bps in test/mainnet environment
 
+**Drift:** GMX adapter (`src/adapters/gmx/`) was later removed. Phase 1-02/1-03 must restore it for a buildable tree.
+
 ## References
 
 - [ADR-0022: Regime-Based GMX v2 Funding Arb Bot](../../../../../adrs/0022-regime-based-gmx-arb.md) — Phase 0, Cost Model, Key Configurations
