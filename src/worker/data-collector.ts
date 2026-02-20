@@ -1,9 +1,7 @@
-import { fetchGmxMarketsInfo, fetchGmxTickers } from "@/adapters/gmx";
-import { marketSnapshot } from "@/lib/db/schema";
+import { type GmxMarket, fetchGmxMarketsInfo, fetchGmxTickers } from "@/adapters/gmx";
+import { type Database, marketSnapshot } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { createScheduler } from "@/worker/scheduler";
-
-import type { Database } from "@/lib/db/client";
 import type { PublicClient } from "viem";
 
 const COLLECT_INTERVAL_MS = 60_000;
@@ -60,7 +58,7 @@ export const createDataCollector = (deps: DataCollectorDeps): DataCollector => {
       if (btcPrice) symbolToPrice.set("BTC", btcPrice);
 
       const targetMarkets = markets.filter(
-        (m) => m.name.includes("ETH/USD") || m.name.includes("BTC/USD"),
+        (m: GmxMarket) => m.name.includes("ETH/USD") || m.name.includes("BTC/USD"),
       );
 
       for (const m of targetMarkets) {

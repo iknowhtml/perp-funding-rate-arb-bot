@@ -44,14 +44,12 @@ export {
   type ExchangeRateLimitConfig,
 } from "./exchanges";
 
-// Re-export exchange-specific configs from adapters (for convenience)
-export { COINBASE_RATE_LIMITS } from "@/adapters/coinbase/rate-limits";
+// Exchange rate limit presets (no adapter dependency)
 export {
-  BINANCE_ENDPOINT_WEIGHTS,
   BINANCE_RATE_LIMITS,
-  getBinanceEndpointWeight,
-} from "@/adapters/binance";
-export { BYBIT_RATE_LIMITS } from "@/adapters/bybit";
+  BYBIT_RATE_LIMITS,
+  COINBASE_RATE_LIMITS,
+} from "./presets";
 
 // Request policy (main entry point)
 export {

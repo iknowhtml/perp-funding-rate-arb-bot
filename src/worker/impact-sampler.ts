@@ -1,9 +1,7 @@
-import { BTC_USD_MARKET, ETH_USD_MARKET, fetchGmxTickers } from "@/adapters/gmx";
-import { executionEstimate } from "@/lib/db/schema";
+import { BTC_USD_MARKET, ETH_USD_MARKET, type GmxTicker, fetchGmxTickers } from "@/adapters/gmx";
+import { type Database, executionEstimate } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { createScheduler } from "@/worker/scheduler";
-
-import type { Database } from "@/lib/db/client";
 import type { PublicClient, WalletClient } from "viem";
 
 const SAMPLE_SIZE_USD = 50_000n * 10n ** 30n;
@@ -61,8 +59,8 @@ export const createImpactSampler = (deps: ImpactSamplerDeps): ImpactSampler => {
   const sampleOnce = async (): Promise<void> => {
     try {
       const tickers = await fetchGmxTickers(deps.gmxOracleUrl);
-      const ethTicker = tickers.find((t) => t.tokenSymbol === "ETH");
-      const btcTicker = tickers.find((t) => t.tokenSymbol === "BTC");
+      const ethTicker = tickers.find((t: GmxTicker) => t.tokenSymbol === "ETH");
+      const btcTicker = tickers.find((t: GmxTicker) => t.tokenSymbol === "BTC");
 
       const ts = new Date();
 

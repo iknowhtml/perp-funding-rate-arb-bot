@@ -27,38 +27,26 @@ const mockAdapter = {
   unsubscribeTicker: vi.fn(),
 };
 
-vi.mock("./coinbase", () => ({
-  createCoinbaseAdapter: vi.fn(() => mockAdapter),
-}));
-
 vi.mock("./paper", () => ({
   createPaperAdapter: vi.fn(() => mockAdapter),
 }));
 
-import { createCoinbaseAdapter } from "./coinbase";
 import { createPaperAdapter } from "./paper";
 
 describe("createExchangeAdapter", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(createCoinbaseAdapter).mockReturnValue(mockAdapter);
     vi.mocked(createPaperAdapter).mockReturnValue(mockAdapter);
   });
 
-  it("should create Coinbase adapter with valid config", () => {
+  it("should throw for Coinbase adapter", () => {
     const config = parseAdapterConfig({
       exchange: "coinbase",
       apiKey: "test-key",
       apiSecret: "test-secret",
     });
 
-    const adapter = createExchangeAdapter(config);
-
-    expect(adapter).toBeDefined();
-    expect(createCoinbaseAdapter).toHaveBeenCalledWith({
-      apiKey: "test-key",
-      apiSecret: "test-secret",
-    });
+    expect(() => createExchangeAdapter(config)).toThrow("coinbase adapter not yet implemented");
   });
 
   it("should create paper adapter with valid config", () => {
@@ -95,7 +83,7 @@ describe("createExchangeAdapter", () => {
       apiSecret: "test-secret",
     });
 
-    expect(() => createExchangeAdapter(config)).toThrow("Binance adapter not yet implemented");
+    expect(() => createExchangeAdapter(config)).toThrow("binance adapter not yet implemented");
   });
 
   it("should throw error for Bybit adapter", () => {
@@ -105,7 +93,7 @@ describe("createExchangeAdapter", () => {
       apiSecret: "test-secret",
     });
 
-    expect(() => createExchangeAdapter(config)).toThrow("Bybit adapter not yet implemented");
+    expect(() => createExchangeAdapter(config)).toThrow("bybit adapter not yet implemented");
   });
 });
 
