@@ -1,0 +1,31 @@
+---
+description: Clean up scripts written during a task when they are one-off or no longer needed
+alwaysApply: true
+---
+
+# Script Cleanup
+
+When you add scripts (e.g. in `scripts/` or as one-off automation), **clean them up** so the repo stays minimal.
+
+## Rules
+
+1. **One-off scripts**: If a script was written for a single task (e.g. capturing screenshots once, migrating data), remove it when the task is done unless the user explicitly wants to keep it.
+2. **Dependencies**: If you added a dev dependency only for that script (e.g. Playwright for a screenshot script), remove that dependency when you remove the script (`pnpm remove <pkg>` at the appropriate scope).
+3. **Keeping scripts**: If the user or the project clearly needs the script long-term, keep it and document its purpose in the script or in a README; do not remove it.
+
+## When in doubt
+
+- Prefer **remove** for one-off or temporary scripts and their sole dependencies.
+- Prefer **keep** only when the script is documented and useful for ongoing use (e.g. `scripts/setup.sh`).
+
+## Screenshots
+
+Do not add Playwright or Puppeteer to the project for screenshots. Use MCP (browser/Playwright MCP tools) instead; see screenshots-vc-ignore rule.
+
+## Example
+
+```bash
+# After removing a one-off script and its sole dependency:
+rm scripts/some-one-off.mjs
+pnpm remove -w some-dep
+```

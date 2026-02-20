@@ -5,32 +5,66 @@ description: Generate PARALLEL-EXECUTION.md and worktree-config.sh from a set of
 
 # Create Parallel Execution Plan
 
-Generate execution artifacts for parallel agent work via git worktrees. Given input plans and a dependency analysis, output PARALLEL-EXECUTION.md and worktree-config.sh.
+Generate execution artifacts for parallel agent work via git worktrees. Given input plans with **structured todo metadata**, output PARALLEL-EXECUTION.md and worktree-config.sh under `.cursor/plans/active/<plan-slug>/`.
+
+This skill automates **Stages 3-4** of the AI-Driven Development pipeline. Input plans should follow the **Structured Todo Format** from [create-plan](../create-plan/SKILL.md).
 
 ## Input
 
-- A set of related plans (e.g. 0001-chain-infrastructure.md, 0002-data-collector.md, 0003-impact-sampler.md)
+- A set of related plans with **Structured Todo Format** (see [create-plan](../create-plan/SKILL.md))
 - Or an existing META-PLAN.md with dependency graph
 - Optional: existing PARALLEL-EXECUTION.md to update
 
+### Required Plan Metadata
+
+Input plans **MUST** have todos with the rich schema (from `create-plan`):
+
+```yaml
+todos:
+  - id: task-id
+    content: Task description
+    status: pending
+    files:
+      creates: [new-file-paths]
+      modifies: [existing-file-paths]
+    depends-on: [other-todo-ids]
+    agent-type: generalPurpose
+    context-refs: [files-to-read]
+```
+
+If any plan is missing `files` or `depends-on` metadata, **STOP**. Use `create-plan` to enrich the plan before proceeding. Without this metadata, the execution graph and file ownership matrix cannot be derived correctly.
+
 ## Workflow
 
-### 1. Analyze Dependencies
+### 1. Validate Plan Metadata
+
+Before building the graph, verify:
+
+- [ ] All `depends-on` IDs resolve to valid todo `id`s (within or across plans)
+- [ ] All `files.creates` paths do NOT already exist
+- [ ] All `files.modifies` paths DO exist
+- [ ] All `context-refs` paths exist
+- [ ] No circular dependencies
+
+If validation fails, report errors and stop.
+
+### 2. Analyze Dependencies and Build Execution Graph
 
 Read each plan's todos. Build a dependency graph:
-- **Hard dependency**: Cannot start without output from another task
-- **Soft dependency**: Benefits from it but can use stubs
 
-Use the Todo-Level Dependency Matrix pattern from META-PLAN.md.
+- **Hard dependency** (`depends-on`): Cannot start without output from another task
+- **Soft dependency** (`benefits-from`): Benefits from it but can use stubs
 
-### 2. Build Batches
+Derive execution levels via topological sort; group todos into parallelizable tiers. Use the Todo-Level Dependency Matrix pattern from META-PLAN.md when present.
+
+### 3. Build Batches
 
 - Group tasks into batches of max 4 agents (Cursor limitation)
 - Batches execute sequentially (Batch N+1 only after Batch N completes)
 - Within a batch, all agents run in parallel
 - Respect dependency order: a task's dependencies must be in prior batches
 
-### 3. Create File Ownership Matrix
+### 4. Create File Ownership Matrix
 
 Ensure **zero overlap** within a batch. No two agents in the same batch may touch the same file.
 
@@ -42,7 +76,7 @@ batch2-chain:     src/lib/chain/*
 batch2-gmx:       src/adapters/gmx/*
 ```
 
-### 4. Generate Agent Prompts
+### 5. Generate Agent Prompts
 
 **Critical**: Subagents have **zero conversation context**. Every prompt must be fully self-contained.
 
@@ -55,19 +89,22 @@ Each agent prompt MUST include:
 5. **Verification commands** — `pnpm biome check --write .` / `pnpm typecheck` / `pnpm test:run <paths>`
 6. **Commit message** — Exact conventional commit string
 
-### 5. Generate worktree-config.sh
+### 6. Generate worktree-config.sh
 
 Use the config template. Replace placeholders:
 - `BRANCH_PREFIX` — e.g. `phase0`
 - `BATCH_1`, `BATCH_2`, ... — arrays with entry format `"<name>|<agent-type>|<merge-commit-message>"`
 - `VERIFY_1`, `VERIFY_2`, ... — shell commands to run after each merge
 
-The config MUST source the generic library:
+The config MUST set REPO from the script directory so it works when the script lives in a subdirectory (e.g. `.cursor/plans/active/<roadmap>/<phase>/worktree-config.sh`):
+
 ```bash
-source "$(git rev-parse --show-toplevel)/.cursor/scripts/worktree-lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO="$(cd "$SCRIPT_DIR" && git rev-parse --show-toplevel)"
+source "$REPO/.cursor/scripts/worktree-lib.sh"
 ```
 
-### 6. Output PARALLEL-EXECUTION.md
+### 7. Output PARALLEL-EXECUTION.md
 
 Use the execution-plan-template.md. Fill in:
 - Plan reference (META-PLAN.md or input plans)
@@ -94,9 +131,10 @@ Use the execution-plan-template.md. Fill in:
 
 ## Relationship to Other Skills
 
-- **create-implement-and-manage-plan**: Produces the input plans (Stage 2 of ADR-0028). Use it first to create plans; when 2+ plans can run in parallel, use this skill to generate execution artifacts.
+- **create-plan**: Produces input plans with Structured Todo Format (Stage 2). Use it first to create plans; when 2+ plans can run in parallel, use this skill to generate execution artifacts.
+- **create-implement-and-manage-plan**: Alternative that creates and implements in one flow; use create-plan + execute-plan when you want human approval between plan and implementation.
 - **execute-parallel-plan**: Consumes the output of this skill. Runs the batch execution.
-- **ADR-0028**: Documents the full pipeline. Stages 3–4 are automated by this skill.
+- **ADR-0028** (if present): Documents the full pipeline. Stages 3–4 are automated by this skill.
 
 ## Reference
 

@@ -6,39 +6,9 @@ alwaysApply: true
 
 # General Coding Rules
 
-## 🚨 FIRST: CHECK IF WORKING ON A PLAN 🚨
-
-**BEFORE doing anything else, check: Am I implementing a plan from `.cursor/plans/active/`?**
-
-**When creating a new plan**, use the template at `.cursor/plans/PLAN_TEMPLATE.md` which includes:
-- Standard plan structure
-- **Lifecycle management todo** (`id: lifecycle-management`) that must be completed
-- Proper frontmatter format
-
-**If implementing a plan**, you MUST complete the **PLAN COMPLETION CHECKLIST** when done:
-
-```
-□ 1. Mark all todos as `status: completed` in plan frontmatter (including lifecycle-management)
-□ 2. Check all validation boxes `[x]` in plan
-□ 3. Update roadmap link to `../../active/<roadmap-id>/README.md`
-□ 4. mkdir -p .cursor/plans/implemented/<roadmap-id>/<phase-id>
-□ 5. mv .cursor/plans/active/<path> .cursor/plans/implemented/<path>
-□ 6. test -f .cursor/plans/active/<path> && rm -f .cursor/plans/active/<path>
-□ 7. Verify: file ONLY in implemented/, NOT in active/
-```
-
-**TRIGGER PHRASES** (if user says ANY of these, complete checklist when done):
-- "implement plan" / "implement @plan-path"
-- "complete plan" / "finish plan"  
-- "done with plan" / "plan is done"
-
----
-
 **Always follow [`CODE_GUIDELINES.md`](../../CODE_GUIDELINES.md)** — it is the source of truth for coding standards.
 
 **Always reference ADRs** — check `adrs/` for architectural decisions before implementing features.
-
-**For Coinbase-related work** — always use the Coinbase MCP server (see `.cursor/rules/coinbase-mcp.mdc`).
 
 ## Key Principles
 
