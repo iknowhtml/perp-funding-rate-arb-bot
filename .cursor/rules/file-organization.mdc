@@ -22,6 +22,15 @@ If a module has no tests and can be self-contained, it can be organized as a sin
 src/lib/module-name.ts
 ```
 
+### Recursive Application at Every Level
+
+**Apply the same directory-per-module pattern recursively at every level.** Any source file that has a colocated test file (`name.ts` + `name.test.ts`) **MUST** live in a subdirectory `name/` with an `index.ts` entry point.
+
+- Before: `evaluator/evaluate.ts` + `evaluator/evaluate.test.ts`
+- After: `evaluator/evaluate/index.ts`, `evaluator/evaluate/evaluate.ts`, `evaluator/evaluate/evaluate.test.ts`
+
+So at every level (worker, worker/evaluator, worker/execution, domains/risk, lib/rate-limiter, server/routes, etc.), each pair (implementation + test) becomes its own subdirectory. The parent's `index.ts` continues to re-export from `"./name"` (which now resolves to the directory). Files without tests (e.g. `types.ts`, `config.ts`) remain as single files in the parent directory unless they are part of a multi-file module.
+
 ### File Naming
 
 | Type | Convention | Example |
@@ -161,6 +170,7 @@ When organizing a module:
 - [ ] `index.ts` exports only public API (directly or via re-exports)
 - [ ] Implementation files are named descriptively (module-name.ts or kebab-case)
 - [ ] Tests are colocated with `*.test.ts` suffix matching source file name
+- [ ] **Recursive**: At every level, any `name.ts` + `name.test.ts` pair lives under `name/` with `name/index.ts`, `name/name.ts`, `name/name.test.ts`
 - [ ] Types/schemas separated if substantial
 - [ ] No redundant re-export files for small implementations
 - [ ] No default exports
