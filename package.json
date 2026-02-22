@@ -2,7 +2,6 @@
   "name": "funding-rate-arb-bot",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "description": "Funding rate arbitrage bot for perpetual futures",
   "author": "",
   "license": "UNLICENSED",

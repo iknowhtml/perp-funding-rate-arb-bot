@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 
-import { db } from "../../client";
+import type { Database } from "../../client";
 import type {
   CreateOrderInput,
   Order,
@@ -51,6 +51,7 @@ const mapToDomain = (row: typeof orders.$inferSelect): Order => {
     priceQuote: row.priceQuote ?? null,
     status: row.status,
     exchangeOrderId: row.exchangeOrderId ?? null,
+    txHash: row.txHash ?? null,
     idempotencyKey: row.idempotencyKey ?? null,
     createdAt: row.createdAt ?? new Date(),
     updatedAt: row.updatedAt ?? new Date(),
@@ -66,10 +67,11 @@ const mapToDb = (order: CreateOrderInput): typeof orders.$inferInsert => ({
   priceQuote: order.priceQuote ?? null,
   status: order.status,
   exchangeOrderId: order.exchangeOrderId ?? null,
+  txHash: order.txHash ?? null,
   idempotencyKey: order.idempotencyKey ?? null,
 });
 
-export const createPostgresOrderRepository = (): OrderRepository => ({
+export const createPostgresOrderRepository = (db: Database): OrderRepository => ({
   create: async (order) => {
     const [inserted] = await db.insert(orders).values(mapToDb(order)).returning();
     if (!inserted) {
@@ -91,6 +93,11 @@ export const createPostgresOrderRepository = (): OrderRepository => ({
     return result ? mapToDomain(result) : null;
   },
 
+  findByTxHash: async (txHash) => {
+    const [result] = await db.select().from(orders).where(eq(orders.txHash, txHash));
+    return result ? mapToDomain(result) : null;
+  },
+
   update: async (id, updates) => {
     const updateData: Partial<typeof orders.$inferInsert> = {};
     if (updates.exchange !== undefined) updateData.exchange = updates.exchange;
@@ -102,6 +109,7 @@ export const createPostgresOrderRepository = (): OrderRepository => ({
     if (updates.status !== undefined) updateData.status = updates.status;
     if (updates.exchangeOrderId !== undefined)
       updateData.exchangeOrderId = updates.exchangeOrderId ?? null;
+    if (updates.txHash !== undefined) updateData.txHash = updates.txHash ?? null;
     if (updates.idempotencyKey !== undefined)
       updateData.idempotencyKey = updates.idempotencyKey ?? null;
     updateData.updatedAt = new Date();

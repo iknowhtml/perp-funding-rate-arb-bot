@@ -16,8 +16,11 @@ vi.mock("@/adapters/gmx", () => ({
   fetchGmxTickers: vi.fn(),
 }));
 
+const mockDb = {
+  insert: vi.fn(() => ({ values: vi.fn().mockResolvedValue(undefined) })),
+};
+
 vi.mock("@/lib/db", () => ({
-  db: { insert: vi.fn(() => ({ values: vi.fn().mockResolvedValue(undefined) })) },
   executionEstimate: {},
   marketSnapshot: {},
 }));
@@ -27,12 +30,11 @@ vi.mock("@/lib/chain", () => ({
 }));
 
 import { fetchGmxMarketsInfo, fetchGmxTickers } from "@/adapters/gmx";
-import { db } from "@/lib/db";
 
 describe("createDataCollector", () => {
   it("inserts correct rows on collectMarketSnapshot", async () => {
     const mockValues = vi.fn().mockResolvedValue(undefined);
-    vi.mocked(db.insert).mockReturnValue({
+    vi.mocked(mockDb.insert).mockReturnValue({
       values: mockValues,
     } as never);
 
@@ -54,7 +56,7 @@ describe("createDataCollector", () => {
 
     const mockGetGasPrice = vi.fn().mockResolvedValue(1000000000n);
     const collector = createDataCollector({
-      db: db as never,
+      db: mockDb as never,
       gmxOracleUrl: "https://arbitrum-api.gmxinfra.io",
       publicClient: { getGasPrice: mockGetGasPrice } as never,
     });
@@ -71,7 +73,7 @@ describe("createDataCollector", () => {
     vi.mocked(fetchGmxMarketsInfo).mockRejectedValue(new Error("network error"));
 
     const collector = createDataCollector({
-      db: db as never,
+      db: mockDb as never,
       gmxOracleUrl: "https://arbitrum-api.gmxinfra.io",
       publicClient: {} as never,
     });

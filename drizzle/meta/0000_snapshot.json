@@ -1,9 +1,215 @@
 {
-  "id": "e1a663aa-8124-4726-b9ce-d156a160a666",
+  "id": "3068a07f-24d3-47f5-8774-4212c08a3ae9",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.execution_estimate": {
+      "name": "execution_estimate",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "timestamp": {
+          "name": "timestamp",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "market": {
+          "name": "market",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "size_usd": {
+          "name": "size_usd",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "simulated_impact_bps": {
+          "name": "simulated_impact_bps",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estimated_gas_usd": {
+          "name": "estimated_gas_usd",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "acceptable_price": {
+          "name": "acceptable_price",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_execution_estimate_market_timestamp": {
+          "name": "idx_execution_estimate_market_timestamp",
+          "columns": [
+            {
+              "expression": "market",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "timestamp",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.market_snapshot": {
+      "name": "market_snapshot",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "timestamp": {
+          "name": "timestamp",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "market": {
+          "name": "market",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "market_name": {
+          "name": "market_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "price": {
+          "name": "price",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "long_funding_rate": {
+          "name": "long_funding_rate",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "short_funding_rate": {
+          "name": "short_funding_rate",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "long_open_interest_usd": {
+          "name": "long_open_interest_usd",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "short_open_interest_usd": {
+          "name": "short_open_interest_usd",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "borrow_rate_long": {
+          "name": "borrow_rate_long",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "borrow_rate_short": {
+          "name": "borrow_rate_short",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "oi_skew_ratio": {
+          "name": "oi_skew_ratio",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gas_price_gwei": {
+          "name": "gas_price_gwei",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_market_snapshot_market_timestamp": {
+          "name": "idx_market_snapshot_market_timestamp",
+          "columns": [
+            {
+              "expression": "market",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "timestamp",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.orders": {
       "name": "orders",
       "schema": "",
@@ -63,6 +269,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "tx_hash": {
+          "name": "tx_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "idempotency_key": {
           "name": "idempotency_key",
           "type": "text",
@@ -85,11 +297,11 @@
         }
       },
       "indexes": {
-        "idx_orders_exchange_order_id": {
-          "name": "idx_orders_exchange_order_id",
+        "idx_orders_idempotency_key": {
+          "name": "idx_orders_idempotency_key",
           "columns": [
             {
-              "expression": "exchange_order_id",
+              "expression": "idempotency_key",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -100,11 +312,11 @@
           "method": "btree",
           "with": {}
         },
-        "idx_orders_idempotency_key": {
-          "name": "idx_orders_idempotency_key",
+        "idx_orders_tx_hash": {
+          "name": "idx_orders_tx_hash",
           "columns": [
             {
-              "expression": "idempotency_key",
+              "expression": "tx_hash",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

@@ -19,6 +19,14 @@ import type { HealthMonitor } from "@/worker/websocket";
 import { evaluate } from "./evaluate";
 import type { EvaluatorDeps } from "./evaluate";
 
+vi.mock("@gmx-io/sdk/configs/contracts", () => ({
+  getContract: (_chainId: number, name: string) =>
+    name === "SyntheticsReader"
+      ? "0x470fbC46bcC0f16532691Df360A07d8Bf5ee0789"
+      : "0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8",
+}));
+vi.mock("@gmx-io/sdk/configs/chainIds", () => ({ ARBITRUM: 42161 }));
+
 vi.mock("@/domains/risk/evaluate", () => ({
   evaluateRisk: vi.fn(),
 }));

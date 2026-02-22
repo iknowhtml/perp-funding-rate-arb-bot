@@ -141,6 +141,8 @@ const config = response as Config;
 const parsed = v.parse(ResponseSchema, response);
 ```
 
+**Type the variable instead of casting the whole object:** Prefer `const config: Config = { ... }` so the compiler checks the shape. If only one property is a mock or untyped, cast only that property (e.g. `publicClient: mockClient as Config["publicClient"]`), not the whole object (`as unknown as Config`). See CODE_GUIDELINES.md §3 (Avoid Type Casts).
+
 ### Never Use `any`
 
 ```typescript
@@ -213,6 +215,8 @@ export const transitionOrder = (order: Order, event: OrderEvent): Order => {
 | Types | PascalCase | `OrderStatus`, `RiskLevel` |
 | BigInt amounts | camelCase + unit suffix | `notionalCents`, `priceSats`, `rateBps` |
 | Records | `<plural>By<Key>` | `ordersById`, `usersbyEmail` |
+
+**No abbreviated variable names:** Use descriptive names (e.g. `snapshotTime`, `errorMessage`), not abbreviations like `ts`, `dt`, `msg`, `val`. When a type/API requires a short key (e.g. `ts`), use a descriptive local variable and assign: `const snapshotTime = new Date(); return { ts: snapshotTime };`. See CODE_GUIDELINES.md §2 (No abbreviated variable names).
 
 ### Function Prefixes
 

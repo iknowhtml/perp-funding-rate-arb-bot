@@ -15,14 +15,17 @@ import {
   type StrategyInput,
   type StrategyPosition,
 } from "@/domains/strategy";
+import { createArbitrumPublicClient, createArbitrumWalletClient } from "@/lib/chain";
 import type { DatabaseInstance } from "@/lib/db";
 import type { Env } from "@/lib/env";
 import type { Logger } from "@/lib/logger";
 
+import { createDataCollector } from "./data-collector";
 import { createDataPlane } from "./data-plane";
 import { evaluate, runStartupSequence } from "./evaluator";
 import { DEFAULT_EXECUTION_CONFIG, createExecutionCircuitBreaker } from "./execution";
 import { DEFAULT_FRESHNESS_CONFIG } from "./freshness";
+import { createImpactSampler } from "./impact-sampler";
 import { createSerialQueue } from "./queue";
 import { DEFAULT_RECONCILER_CONFIG, runReconcile } from "./reconciler";
 import { createStateStore } from "./state";
@@ -57,9 +60,14 @@ const SLOW_EVALUATION_WARN_MS = 1500;
  * Start the worker: startup sequence, data plane, reconciler, and evaluation loop.
  */
 export const startWorker = async (config: StartWorkerConfig): Promise<WorkerHandle> => {
-  const { env, logger } = config;
+  const { env, db, logger } = config;
 
   const baseUrl = env.GMX_ORACLE_URL ?? "https://arbitrum-api.gmxinfra.io";
+  const publicClient = createArbitrumPublicClient(env.ARBITRUM_RPC_URL);
+  const walletClient = env.ARBITRUM_PRIVATE_KEY
+    ? createArbitrumWalletClient(env.ARBITRUM_RPC_URL, env.ARBITRUM_PRIVATE_KEY as `0x${string}`)
+    : null;
+
   const adapter = createGmxAdapter({ baseUrl });
   const stateStore = createStateStore();
   const executionQueue = createSerialQueue();
@@ -102,6 +110,21 @@ export const startWorker = async (config: StartWorkerConfig): Promise<WorkerHand
   });
 
   await dataPlane.start();
+
+  const dataCollector = createDataCollector({
+    db: db.db,
+    gmxOracleUrl: baseUrl,
+    publicClient,
+  });
+  dataCollector.start();
+
+  const impactSampler = createImpactSampler({
+    db: db.db,
+    publicClient,
+    walletClient,
+    gmxOracleUrl: baseUrl,
+  });
+  impactSampler.start();
 
   const getDerivedPosition = (): ReturnType<typeof derivePosition> | null => {
     const state = stateStore.getState();
@@ -247,6 +270,8 @@ export const startWorker = async (config: StartWorkerConfig): Promise<WorkerHand
       }
       healthMonitor.stop();
       clearInterval(reconcileInterval);
+      dataCollector.stop();
+      impactSampler.stop();
       await dataPlane.stop();
       logger.info("Worker shut down");
     },

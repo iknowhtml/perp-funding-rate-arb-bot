@@ -77,7 +77,7 @@ export const getImpactDistributions = async (
       simulatedImpactBps: executionEstimate.simulatedImpactBps,
     })
     .from(executionEstimate)
-    .where(gte(executionEstimate.ts, since));
+    .where(gte(executionEstimate.timestamp, since));
 
   const byMarket = new Map<string, bigint[]>();
   for (const row of rows) {

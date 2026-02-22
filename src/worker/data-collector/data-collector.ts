@@ -50,7 +50,7 @@ export const createDataCollector = (deps: DataCollectorDeps): DataCollector => {
         // non-fatal
       }
 
-      const ts = new Date();
+      const snapshotTime = new Date();
       const symbolToPrice = new Map<string, bigint>();
       const ethPrice = findPriceForToken(tickers, "ETH");
       const btcPrice = findPriceForToken(tickers, "BTC");
@@ -67,7 +67,7 @@ export const createDataCollector = (deps: DataCollectorDeps): DataCollector => {
         const oiSkewRatio = computeOiSkewRatio(m.openInterestLong, m.openInterestShort);
 
         await deps.db.insert(marketSnapshot).values({
-          ts,
+          timestamp: snapshotTime,
           market: m.marketToken,
           marketName: m.name,
           price,
@@ -84,7 +84,7 @@ export const createDataCollector = (deps: DataCollectorDeps): DataCollector => {
 
       logger.debug("Collected market snapshot", {
         marketCount: markets.length,
-        ts: ts.toISOString(),
+        timestamp: snapshotTime.toISOString(),
       });
     } catch (err) {
       logger.error("Data collector failed", err instanceof Error ? err : new Error(String(err)));

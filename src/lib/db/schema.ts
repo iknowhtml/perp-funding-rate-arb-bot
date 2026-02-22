@@ -1,63 +1,78 @@
+/**
+ * DB schema for funding-rate arb bot.
+ *
+ * On-chain suitability (GMX / protocol-agnostic):
+ *
+ * - orders: Holds both CEX-style and on-chain orders. exchange = protocol (e.g. "gmx").
+ *   txHash = transaction hash (0x-prefixed hex) is the canonical on-chain identifier; use for
+ *   idempotency, reconciliation (receipt lookup), and support. exchangeOrderId = protocol-specific
+ *   order id when available. Indexes: exchange_order_id, idempotency_key, tx_hash.
+ *
+ * - market_snapshot: Time-series of market data (funding, OI, borrow rates). market = contract
+ *   address (e.g. GMX market). All amounts in bigint; suitable for on-chain. Optional future:
+ *   chainId if multi-chain.
+ *
+ * - execution_estimate: Pre-execution simulation (impact, gas, acceptable price). No tx hash;
+ *   optional future: txHash to link estimate → executed order for analytics.
+ */
 import { bigint, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const orders = pgTable(
   "orders",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    exchange: text("exchange").notNull(),
-    symbol: text("symbol").notNull(),
-    side: text("side").notNull(), // 'BUY' | 'SELL'
-    type: text("type").notNull(), // 'MARKET' | 'LIMIT'
-    quantityBase: bigint("quantity_base", { mode: "bigint" }).notNull(),
-    priceQuote: bigint("price_quote", { mode: "bigint" }),
-    status: text("status").notNull(),
-    exchangeOrderId: text("exchange_order_id"),
-    idempotencyKey: text("idempotency_key"),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+    id: uuid().primaryKey().defaultRandom(),
+    exchange: text().notNull(),
+    symbol: text().notNull(),
+    side: text().notNull(), // 'BUY' | 'SELL'
+    type: text().notNull(), // 'MARKET' | 'LIMIT'
+    quantityBase: bigint({ mode: "bigint" }).notNull(),
+    priceQuote: bigint({ mode: "bigint" }),
+    status: text().notNull(),
+    exchangeOrderId: text(),
+    /** On-chain: transaction hash (0x-prefixed hex). Canonical identifier for submitted txs. */
+    txHash: text(),
+    idempotencyKey: text(),
+    createdAt: timestamp({ withTimezone: true }).defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).defaultNow(),
   },
-  (table) => ({
-    exchangeOrderIdIdx: index("idx_orders_exchange_order_id").on(table.exchangeOrderId),
-    idempotencyKeyIdx: index("idx_orders_idempotency_key").on(table.idempotencyKey),
-  }),
+  (table) => [
+    index("idx_orders_idempotency_key").on(table.idempotencyKey),
+    index("idx_orders_tx_hash").on(table.txHash),
+  ],
 );
 
 export const marketSnapshot = pgTable(
   "market_snapshot",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    ts: timestamp("ts", { withTimezone: true }).notNull(),
-    market: text("market").notNull(),
-    marketName: text("market_name").notNull(),
-    price: bigint("price", { mode: "bigint" }).notNull(),
-    longFundingRate: bigint("long_funding_rate", { mode: "bigint" }).notNull(),
-    shortFundingRate: bigint("short_funding_rate", { mode: "bigint" }).notNull(),
-    longOpenInterestUsd: bigint("long_open_interest_usd", { mode: "bigint" }).notNull(),
-    shortOpenInterestUsd: bigint("short_open_interest_usd", { mode: "bigint" }).notNull(),
-    borrowRateLong: bigint("borrow_rate_long", { mode: "bigint" }).notNull(),
-    borrowRateShort: bigint("borrow_rate_short", { mode: "bigint" }).notNull(),
-    oiSkewRatio: bigint("oi_skew_ratio", { mode: "bigint" }),
-    gasPriceGwei: bigint("gas_price_gwei", { mode: "bigint" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    id: uuid().primaryKey().defaultRandom(),
+    timestamp: timestamp({ withTimezone: true }).notNull(),
+    market: text().notNull(),
+    marketName: text().notNull(),
+    price: bigint({ mode: "bigint" }).notNull(),
+    longFundingRate: bigint({ mode: "bigint" }).notNull(),
+    shortFundingRate: bigint({ mode: "bigint" }).notNull(),
+    longOpenInterestUsd: bigint({ mode: "bigint" }).notNull(),
+    shortOpenInterestUsd: bigint({ mode: "bigint" }).notNull(),
+    borrowRateLong: bigint({ mode: "bigint" }).notNull(),
+    borrowRateShort: bigint({ mode: "bigint" }).notNull(),
+    oiSkewRatio: bigint({ mode: "bigint" }),
+    gasPriceGwei: bigint({ mode: "bigint" }),
+    createdAt: timestamp({ withTimezone: true }).defaultNow(),
   },
-  (table) => ({
-    marketTsIdx: index("idx_market_snapshot_market_ts").on(table.market, table.ts),
-  }),
+  (table) => [index("idx_market_snapshot_market_timestamp").on(table.market, table.timestamp)],
 );
 
 export const executionEstimate = pgTable(
   "execution_estimate",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    ts: timestamp("ts", { withTimezone: true }).notNull(),
-    market: text("market").notNull(),
-    sizeUsd: bigint("size_usd", { mode: "bigint" }).notNull(),
-    simulatedImpactBps: bigint("simulated_impact_bps", { mode: "bigint" }).notNull(),
-    estimatedGasUsd: bigint("estimated_gas_usd", { mode: "bigint" }),
-    acceptablePrice: bigint("acceptable_price", { mode: "bigint" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    id: uuid().primaryKey().defaultRandom(),
+    timestamp: timestamp({ withTimezone: true }).notNull(),
+    market: text().notNull(),
+    sizeUsd: bigint({ mode: "bigint" }).notNull(),
+    simulatedImpactBps: bigint({ mode: "bigint" }).notNull(),
+    estimatedGasUsd: bigint({ mode: "bigint" }),
+    acceptablePrice: bigint({ mode: "bigint" }),
+    createdAt: timestamp({ withTimezone: true }).defaultNow(),
   },
-  (table) => ({
-    marketTsIdx: index("idx_execution_estimate_market_ts").on(table.market, table.ts),
-  }),
+  (table) => [index("idx_execution_estimate_market_timestamp").on(table.market, table.timestamp)],
 );

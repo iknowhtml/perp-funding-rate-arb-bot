@@ -63,7 +63,7 @@ This roadmap implements a regime-based GMX v2 arbitrage bot per ADR-0022. It use
 
 - [ ] **[1-01: Transaction Lifecycle](./01-mvp-execution/0001-transaction-lifecycle/plan.md)** — Build → simulate → send → confirm pipeline
 - [ ] **[1-02: GMX Adapter Types + CEX Cleanup](./01-mvp-execution/0002-gmx-adapter-types.md)** — position_state, pnl_snapshot types; delete CEX adapters
-- [ ] **[1-03: GMX Adapter — Reads](./01-mvp-execution/0003-gmx-adapter-reads.md)** — 4h MA funding, OI skew ratio
+- [x] **[1-03: GMX Adapter — Reads](../../implemented/0002-on-chain-pivot/01-mvp-execution/0003-gmx-adapter-reads.md)** — 4h MA funding, OI skew ratio
 - [ ] **[1-04: GMX Adapter — Writes](./01-mvp-execution/0004-gmx-adapter-writes.md)** — simulate-before-submit pattern
 - [ ] **[1-05: Keeper Monitoring](./01-mvp-execution/0005-keeper-monitoring.md)** — 60-120s timeout, cancel on timeout
 - [ ] **[1-06: Regime Detector](./01-mvp-execution/0006-regime-detector.md)** — 4h MA entry/exit signals

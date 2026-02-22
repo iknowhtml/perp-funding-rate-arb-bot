@@ -5,20 +5,38 @@
  * @see {@link ../../../adrs/0022-regime-based-gmx-arb.md ADR-0022: Regime-Based GMX Arb}
  */
 
+import { type Address, isAddress } from "viem";
+
 import type {
   LiquidityBalance,
+  OiSkew,
   OpenPositionParams,
   PositionState,
   ProtocolAdapter,
   TxResult,
 } from "../types";
 import type { GmxMarket, GmxTicker } from "./api";
-import { fetchGmxMarketsInfo, fetchGmxTickers } from "./api";
+import type { GmxReadsDeps } from "./reads";
+import {
+  compute4hMaFundingRateBps,
+  getFundingRateForMarket,
+  getGmBalance,
+  getMarketsInfo as getMarketsInfoRead,
+  getOiSkewForMarket,
+  getPositionState as getPositionStateRead,
+  getTickers as getTickersRead,
+} from "./reads";
 
 /** Configuration for creating a GMX protocol adapter. */
 export interface GmxProtocolAdapterConfig {
   /** Base URL for GMX Oracle API (e.g. https://arbitrum-api.gmxinfra.io). */
   baseUrl: string;
+  /** Optional: public client for chain reads (position, GM balance). */
+  publicClient?: GmxReadsDeps["publicClient"];
+  /** Optional: account address for position and balance reads. */
+  account?: Address;
+  /** Optional: chain ID (default Arbitrum). */
+  chainId?: GmxReadsDeps["chainId"];
 }
 
 /**
@@ -30,26 +48,38 @@ export interface GmxProtocolAdapter extends ProtocolAdapter {
   getMarketsInfo(): Promise<GmxMarket[]>;
   /** Price tickers from Oracle API. */
   getTickers(): Promise<GmxTicker[]>;
+  /** MA funding rate for regime detection (e.g. 4h MA or raw long rate in bps). */
+  getMaFundingRate(market: string, samples?: bigint[]): Promise<bigint>;
+  /** OI skew (long/short) for a market. */
+  getOiSkew(market: string): Promise<OiSkew | null>;
 }
 
 /**
  * Create a GMX protocol adapter instance.
  *
- * @param config - Adapter config (Oracle API base URL).
+ * @param config - Adapter config (baseUrl required; publicClient + account for chain reads).
  * @returns ProtocolAdapter implementation (GmxProtocolAdapter).
  */
-export const createGmxProtocolAdapter = (config: GmxProtocolAdapterConfig): ProtocolAdapter => {
-  const { baseUrl } = config;
+export const createGmxProtocolAdapter = (config: GmxProtocolAdapterConfig): GmxProtocolAdapter => {
+  const { baseUrl, publicClient, account, chainId } = config;
+  const readsDeps: GmxReadsDeps | null =
+    publicClient != null ? { publicClient, ...(chainId != null ? { chainId } : {}) } : null;
+
   return {
-    getMarketsInfo: () => fetchGmxMarketsInfo(baseUrl),
-    getTickers: () => fetchGmxTickers(baseUrl),
-    getPositionState: async (_market: string): Promise<PositionState | null> => {
-      // TODO: chain read via Reader / DataStore
-      return null;
+    getMarketsInfo: () => getMarketsInfoRead(baseUrl),
+    getTickers: () => getTickersRead(baseUrl),
+    getPositionState: async (market: string): Promise<PositionState | null> => {
+      if (readsDeps == null || account == null || !isAddress(market)) {
+        return null;
+      }
+      return getPositionStateRead(readsDeps, account, market);
     },
     getLiquidityBalance: async (pool: string): Promise<LiquidityBalance> => {
-      // TODO: chain read GM balance for pool
-      return { pool, balance: 0n };
+      if (readsDeps == null || account == null || !isAddress(pool)) {
+        return { pool, balance: 0n };
+      }
+      const balance = await getGmBalance(readsDeps, pool, account);
+      return { pool, balance };
     },
     simulateOrder: async (_params: OpenPositionParams): Promise<{ impactBps: bigint }> => {
       // TODO: GMX simulation
@@ -58,6 +88,27 @@ export const createGmxProtocolAdapter = (config: GmxProtocolAdapterConfig): Prot
     submitOrder: async (_params: OpenPositionParams): Promise<TxResult> => {
       // TODO: build + send tx
       throw new Error("GMX submitOrder not yet implemented");
+    },
+    getMaFundingRate: async (market: string, samples?: bigint[]): Promise<bigint> => {
+      if (!isAddress(market)) {
+        return 0n;
+      }
+      if (samples != null && samples.length > 0) {
+        return compute4hMaFundingRateBps(samples);
+      }
+      const markets = await getMarketsInfoRead(baseUrl);
+      const raw = getFundingRateForMarket(markets, market);
+      if (raw == null) {
+        return 0n;
+      }
+      return raw.fundingRateLong;
+    },
+    getOiSkew: async (market: string): Promise<OiSkew | null> => {
+      if (!isAddress(market)) {
+        return null;
+      }
+      const markets = await getMarketsInfoRead(baseUrl);
+      return getOiSkewForMarket(markets, market);
     },
   };
 };

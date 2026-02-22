@@ -62,7 +62,7 @@ export const createImpactSampler = (deps: ImpactSamplerDeps): ImpactSampler => {
       const ethTicker = tickers.find((t: GmxTicker) => t.tokenSymbol === "ETH");
       const btcTicker = tickers.find((t: GmxTicker) => t.tokenSymbol === "BTC");
 
-      const ts = new Date();
+      const snapshotTime = new Date();
 
       for (const { address, name } of TARGET_MARKETS) {
         try {
@@ -78,7 +78,7 @@ export const createImpactSampler = (deps: ImpactSamplerDeps): ImpactSampler => {
           const result = await simulateImpact(address, SAMPLE_SIZE_USD, price);
 
           await deps.db.insert(executionEstimate).values({
-            ts,
+            timestamp: snapshotTime,
             market: address,
             sizeUsd: SAMPLE_SIZE_USD,
             simulatedImpactBps: result.simulatedImpactBps,

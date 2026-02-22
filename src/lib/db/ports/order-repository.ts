@@ -18,6 +18,8 @@ export interface Order {
   priceQuote: bigint | null;
   status: OrderStatus;
   exchangeOrderId: string | null;
+  /** On-chain: transaction hash (0x-prefixed hex). */
+  txHash: string | null;
   idempotencyKey: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -32,6 +34,8 @@ export interface CreateOrderInput {
   priceQuote?: bigint | null;
   status: OrderStatus;
   exchangeOrderId?: string | null;
+  /** On-chain: transaction hash (0x-prefixed hex). */
+  txHash?: string | null;
   idempotencyKey?: string | null;
 }
 
@@ -47,6 +51,7 @@ export interface OrderRepository {
   create(order: CreateOrderInput): Promise<Order>;
   findById(id: string): Promise<Order | null>;
   findByExchangeOrderId(exchange: string, exchangeOrderId: string): Promise<Order | null>;
+  findByTxHash(txHash: string): Promise<Order | null>;
   update(id: string, updates: Partial<Order>): Promise<Order>;
   list(filters: OrderFilters): Promise<Order[]>;
 }

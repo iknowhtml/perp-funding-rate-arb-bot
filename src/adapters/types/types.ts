@@ -36,6 +36,12 @@ export interface LiquidityBalance {
   balance: bigint;
 }
 
+/** Open interest skew (long/short) for regime detection. Protocol-agnostic. */
+export interface OiSkew {
+  longOi: bigint;
+  shortOi: bigint;
+}
+
 /** Perp position subset for position_state (ADR-0022 appendix). */
 export interface PerpPositionState {
   sizeUsd: bigint;
@@ -306,6 +312,11 @@ export const liquidityBalanceSchema = v.object({
   balance: v.bigint(),
 });
 
+export const oiSkewSchema = v.object({
+  longOi: v.bigint(),
+  shortOi: v.bigint(),
+});
+
 export const perpPositionStateSchema = v.object({
   sizeUsd: v.bigint(),
   entryPrice: v.bigint(),
@@ -365,6 +376,8 @@ export const isOpenPositionParams = (value: unknown): value is OpenPositionParam
 export const isLiquidityBalance = (value: unknown): value is LiquidityBalance =>
   v.is(liquidityBalanceSchema, value);
 
+export const isOiSkew = (value: unknown): value is OiSkew => v.is(oiSkewSchema, value);
+
 export const isPerpPositionState = (value: unknown): value is PerpPositionState =>
   v.is(perpPositionStateSchema, value);
 
@@ -394,6 +407,10 @@ export interface ProtocolAdapter {
   simulateOrder(params: OpenPositionParams): Promise<{ impactBps: bigint }>;
   /** Submit open perp order; returns tx result when broadcast. */
   submitOrder(params: OpenPositionParams): Promise<TxResult>;
+  /** MA funding rate for regime detection (e.g. 4h MA in bps). Optional; implement when protocol supports it. */
+  getMaFundingRate?(market: string, samples?: bigint[]): Promise<bigint>;
+  /** OI skew (long/short) for a market. Optional; implement when protocol supports it. */
+  getOiSkew?(market: string): Promise<OiSkew | null>;
 }
 
 /**

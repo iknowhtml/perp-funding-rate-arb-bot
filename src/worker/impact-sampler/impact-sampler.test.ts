@@ -17,8 +17,11 @@ vi.mock("@/adapters/gmx", () => ({
   fetchGmxTickers: vi.fn(),
 }));
 
+const mockDb = {
+  insert: vi.fn(() => ({ values: vi.fn().mockResolvedValue(undefined) })),
+};
+
 vi.mock("@/lib/db", () => ({
-  db: { insert: vi.fn(() => ({ values: vi.fn().mockResolvedValue(undefined) })) },
   executionEstimate: {},
   marketSnapshot: {},
 }));
@@ -29,12 +32,11 @@ vi.mock("@/lib/chain", () => ({
 }));
 
 import { fetchGmxTickers } from "@/adapters/gmx";
-import { db } from "@/lib/db";
 
 describe("createImpactSampler", () => {
   it("sampleOnce inserts rows for both markets", async () => {
     const mockValues = vi.fn().mockResolvedValue(undefined);
-    vi.mocked(db.insert).mockReturnValue({ values: mockValues } as never);
+    vi.mocked(mockDb.insert).mockReturnValue({ values: mockValues } as never);
 
     vi.mocked(fetchGmxTickers).mockResolvedValue([
       { tokenSymbol: "ETH", minPrice: 2000n, maxPrice: 2010n } as never,
@@ -42,7 +44,7 @@ describe("createImpactSampler", () => {
     ]);
 
     const sampler = createImpactSampler({
-      db: db as never,
+      db: mockDb as never,
       publicClient: {} as never,
       walletClient: null,
       gmxOracleUrl: "https://arbitrum-api.gmxinfra.io",
@@ -57,7 +59,7 @@ describe("createImpactSampler", () => {
     vi.mocked(fetchGmxTickers).mockRejectedValue(new Error("network error"));
 
     const sampler = createImpactSampler({
-      db: db as never,
+      db: mockDb as never,
       publicClient: {} as never,
       walletClient: null,
       gmxOracleUrl: "https://arbitrum-api.gmxinfra.io",

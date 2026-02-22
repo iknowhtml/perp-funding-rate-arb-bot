@@ -1,6 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { ProtocolAdapter } from "@/adapters/types";
+
+vi.mock("@gmx-io/sdk/configs/contracts", () => ({
+  getContract: (_chainId: number, name: string) =>
+    name === "SyntheticsReader"
+      ? "0x470fbC46bcC0f16532691Df360A07d8Bf5ee0789"
+      : "0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8",
+}));
+vi.mock("@gmx-io/sdk/configs/chainIds", () => ({ ARBITRUM: 42161 }));
 import type { ExchangeOrder } from "@/adapters/types";
 import { DEFAULT_RISK_CONFIG, type RiskSnapshot } from "@/domains/risk";
 import type { Logger } from "@/lib/logger";
