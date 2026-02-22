@@ -79,6 +79,23 @@ tests/lib/logger/
 └── logger.test.ts  # Not colocated
 ```
 
+### Index.ts Export Style
+
+**Practical takeaway:**
+
+- **Small index (one or two re-exports):** One line with mixed type + value is fine and keeps the file short.
+  ```typescript
+  export { runStartupSequence, type StartupDeps } from "./startup";
+  export { executeEnterHedge, type EnterHedgeDeps, type EnterHedgeExecutionParams } from "./enter-hedge";
+  ```
+- **Larger index (many exports):** Separate `export type { ... }` and `export { ... }` (e.g. types first, then values) so the public API is easier to scan.
+  ```typescript
+  export type { AdapterConfig, Exchange, OrderBook } from "./types";
+  export { createAdapter, parseConfig } from "./factory";
+  export { createPaperAdapter } from "./paper";
+  export type { PaperAdapterConfig } from "./paper";
+  ```
+
 ### Import Paths
 
 **Always import from module directories, not individual files:**
