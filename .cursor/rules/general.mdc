@@ -28,10 +28,11 @@ alwaysApply: true
    - Check `src/lib/` for shared utilities
    - Check domain-specific directories for existing patterns
 
-2. **Check shared libraries:**
+2. **Check shared libraries:** Prefer library utilities over custom implementations.
    - **Schemas**: Use Valibot's built-in schemas directly (`v.bigint()`, `v.date()`, etc.) - no need for wrappers
-   - **Common types**: Check `src/adapters/types.ts` for shared type definitions
+   - **Common types**: Check for shared type definitions
    - **Utilities**: Check `src/lib/` for existing utility functions
+   - **Dependencies**: Use functions from project deps (e.g. `viem` — `isHex`, encoding; Valibot; Node built-ins) instead of reimplementing (e.g. use `isHex` from viem, not a custom `isHex`)
 
 3. **If found**: Import and reuse the existing utility
 4. **If not found**: Create in appropriate shared location (`src/lib/` for utilities)

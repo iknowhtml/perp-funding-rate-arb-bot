@@ -19,6 +19,7 @@
 2. **Deterministic**: Logic should be testable and reproducible
 3. **Auditable**: Every action should be traceable
 4. **ADR-Driven**: Check `adrs/` for architectural decisions before implementing features
+5. **Use library functions where possible**: Prefer existing utilities from the codebase and project dependencies (e.g. `viem`, Valibot, Node built-ins) over custom implementations. Before writing a small helper (e.g. `isHex`, date parsing, type guards), check whether the library already provides it.
 
 ---
 
