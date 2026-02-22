@@ -7,3 +7,30 @@ export {
 } from "./constants";
 export { createArbitrumPublicClient, createArbitrumWalletClient } from "./client";
 export { checkRpcHealth } from "./health";
+export { ChainError } from "./errors";
+export type { ChainErrorCode } from "./errors";
+export {
+  checkExecutionFeeOrThrow,
+  createGasEstimator,
+  estimateExecutionFeeWei,
+  estimateExecutionFeeWeiOrThrow,
+} from "./gas";
+export type {
+  CreateGasEstimatorConfig,
+  GasEstimatorDeps,
+  OrderType as GasOrderType,
+} from "./gas";
+export {
+  buildDecreaseOrderPayload,
+  buildDepositPayload,
+  buildIncreaseOrderPayload,
+  buildWithdrawalPayload,
+} from "./tx-builder";
+export type {
+  BuildDecreaseOrderParams,
+  BuildDepositParams,
+  BuildIncreaseOrderParams,
+  BuildWithdrawalParams,
+  MulticallPayload,
+  TxBuilderDeps,
+} from "./tx-builder";
