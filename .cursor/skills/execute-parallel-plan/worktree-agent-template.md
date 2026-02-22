@@ -8,7 +8,9 @@ Only modify files listed in your task scope. Do NOT touch files outside your own
 
 ## 2. Code Guidelines
 
-Follow CODE_GUIDELINES.md strictly:
+**Load and follow the project code guidelines.** From your worktree root, read `CODE_GUIDELINES.md` and keep it in context for all implementation. Follow it strictly.
+
+Key rules (see `CODE_GUIDELINES.md` for full list):
 
 - Use `const` arrow functions, never `function` declarations
 - Use Valibot for validation: `import * as v from "valibot"`
@@ -19,6 +21,8 @@ Follow CODE_GUIDELINES.md strictly:
 - kebab-case file names, colocated `*.test.ts` tests
 - No `.js` extensions in imports
 - Factory pattern: `createX(config)` not `new X(config)`
+
+**Test conventions** (see `.cursor/rules/testing.mdc`): Assert types with Vitest built-ins only — `expect(typeof value).toBe("bigint")` for bigint, `expect(value).toBeInstanceOf(Class)` for class instances, `expect(typeof x).toBe("function")` for functions. Do not use `expect(typeof x === "bigint").toBe(true)`.
 
 ## 3. Verification (before committing)
 

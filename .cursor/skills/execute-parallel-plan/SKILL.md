@@ -28,7 +28,8 @@ wt_setup_batch N
 
 Parse the PARALLEL-EXECUTION.md for batch N. For each agent in the batch:
 
-- Prepend the contents of `worktree-agent-template.md` to the agent's prompt
+- Prepend the contents of `worktree-agent-template.md` to the agent's prompt (the template instructs the agent to read `CODE_GUIDELINES.md` from the worktree root so it is in context)
+- When launching, ensure `CODE_GUIDELINES.md` is available to the subagent: either include it in the prompt context (e.g. @CODE_GUIDELINES.md when invoking) or rely on the template instruction that the agent read it from the worktree root
 - Launch a Task subagent with:
   - **prompt**: worktree-agent-template preamble + plan-specific agent prompt (full block from PARALLEL-EXECUTION.md)
   - **subagent_type**: from plan (shell, generalPurpose, etc.)
@@ -59,7 +60,7 @@ wt_verify_batch N
 ```
 
 If verification fails (typecheck, tests, biome):
-- Fix issues on main
+- Fix issues on main (including test conventions: `.cursor/rules/testing.mdc`)
 - Re-run `wt_verify_batch N` until clean
 
 ### 6. Cleanup
@@ -77,7 +78,7 @@ Repeat for N+1 until all batches complete.
 After all batches merged and cleaned up:
 
 1. Launch in parallel:
-   - code-reviewer subagent (review new code per CODE_GUIDELINES.md)
+   - code-reviewer subagent (review new code per CODE_GUIDELINES.md and test conventions in `.cursor/rules/testing.mdc`)
    - typescript-checker (pnpm typecheck)
    - biome-checker (pnpm biome check .)
 
@@ -118,3 +119,4 @@ Extract the prompt block verbatim. Ensure worktree path is correct (from WORKTRE
 - worktree-agent-template.md — standard preamble for every subagent
 - .cursor/scripts/worktree-lib.sh — underlying library
 - .cursor/rules/worktree-execution.mdc — constraints
+- .cursor/rules/testing.mdc — test conventions (type assertions, bigint, etc.)
