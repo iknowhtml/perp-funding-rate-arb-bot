@@ -45,6 +45,22 @@
 | BigInt amounts | camelCase + unit suffix | `notionalCents`, `priceSats`, `rateBps` |
 | Records | `<plural>By<Key>` | `ordersById`, `usersByEmail` |
 
+### No single-letter parameter names
+
+**Use descriptive parameter names.** Do not use single-letter shorthands like `m`, `t`, `p`, `r`, `d` for parameters.
+
+```typescript
+// ✅ Good
+const parseMarket = (rawMarket: GmxMarketsInfoResponse["markets"][number]): GmxMarket => ({ ... });
+items.find((item) => item.id === id);
+
+// ❌ Bad
+const parseMarket = (m: GmxMarketsInfoResponse["markets"][number]): GmxMarket => ({ ... });
+items.find((t) => t.id === id);
+```
+
+**Exception:** Idiomatic callbacks where the meaning is obvious are acceptable: e.g. `.sort((a, b) => ...)`, `.reduce((acc, value) => ...)`, or framework conventions like Hono's `(c) =>` for context.
+
 ### Function Prefixes
 
 | Prefix | Use Case | Example |
