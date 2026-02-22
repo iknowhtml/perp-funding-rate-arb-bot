@@ -1,6 +1,6 @@
 ---
 name: GMX Adapter Types + CEX Cleanup
-overview: Define GmxAdapter type and domain types including position_state and pnl_snapshot (ADR-0022 appendix). Delete ExchangeAdapter and CEX adapters.
+overview: Define ProtocolAdapter (types) and GmxProtocolAdapter (GMX implementation); domain types including position_state and pnl_snapshot (ADR-0022 appendix). Delete ExchangeAdapter and CEX adapters.
 todos:
   - id: domain-types
     content: Define TxResult, OpenPositionParams, LiquidityBalance, position_state, pnl_snapshot types per ADR-0022/0021
@@ -55,7 +55,7 @@ todos:
       - adrs/0020-contract-interaction-patterns.md
 
   - id: gmx-adapter-type
-    content: Define GmxAdapter interface as return type of createGmxAdapter()
+    content: Define ProtocolAdapter in types; GmxProtocolAdapter in gmx/adapter as return type of createGmxAdapter()
     status: completed
     files:
       creates: []
@@ -96,7 +96,7 @@ todos:
       - .cursor/rules/file-organization.mdc
 
   - id: update-domain-imports
-    content: Update domain and worker call sites to use GmxAdapter type
+    content: Update domain and worker call sites to use ProtocolAdapter type
     status: completed
     files:
       creates: []
@@ -198,7 +198,7 @@ Define the concrete GMX adapter types. Add `position_state` and `pnl_snapshot` t
 - **TxResult**: hash, success, blockNumber (from ADR-0020 / transaction lifecycle)
 - **OpenPositionParams**: market, size, collateral, leverage, etc. (GMX increase-order params)
 - **LiquidityBalance**: GM token balance / pool share (GMX-specific)
-- **GmxAdapter**: Interface with read methods (getBalance, getPositions, getFundingRate, getMarketInfo, etc.) — no WebSocket; regime reads (4h MA funding, OI skew) can be added in 0003.
+- **ProtocolAdapter** (in types): Interface with getMarketsInfo, getTickers, getPositionState, getLiquidityBalance, simulateOrder, submitOrder. **GmxProtocolAdapter** (in gmx/adapter): GMX implementation; regime reads (4h MA funding, OI skew) can be added in 0003.
 
 ### File Locations
 
@@ -237,7 +237,7 @@ Based on the dependencies above, execution will proceed as follows:
 **Batch 2**
 
 - [x] valibot-schemas: Add Valibot schemas and type guards in `src/adapters/types/types.ts` _(depends on domain-types)_
-- [x] gmx-adapter-type: Define GmxAdapter interface in `src/adapters/gmx/adapter.ts` _(depends on domain-types)_
+- [x] gmx-adapter-type: Define ProtocolAdapter in types; GmxProtocolAdapter in `src/adapters/gmx/adapter.ts` _(depends on domain-types)_
 
 **Batch 3**
 
@@ -245,7 +245,7 @@ Based on the dependencies above, execution will proceed as follows:
 
 **Batch 4**
 
-- [x] update-domain-imports: Update domain/worker call sites to use GmxAdapter _(depends on cex-cleanup)_
+- [x] update-domain-imports: Update domain/worker call sites to use ProtocolAdapter _(depends on cex-cleanup)_
 
 **Batch 5**
 

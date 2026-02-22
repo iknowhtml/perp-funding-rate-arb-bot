@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { GmxAdapter } from "@/adapters/gmx";
+import type { ProtocolAdapter } from "@/adapters/types";
 import type { Logger } from "@/lib/logger";
 import type { StateStore } from "@/worker/state";
 
@@ -18,7 +18,7 @@ const createMockLogger = (): Logger => ({
   error: vi.fn(),
 });
 
-const createMockAdapter = (): GmxAdapter => ({
+const createMockAdapter = (): ProtocolAdapter => ({
   getMarketsInfo: vi.fn().mockResolvedValue([]),
   getTickers: vi.fn().mockResolvedValue([]),
   getPositionState: vi.fn().mockResolvedValue(null),

@@ -5,8 +5,8 @@
  * @see {@link ../../../../../adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
  */
 
-import type { GmxAdapter } from "@/adapters/gmx";
 import { BTC_USD_MARKET, ETH_USD_MARKET } from "@/adapters/gmx";
+import type { ProtocolAdapter } from "@/adapters/types";
 import { type RiskConfig, type RiskSnapshot, evaluateRisk } from "@/domains/risk";
 import type { Logger } from "@/lib/logger";
 import type { CircuitBreaker } from "@/lib/rate-limiter";
@@ -32,7 +32,7 @@ export interface EnterHedgeExecutionParams {
  * Dependencies injected into the enter hedge execution.
  */
 export interface EnterHedgeDeps {
-  adapter: GmxAdapter;
+  adapter: ProtocolAdapter;
   getRiskSnapshot: () => RiskSnapshot;
   riskConfig: RiskConfig;
   executionConfig: ExecutionConfig;

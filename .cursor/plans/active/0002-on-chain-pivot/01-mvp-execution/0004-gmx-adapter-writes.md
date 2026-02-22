@@ -38,7 +38,7 @@ isProject: false
 
 ## Overview
 
-Implement GmxAdapter write methods. Simulation-before-submit pattern per ADR-0022: simulateExecuteDeposit, simulateExecuteOrder before submitting tx(s) with conservative acceptable price.
+Implement GmxProtocolAdapter (ProtocolAdapter) write methods. Simulation-before-submit pattern per ADR-0022: simulateExecuteDeposit, simulateExecuteOrder before submitting tx(s) with conservative acceptable price.
 
 See deprecated [phase-b-gmx-adapter/0003-gmx-adapter-writes.md](../../../deprecated/0002-gmx-pivot-v1/phase-b-gmx-adapter/0003-gmx-adapter-writes.md).
 

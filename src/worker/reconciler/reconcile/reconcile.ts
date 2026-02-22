@@ -5,7 +5,7 @@
  * @see {@link ../../../../adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
  */
 
-import type { GmxAdapter } from "@/adapters/gmx";
+import type { ProtocolAdapter } from "@/adapters/types";
 import type { Balance, Position } from "@/adapters/types";
 import { derivePosition, reconcilePosition } from "@/domains/position";
 import type { PositionConfig } from "@/domains/position";
@@ -16,8 +16,8 @@ import type { BalanceInconsistency, ReconcilerConfig, ReconcilerResult } from ".
 
 /** Map GMX position state + liquidity balance to Balance[] and Position[] for reconciliation. */
 const toBalancesAndPositions = (
-  positionState: Awaited<ReturnType<GmxAdapter["getPositionState"]>>,
-  liquidityBalance: Awaited<ReturnType<GmxAdapter["getLiquidityBalance"]>>,
+  positionState: Awaited<ReturnType<ProtocolAdapter["getPositionState"]>>,
+  liquidityBalance: Awaited<ReturnType<ProtocolAdapter["getLiquidityBalance"]>>,
   perpSymbol: string,
   _baseAsset: string,
 ): { balances: Balance[]; positions: Position[] } => {
@@ -132,7 +132,7 @@ const detectBalanceInconsistencies = (
  * @returns Reconciliation result with consistency info and corrected position
  */
 export const runReconcile = async (
-  adapter: GmxAdapter,
+  adapter: ProtocolAdapter,
   stateStore: StateStore,
   config: ReconcilerConfig,
   logger: Logger,

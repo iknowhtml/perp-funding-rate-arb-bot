@@ -5,8 +5,8 @@
  * @see {@link ../../../adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
  */
 
-import type { GmxAdapter } from "@/adapters/gmx";
-import type { Balance, FundingRate, Position, Ticker } from "@/adapters/types";
+import type { GmxMarket, GmxTicker } from "@/adapters/gmx";
+import type { Balance, FundingRate, Position, ProtocolAdapter, Ticker } from "@/adapters/types";
 import type { Logger } from "@/lib/logger";
 
 import type { StateStore } from "../state";
@@ -15,7 +15,7 @@ import type { StateStore } from "../state";
  * Configuration for data plane (GMX path).
  */
 export interface DataPlaneConfig {
-  adapter: GmxAdapter;
+  adapter: ProtocolAdapter;
   stateStore: StateStore;
   logger: Logger;
   symbols: string[];
@@ -70,8 +70,8 @@ const fundingRateFromGmx = (
 /** Map PositionState to Position[] and LiquidityBalance to Balance[] for state. */
 const accountFromGmx = (
   _market: string,
-  positionState: Awaited<ReturnType<GmxAdapter["getPositionState"]>>,
-  liquidityBalance: Awaited<ReturnType<GmxAdapter["getLiquidityBalance"]>>,
+  positionState: Awaited<ReturnType<ProtocolAdapter["getPositionState"]>>,
+  liquidityBalance: Awaited<ReturnType<ProtocolAdapter["getLiquidityBalance"]>>,
   perpSymbol: string,
   _baseAsset: string,
 ): { balances: Balance[]; positions: Position[] } => {
@@ -127,10 +127,12 @@ export const createDataPlane = (config: DataPlaneConfig): DataPlane => {
   const startFundingRatePolling = (): void => {
     const poll = async (): Promise<void> => {
       try {
-        const [markets, tickers] = await Promise.all([
+        const [marketsRaw, tickersRaw] = await Promise.all([
           adapter.getMarketsInfo(),
           adapter.getTickers(),
         ]);
+        const markets = marketsRaw as GmxMarket[];
+        const tickers = tickersRaw as GmxTicker[];
         const symbol = symbols[0];
         if (symbol) {
           const market = markets.find((m) => m.name.includes(symbol.replace("-", "/")));

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { GmxAdapter } from "@/adapters/gmx";
+import type { ProtocolAdapter } from "@/adapters/types";
 import type { Balance, ExchangeOrder, Position } from "@/adapters/types";
 import type { Logger } from "@/lib/logger";
 import { createStateStore } from "@/worker/state";
@@ -44,10 +44,10 @@ const makePosition = (overrides: Partial<Position> = {}): Position => ({
   ...overrides,
 });
 
-const createMockGmxAdapter = (
-  positionState: Awaited<ReturnType<GmxAdapter["getPositionState"]>>,
-  liquidityBalance: Awaited<ReturnType<GmxAdapter["getLiquidityBalance"]>>,
-): GmxAdapter => ({
+const createMockProtocolAdapter = (
+  positionState: Awaited<ReturnType<ProtocolAdapter["getPositionState"]>>,
+  liquidityBalance: Awaited<ReturnType<ProtocolAdapter["getLiquidityBalance"]>>,
+): ProtocolAdapter => ({
   getMarketsInfo: vi.fn().mockResolvedValue([]),
   getTickers: vi.fn().mockResolvedValue([]),
   getPositionState: vi.fn().mockResolvedValue(positionState),
@@ -57,7 +57,7 @@ const createMockGmxAdapter = (
 });
 
 describe("runReconcile", () => {
-  let mockAdapter: GmxAdapter;
+  let mockAdapter: ProtocolAdapter;
   let mockLogger: Logger;
   let stateStore: ReturnType<typeof createStateStore>;
 
@@ -73,7 +73,7 @@ describe("runReconcile", () => {
   beforeEach(() => {
     vi.useFakeTimers();
 
-    mockAdapter = createMockGmxAdapter(
+    mockAdapter = createMockProtocolAdapter(
       {
         ts: new Date(),
         market: GMX_MARKET,

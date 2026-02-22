@@ -12,5 +12,5 @@ export {
 } from "./api";
 export type { GmxMarket, GmxTicker } from "./api";
 
-export { createGmxAdapter } from "./adapter";
-export type { GmxAdapter, GmxAdapterConfig } from "./adapter";
+export { createGmxProtocolAdapter as createGmxAdapter } from "./adapter";
+export type { GmxProtocolAdapter, GmxProtocolAdapterConfig } from "./adapter";

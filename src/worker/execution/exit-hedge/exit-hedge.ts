@@ -14,7 +14,7 @@
  * @see {@link ../../../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
-import type { GmxAdapter } from "@/adapters/gmx";
+import type { ProtocolAdapter } from "@/adapters/types";
 import type { Logger } from "@/lib/logger";
 
 import { ExecutionError } from "../types";
@@ -42,7 +42,7 @@ export interface ExitHedgeExecutionParams {
  * Dependencies injected into the exit hedge execution.
  */
 export interface ExitHedgeDeps {
-  adapter: GmxAdapter;
+  adapter: ProtocolAdapter;
   executionConfig: ExecutionConfig;
   logger: Logger;
 }
@@ -50,13 +50,13 @@ export interface ExitHedgeDeps {
 /**
  * Verify that no open position remains for the given market (GMX path).
  *
- * @param adapter - GMX adapter
+ * @param adapter - Protocol adapter
  * @param _symbol - Base symbol (unused for GMX)
  * @param _perpSymbol - Perp symbol (unused for GMX)
  * @param market - GMX market address
  */
 export const verifyFlatPosition = async (
-  adapter: GmxAdapter,
+  adapter: ProtocolAdapter,
   _symbol: string,
   _perpSymbol: string,
   market: string,

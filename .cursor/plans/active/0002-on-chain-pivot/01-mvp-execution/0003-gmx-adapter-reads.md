@@ -1,6 +1,6 @@
 ---
 name: GMX Adapter — Read Operations
-overview: Implement GmxAdapter read methods including regime-specific reads (4h MA funding, OI skew ratio). REST + Reader contract.
+overview: Implement GmxProtocolAdapter read methods (ProtocolAdapter interface) including regime-specific reads (4h MA funding, OI skew ratio). REST + Reader contract.
 todos:
   - id: balance-reads
     content: Implement balance and position reads via Reader contract (getAccountPositions, token balances)
@@ -94,7 +94,7 @@ todos:
       - src/adapters/gmx/types.ts
 
   - id: adapter-factory
-    content: Implement createGmxAdapter composing reads and return GmxAdapter
+    content: Implement createGmxAdapter composing reads and return ProtocolAdapter (GmxProtocolAdapter)
     status: pending
     files:
       creates:
@@ -175,13 +175,13 @@ Implement GmxAdapter read methods. Add regime-specific reads: 4h MA funding rate
 
 ### Code Patterns
 
-- **Factory over class**: `createGmxAdapter(deps)` returning object implementing `GmxAdapter` (from 0002). Dependencies: publicClient (viem), REST base URL, optional chain constants.
+- **Factory over class**: `createGmxAdapter(deps)` returning object implementing `ProtocolAdapter` (GmxProtocolAdapter, from 0002). Dependencies: publicClient (viem), REST base URL, optional chain constants.
 - **Read pattern**: Use existing `fetchGmxMarketsInfo`, `fetchGmxTickers` from `src/adapters/gmx/index.ts` for REST; use `publicClient.readContract` with Reader ABI for on-chain reads (positions, balances). Per ADR-0020 (viem, not SDK class).
 - **File organization**: `src/adapters/gmx/reads.ts` for read functions; `src/adapters/gmx/adapter.ts` for `createGmxAdapter`. Colocated `reads.test.ts`, `adapter.test.ts`. See [.cursor/rules/file-organization.mdc](../../../rules/file-organization.mdc).
 
 ### Relevant Types
 
-- **GmxAdapter** (from 0002): Interface with getBalance, getPositions, getFundingRate, getMarketInfo, getTicker, getBorrowRates, getGmBalance, get4hMaFundingRate?, getOiSkew? (regime reads).
+- **ProtocolAdapter** (from 0002, in types): Interface with getMarketsInfo, getTickers, getPositionState, getLiquidityBalance, simulateOrder, submitOrder. **GmxProtocolAdapter** adds get4hMaFundingRate?, getOiSkew? (regime reads) when implemented.
 - **GmxMarket**, **GmxTicker** (existing in `src/adapters/gmx/index.ts`): Use for REST responses; normalize to domain types where needed.
 - **position_state**, **pnl_snapshot** (from 0002): Use when returning position/PnL snapshots from reads.
 
@@ -229,7 +229,7 @@ Based on the dependencies above, execution will proceed as follows:
 
 **Batch 3**
 
-- [ ] adapter-factory: Implement createGmxAdapter and wire reads into GmxAdapter _(depends on all read todos)_
+- [ ] adapter-factory: Implement createGmxAdapter and wire reads into GmxProtocolAdapter (ProtocolAdapter) _(depends on all read todos)_
 
 **Batch 4**
 

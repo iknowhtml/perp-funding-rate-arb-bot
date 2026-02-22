@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { GmxAdapter } from "@/adapters/gmx";
+import type { ProtocolAdapter } from "@/adapters/types";
 import type { Logger } from "@/lib/logger";
 
 import { createStateStore } from "../state";
@@ -9,7 +9,7 @@ import { createDataPlane } from "./data-plane";
 const GMX_MARKET = "0x47c031236e19d024b42f8AE6780E44A573170703";
 const GMX_POOL = "default";
 
-const createMockGmxAdapter = (): GmxAdapter => ({
+const createMockProtocolAdapter = (): ProtocolAdapter => ({
   getMarketsInfo: vi.fn().mockResolvedValue([]),
   getTickers: vi.fn().mockResolvedValue([]),
   getPositionState: vi.fn().mockResolvedValue(null),
@@ -19,13 +19,13 @@ const createMockGmxAdapter = (): GmxAdapter => ({
 });
 
 describe("createDataPlane", () => {
-  let mockAdapter: GmxAdapter;
+  let mockAdapter: ProtocolAdapter;
   let mockLogger: Logger;
   let stateStore: ReturnType<typeof createStateStore>;
 
   beforeEach(() => {
     vi.useFakeTimers();
-    mockAdapter = createMockGmxAdapter();
+    mockAdapter = createMockProtocolAdapter();
     mockLogger = {
       debug: vi.fn(),
       info: vi.fn(),

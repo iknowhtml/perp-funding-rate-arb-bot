@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { GmxAdapter } from "@/adapters/gmx";
+import type { ProtocolAdapter } from "@/adapters/types";
 import type { ExchangeOrder } from "@/adapters/types";
 import type { Logger } from "@/lib/logger";
 
@@ -54,9 +54,9 @@ const createDefaultParams = (): ExitHedgeExecutionParams => ({
 const GMX_MARKET = "0x47c031236e19d024b42f8AE6780E44A573170703";
 
 const createDefaultDeps = (overrides?: {
-  adapter?: Partial<GmxAdapter>;
+  adapter?: Partial<ProtocolAdapter>;
 }): ExitHedgeDeps => {
-  const adapter: GmxAdapter = {
+  const adapter: ProtocolAdapter = {
     getMarketsInfo: vi.fn().mockResolvedValue([]),
     getTickers: vi.fn().mockResolvedValue([]),
     getPositionState: vi.fn().mockResolvedValue(null),

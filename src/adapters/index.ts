@@ -24,6 +24,7 @@ export type {
   Position,
   PositionState,
   PositionSide,
+  ProtocolAdapter,
   Ticker,
   TickerCallback,
   TxResult,
@@ -69,9 +70,9 @@ export {
   txResultSchema,
 } from "./types";
 
-// GMX adapter (ADR-0019)
+// GMX protocol adapter (ADR-0019)
 export { createGmxAdapter } from "./gmx";
-export type { GmxAdapter, GmxAdapterConfig } from "./gmx";
+export type { GmxProtocolAdapter, GmxProtocolAdapterConfig } from "./gmx";
 
 // Config validation (legacy AdapterConfig kept for env parsing if needed)
 export type { AdapterConfig } from "./config";

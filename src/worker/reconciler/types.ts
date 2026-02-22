@@ -31,9 +31,9 @@ export interface ReconcilerConfig {
   quoteAsset: string;
   /** Base asset decimal places. */
   baseDecimals: number;
-  /** GMX market address (for GmxAdapter path). */
+  /** GMX market address (for ProtocolAdapter path). */
   gmxMarket?: string;
-  /** GMX pool id (for GmxAdapter path). */
+  /** GMX pool id (for ProtocolAdapter path). */
   gmxPool?: string;
 }
 

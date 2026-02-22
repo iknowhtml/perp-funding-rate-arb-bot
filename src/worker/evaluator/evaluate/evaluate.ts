@@ -4,7 +4,7 @@
  * @see {@link ../../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
-import type { GmxAdapter } from "@/adapters/gmx";
+import type { ProtocolAdapter } from "@/adapters/types";
 import { calculateBaseUnitScale } from "@/domains/position";
 import type { DerivedPosition } from "@/domains/position";
 import { type RiskConfig, type RiskSnapshot, evaluateRisk } from "@/domains/risk";
@@ -38,7 +38,7 @@ const generateIntentId = (): string => crypto.randomUUID();
 export interface EvaluatorDeps {
   stateStore: StateStore;
   executionQueue: SerialQueue;
-  adapter: GmxAdapter;
+  adapter: ProtocolAdapter;
   healthMonitor: HealthMonitor;
   freshnessConfig: FreshnessConfig;
   riskConfig: RiskConfig;

@@ -80,7 +80,7 @@ export interface ExecutionConfig {
   maxPartialFillRetries: number;
   /** Minimum liquidity depth multiplier (e.g., 3 = need 3x depth). */
   minLiquidityMultiplier: bigint;
-  /** GMX market address (for GmxAdapter path). */
+  /** GMX market address (for ProtocolAdapter path). */
   gmxMarketAddress?: string;
 }
 

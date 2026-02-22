@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { GmxAdapter } from "@/adapters/gmx";
+import type { ProtocolAdapter } from "@/adapters/types";
 import type { ExchangeOrder } from "@/adapters/types";
 import { DEFAULT_RISK_CONFIG, type RiskSnapshot } from "@/domains/risk";
 import type { Logger } from "@/lib/logger";
@@ -69,11 +69,11 @@ const createDefaultParams = (): EnterHedgeExecutionParams => ({
 });
 
 const createDefaultDeps = (overrides?: {
-  adapter?: Partial<GmxAdapter>;
+  adapter?: Partial<ProtocolAdapter>;
   isCircuitBreakerOpen?: boolean;
   riskSnapshot?: RiskSnapshot;
 }): EnterHedgeDeps => {
-  const adapter: GmxAdapter = {
+  const adapter: ProtocolAdapter = {
     getMarketsInfo: vi.fn().mockResolvedValue([]),
     getTickers: vi.fn().mockResolvedValue([]),
     getPositionState: vi.fn().mockResolvedValue(null),

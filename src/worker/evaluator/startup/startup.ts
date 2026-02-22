@@ -6,7 +6,7 @@
  * @see {@link ../../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
-import type { GmxAdapter } from "@/adapters/gmx";
+import type { ProtocolAdapter } from "@/adapters/types";
 import type { Logger } from "@/lib/logger";
 import type { StateStore } from "@/worker/state";
 
@@ -17,7 +17,7 @@ import type { ReconcilerConfig } from "@/worker/reconciler";
  * Dependencies for the startup sequence.
  */
 export interface StartupDeps {
-  adapter: GmxAdapter;
+  adapter: ProtocolAdapter;
   stateStore: StateStore;
   reconcilerConfig: ReconcilerConfig;
   logger: Logger;

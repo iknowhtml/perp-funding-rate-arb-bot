@@ -88,38 +88,34 @@ Stale data response rules  → RPC health + oracle staleness checks
 | `viem` | Ethereum client (RPC, tx signing, ABI encoding) | TypeScript-first, tree-shakeable, functional API. Fits the project's functional programming style (vs `ethers.js` which is class-heavy). Battle-tested in production DeFi. |
 | `@gmx-io/sdk` | GMX v2 SDK (ABIs, types, calculation utilities) | Official TypeScript SDK used as a utility library -- we import ABIs, types, and helper functions but not the `GmxSdk` class. See [ADR-0020](0020-contract-interaction-patterns.md) for details. |
 
-### Why No Interface (Yet)
+### ProtocolAdapter and GmxProtocolAdapter
 
-The existing `ExchangeAdapter` interface (ADR-0010) was designed for CEX API interactions. It doesn't fit GMX:
-
-- `getOrderBook()` -- GMX is pool-based, no order book
-- `subscribeTicker()` / `unsubscribeTicker()` -- GMX has no WebSocket
-- `CreateOrderParams` -- assumes CEX-style orders (`timeInForce`, `stopPriceQuote`); GMX needs execution fees, acceptable prices, collateral token addresses
-- `createOrder()` returns a filled/pending order; GMX orders are async (keeper-executed 1-30s later)
-- GM token deposit/withdrawal (half the strategy) doesn't exist in the interface
-
-Rather than design a new `ProtocolAdapter` interface upfront, we build a **concrete GMX module** and skip the interface entirely:
-
-1. **We have exactly one protocol.** An interface designed for one implementation is speculative. The "common surface" between GMX and Drift (if we add it later) isn't knowable yet -- GMX has GM tokens and keepers, Drift has a different execution model entirely.
-2. **Testing doesn't require an interface.** We use `vi.mock()` to mock modules. A concrete module is just as mockable as an interface.
-3. **Extract later, don't design upfront.** When (if) we add a second protocol, we'll have two concrete implementations to compare. The common interface will be obvious, not guessed. This follows "extract interfaces from implementations."
-
-The GMX module exports functions directly:
+The existing `ExchangeAdapter` interface (ADR-0010) was designed for CEX API interactions. It doesn't fit GMX (no order book, no WebSocket, async keeper-executed orders, GM token deposit/withdrawal). We introduce a shared **`ProtocolAdapter`** interface in `src/adapters/types/types.ts` for on-chain perp protocols. The GMX implementation is **`GmxProtocolAdapter`** (in `src/adapters/gmx/adapter.ts`); domain code depends on `ProtocolAdapter`, and the factory `createGmxAdapter()` returns `ProtocolAdapter`.
 
 ```typescript
-// src/adapters/gmx/index.ts -- concrete exports, no interface
+// src/adapters/types/types.ts -- shared interface
+export interface ProtocolAdapter {
+  getMarketsInfo(): Promise<unknown[]>;
+  getTickers(): Promise<unknown[]>;
+  getPositionState(market: string): Promise<PositionState | null>;
+  getLiquidityBalance(pool: string): Promise<LiquidityBalance>;
+  simulateOrder(params: OpenPositionParams): Promise<{ impactBps: bigint }>;
+  submitOrder(params: OpenPositionParams): Promise<TxResult>;
+}
+
+// src/adapters/gmx/index.ts
 export { createGmxAdapter } from "./adapter";
-export type { GmxAdapter } from "./adapter";
+export type { GmxProtocolAdapter, GmxProtocolAdapterConfig } from "./adapter";
 ```
 
-Domain code calls the adapter directly:
+Domain code uses the interface:
 
 ```typescript
 // src/worker/execution/enter-hedge.ts
-import type { GmxAdapter } from "@/adapters/gmx";
+import type { ProtocolAdapter } from "@/adapters/types";
 
 export const executeEnterHedge = async (
-  adapter: GmxAdapter,
+  adapter: ProtocolAdapter,
   params: EnterHedgeParams,
 ): Promise<ExecutionResult> => {
   const simulation = await adapter.simulateOrder(params.perpOrder);
@@ -127,7 +123,7 @@ export const executeEnterHedge = async (
 };
 ```
 
-If we add Drift later, we extract the common surface into an interface at that point. Until then, the concrete type is the contract.
+If we add a second protocol (e.g. Drift) later, we add another implementation of `ProtocolAdapter`; the interface is already in place.
 
 The CEX adapter code (`src/adapters/coinbase/`, `src/adapters/binance/`, `src/adapters/bybit/`) is deleted. It's in git history if ever needed.
 
@@ -249,7 +245,7 @@ src/adapters/
 ├── errors.ts                   # Shared error types (renamed from ExchangeError to AdapterError)
 ├── paper/                      # Preserved (can wrap GMX adapter later)
 └── gmx/                        # NEW
-    ├── adapter.ts              # Concrete GMX adapter (no interface -- export GmxAdapter type)
+    ├── adapter.ts              # GmxProtocolAdapter (implements ProtocolAdapter from types)
     ├── adapter.test.ts
     ├── normalizers.ts          # Contract/API responses → domain types
     ├── normalizers.test.ts

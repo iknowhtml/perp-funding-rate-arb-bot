@@ -375,8 +375,30 @@ export const isPnlSnapshot = (value: unknown): value is PnlSnapshot =>
   v.is(pnlSnapshotSchema, value);
 
 /**
+ * On-chain perpetual protocol adapter interface (ADR-0019).
+ * Implementations (e.g. GmxProtocolAdapter) provide read/write operations for a single protocol.
+ * No order book or WebSocket; uses REST + chain reads and transaction submission.
+ *
+ * @see {@link ../../../adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
+ */
+export interface ProtocolAdapter {
+  /** Market info (funding, OI, borrow rates). Protocol-specific shape; use unknown[] for interface. */
+  getMarketsInfo(): Promise<unknown[]>;
+  /** Price tickers. Protocol-specific shape; use unknown[] for interface. */
+  getTickers(): Promise<unknown[]>;
+  /** Current position state for a market (perp + GM/liquidity balance). */
+  getPositionState(market: string): Promise<PositionState | null>;
+  /** Liquidity balance for a pool (e.g. GM tokens). */
+  getLiquidityBalance(pool: string): Promise<LiquidityBalance>;
+  /** Simulate open perp order (no tx). */
+  simulateOrder(params: OpenPositionParams): Promise<{ impactBps: bigint }>;
+  /** Submit open perp order; returns tx result when broadcast. */
+  submitOrder(params: OpenPositionParams): Promise<TxResult>;
+}
+
+/**
  * CEX exchange adapter interface (deprecated).
- * @deprecated Removed in GMX pivot (ADR-0019). Worker uses GmxAdapter from @/adapters/gmx.
+ * @deprecated Removed in GMX pivot (ADR-0019). Worker uses ProtocolAdapter from @/adapters/types.
  */
 export interface ExchangeAdapter {
   connect(): Promise<void>;
