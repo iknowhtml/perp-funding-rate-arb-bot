@@ -7,4 +7,4 @@ preDeployCommand = ["pnpm db:migrate"]
 startCommand = "pnpm start"
 healthcheckPath = "/"
 healthcheckTimeout = 100
-restartPolicyType = "never"
+restartPolicyType = "ON_FAILURE"
