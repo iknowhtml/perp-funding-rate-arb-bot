@@ -34,3 +34,5 @@ export type {
   MulticallPayload,
   TxBuilderDeps,
 } from "./tx-builder";
+export { sendMulticall } from "./tx-sender";
+export type { TxSenderDeps } from "./tx-sender";
