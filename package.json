@@ -11,7 +11,7 @@
   },
   "packageManager": "pnpm@9.15.2",
   "scripts": {
-    "postinstall": "git rev-parse --git-dir >/dev/null 2>&1 && lefthook install || true",
+    "postinstall": "([ -n \"$CI\" ] || [ -n \"$RAILWAY_ENVIRONMENT\" ]) || (git rev-parse --git-dir >/dev/null 2>&1 && lefthook install) || true",
     "setup": "./scripts/setup.sh",
     "dev": "tsx watch src/index.ts",
     "build": "tsc",

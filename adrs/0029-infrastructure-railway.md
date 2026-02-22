@@ -128,7 +128,7 @@ CMD ["node", "dist/index.js"]
 
 Railway can build from this Dockerfile or use Nixpacks with `package.json`; specify root directory and start command in the dashboard or `railway.json` if needed.
 
-**postinstall:** The `postinstall` script runs `lefthook install` only when the build is inside a git repository. Railway (and many CI environments) build without a `.git` directory, so `lefthook install` is skipped and the install succeeds. Local clones run `lefthook install` as usual.
+**postinstall:** The `postinstall` script runs `lefthook install` only when **not** in CI (e.g. `CI` or `RAILWAY_ENVIRONMENT` set) and the build is inside a git repository. Railway and other CI environments either set these variables or omit `.git`, so `lefthook install` is skipped and the install succeeds. Local clones run `lefthook install` as usual.
 
 ### Required Environment Variables
 
