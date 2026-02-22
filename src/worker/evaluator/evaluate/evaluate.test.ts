@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ExchangeAdapter } from "@/adapters/types";
+import type { GmxAdapter } from "@/adapters/gmx";
 import type { DerivedPosition } from "@/domains/position";
 import { DEFAULT_RISK_CONFIG, type RiskAssessment, type RiskSnapshot } from "@/domains/risk";
 import {
@@ -93,7 +93,7 @@ const createBaseDeps = (overrides?: Partial<EvaluatorDeps>): EvaluatorDeps => {
   return {
     stateStore: createMockStateStore({}),
     executionQueue: queue,
-    adapter: {} as ExchangeAdapter,
+    adapter: {} as GmxAdapter,
     healthMonitor: createMockHealthMonitor(true),
     freshnessConfig: DEFAULT_FRESHNESS_CONFIG,
     riskConfig: DEFAULT_RISK_CONFIG,

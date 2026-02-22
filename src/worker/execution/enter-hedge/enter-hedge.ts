@@ -1,31 +1,16 @@
 /**
- * Enter hedge execution: perp short + spot buy.
- *
- * Implements the ENTER_HEDGE execution job from ADR-0001.
- * Follows the two-phase risk check pattern: risk is re-evaluated
- * right before placing orders, not just at strategy evaluation time.
- *
- * Execution flow:
- * 1. Check circuit breaker state
- * 2. Re-check risk (two-phase check)
- * 3. Validate slippage from order book
- * 4. Place perp short order (through circuit breaker)
- * 5. Place spot buy order (through circuit breaker)
- * 6. Handle partial fills
- * 7. Check and correct hedge drift
+ * Enter hedge execution: GMX path — simulate then submit perp short.
  *
  * @see {@link ../../../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
+ * @see {@link ../../../../../adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
  */
 
-import type { ExchangeAdapter } from "@/adapters/types";
+import type { GmxAdapter } from "@/adapters/gmx";
+import { BTC_USD_MARKET, ETH_USD_MARKET } from "@/adapters/gmx";
 import { type RiskConfig, type RiskSnapshot, evaluateRisk } from "@/domains/risk";
 import type { Logger } from "@/lib/logger";
 import type { CircuitBreaker } from "@/lib/rate-limiter";
 
-import { calculateHedgeDrift, correctDrift } from "../drift";
-import { confirmOrderFill } from "../fill-confirmation";
-import { handlePartialFills } from "../partial-fills";
-import { validateExecution } from "../slippage";
 import { ExecutionError } from "../types";
 import type { ExecutionConfig, ExecutionResult } from "../types";
 
@@ -47,8 +32,7 @@ export interface EnterHedgeExecutionParams {
  * Dependencies injected into the enter hedge execution.
  */
 export interface EnterHedgeDeps {
-  adapter: ExchangeAdapter;
-  /** Callback to get a fresh risk snapshot right before execution. */
+  adapter: GmxAdapter;
   getRiskSnapshot: () => RiskSnapshot;
   riskConfig: RiskConfig;
   executionConfig: ExecutionConfig;
@@ -57,27 +41,15 @@ export interface EnterHedgeDeps {
 }
 
 /**
- * Execute entering a hedged position (perp short + spot buy).
- *
- * CRITICAL SAFETY INVARIANTS:
- * - Risk is checked twice: once at strategy time, once here before orders
- * - Slippage is validated before any orders are placed
- * - All orders are confirmed with exchange fill polling
- * - Hedge drift is detected and corrected
- * - All execution is auditable via logger
- *
- * @param params - Execution parameters (size, symbol, intentId)
- * @param deps - Injected dependencies
- * @returns Execution result with order details and drift analysis
+ * Execute entering a hedged position (GMX: simulate then submit perp short).
  */
 export const executeEnterHedge = async (
   params: EnterHedgeExecutionParams,
   deps: EnterHedgeDeps,
 ): Promise<ExecutionResult> => {
-  const { sizeBase, symbol, perpSymbol, intentId } = params;
+  const { sizeBase, perpSymbol, intentId } = params;
   const { adapter, getRiskSnapshot, riskConfig, executionConfig, circuitBreaker, logger } = deps;
 
-  // 0. Check circuit breaker
   if (circuitBreaker.isOpen()) {
     logger.warn("Enter hedge aborted: circuit breaker open", { intentId });
     return {
@@ -88,7 +60,6 @@ export const executeEnterHedge = async (
     };
   }
 
-  // 1. Re-check risk (two-phase check per ADR-0001)
   const riskSnapshot = getRiskSnapshot();
   const risk = evaluateRisk(riskSnapshot, riskConfig);
 
@@ -120,98 +91,31 @@ export const executeEnterHedge = async (
     };
   }
 
-  // 2. Validate slippage
-  const validation = await validateExecution(adapter, symbol, "BUY", sizeBase, executionConfig);
-  if (!validation.valid) {
-    const slippageReason = validation.reason ?? "Slippage validation failed";
-    logger.warn("Enter hedge aborted: slippage validation failed", {
-      intentId,
-      reason: slippageReason,
-      estimatedSlippageBps: validation.slippageEstimate.estimatedSlippageBps.toString(),
-    });
-    return {
-      success: false,
-      aborted: true,
-      reason: slippageReason,
-      slippageEstimate: validation.slippageEstimate,
-      timestamp: new Date(),
-    };
-  }
+  const market =
+    executionConfig.gmxMarketAddress ??
+    (perpSymbol.includes("BTC") ? BTC_USD_MARKET : ETH_USD_MARKET);
+  const openParams = {
+    market,
+    sizeUsd: sizeBase,
+    acceptablePrice: 0n,
+  };
 
   try {
-    // 3. Place perp short order (through circuit breaker)
-    logger.info("Placing perp short order", {
+    const simulation = await adapter.simulateOrder(openParams);
+    logger.info("GMX simulateOrder", { intentId, impactBps: simulation.impactBps.toString() });
+
+    const txResult = await circuitBreaker.execute(() => adapter.submitOrder(openParams));
+
+    logger.info("Enter hedge (GMX) execution complete", {
       intentId,
-      symbol: perpSymbol,
-      sizeBase: sizeBase.toString(),
-    });
-
-    const perpOrder = await circuitBreaker.execute(async () => {
-      const order = await adapter.createOrder({
-        symbol: perpSymbol,
-        side: "SELL",
-        type: "MARKET",
-        quantityBase: sizeBase,
-      });
-      return confirmOrderFill(adapter, order.id, executionConfig, logger);
-    });
-
-    // 4. Place spot buy order (through circuit breaker)
-    logger.info("Placing spot buy order", {
-      intentId,
-      symbol,
-      sizeBase: sizeBase.toString(),
-    });
-
-    const spotOrder = await circuitBreaker.execute(async () => {
-      const order = await adapter.createOrder({
-        symbol,
-        side: "BUY",
-        type: "MARKET",
-        quantityBase: sizeBase,
-      });
-      return confirmOrderFill(adapter, order.id, executionConfig, logger);
-    });
-
-    // 5. Handle partial fills
-    if (perpOrder.status === "PARTIALLY_FILLED" || spotOrder.status === "PARTIALLY_FILLED") {
-      logger.warn("Partial fills detected, completing", { intentId });
-      await handlePartialFills(perpOrder, spotOrder, adapter, executionConfig, logger);
-    }
-
-    // 6. Check and correct hedge drift
-    const drift = calculateHedgeDrift(perpOrder, spotOrder, executionConfig.maxDriftBps);
-    if (drift.needsCorrection) {
-      logger.warn("Hedge drift detected, correcting", {
-        intentId,
-        driftBps: drift.driftBps.toString(),
-      });
-      const driftMidPriceQuote = validation.slippageEstimate.midPriceQuote;
-      await correctDrift(
-        drift,
-        adapter,
-        symbol,
-        perpSymbol,
-        driftMidPriceQuote,
-        executionConfig,
-        logger,
-      );
-    }
-
-    logger.info("Enter hedge execution complete", {
-      intentId,
-      perpOrderId: perpOrder.id,
-      spotOrderId: spotOrder.id,
-      driftBps: drift.driftBps.toString(),
+      txHash: txResult.hash,
+      success: txResult.success,
     });
 
     return {
-      success: true,
+      success: txResult.success,
       aborted: false,
-      perpOrder,
-      spotOrder,
-      drift,
-      slippageEstimate: validation.slippageEstimate,
+      txResult,
       timestamp: new Date(),
     };
   } catch (error) {
@@ -220,7 +124,6 @@ export const executeEnterHedge = async (
       error instanceof Error ? error : new Error(String(error)),
       { intentId },
     );
-
     throw new ExecutionError(
       `Enter hedge failed: ${error instanceof Error ? error.message : String(error)}`,
       "ENTER_HEDGE_FAILED",

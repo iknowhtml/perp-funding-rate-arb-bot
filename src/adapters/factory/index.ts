@@ -1,1 +1,0 @@
-export { createExchangeAdapter } from "./factory";

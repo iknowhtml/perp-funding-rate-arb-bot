@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ExchangeAdapter, ExchangeOrder, OrderBook } from "@/adapters/types";
+import type { GmxAdapter } from "@/adapters/gmx";
+import type { ExchangeOrder } from "@/adapters/types";
 import { DEFAULT_RISK_CONFIG, type RiskSnapshot } from "@/domains/risk";
 import type { Logger } from "@/lib/logger";
 import type { CircuitBreaker } from "@/lib/rate-limiter";
@@ -14,7 +15,7 @@ import type { EnterHedgeDeps, EnterHedgeExecutionParams } from "./enter-hedge";
 const QUOTE_SCALE = 1_000_000n;
 
 /** Create a mock filled order. */
-const createFilledOrder = (overrides?: Partial<ExchangeOrder>): ExchangeOrder => ({
+const _createFilledOrder = (overrides?: Partial<ExchangeOrder>): ExchangeOrder => ({
   id: "order-1",
   exchangeOrderId: "exch-1",
   symbol: "BTC-USD",
@@ -28,20 +29,6 @@ const createFilledOrder = (overrides?: Partial<ExchangeOrder>): ExchangeOrder =>
   createdAt: new Date(),
   updatedAt: new Date(),
   ...overrides,
-});
-
-/** Create a mock order book with reasonable liquidity. */
-const createMockOrderBook = (): OrderBook => ({
-  symbol: "BTC-USD",
-  bids: [
-    { priceQuote: 49900n * QUOTE_SCALE, quantityBase: 1000000n },
-    { priceQuote: 49800n * QUOTE_SCALE, quantityBase: 1000000n },
-  ],
-  asks: [
-    { priceQuote: 50100n * QUOTE_SCALE, quantityBase: 1000000n },
-    { priceQuote: 50200n * QUOTE_SCALE, quantityBase: 1000000n },
-  ],
-  timestamp: new Date(),
 });
 
 /** Create a safe risk snapshot. */
@@ -82,33 +69,28 @@ const createDefaultParams = (): EnterHedgeExecutionParams => ({
 });
 
 const createDefaultDeps = (overrides?: {
-  adapter?: Partial<ExchangeAdapter>;
+  adapter?: Partial<GmxAdapter>;
   isCircuitBreakerOpen?: boolean;
   riskSnapshot?: RiskSnapshot;
 }): EnterHedgeDeps => {
-  const perpOrder = createFilledOrder({
-    id: "perp-1",
-    symbol: "BTC-USD-PERP",
-    side: "SELL",
-  });
-  const spotOrder = createFilledOrder({
-    id: "spot-1",
-    symbol: "BTC-USD",
-    side: "BUY",
-  });
-
-  const adapter = {
-    createOrder: vi.fn().mockResolvedValueOnce(perpOrder).mockResolvedValueOnce(spotOrder),
-    getOrder: vi.fn().mockResolvedValueOnce(perpOrder).mockResolvedValueOnce(spotOrder),
-    getOrderBook: vi.fn().mockResolvedValue(createMockOrderBook()),
+  const adapter: GmxAdapter = {
+    getMarketsInfo: vi.fn().mockResolvedValue([]),
+    getTickers: vi.fn().mockResolvedValue([]),
+    getPositionState: vi.fn().mockResolvedValue(null),
+    getLiquidityBalance: vi.fn().mockResolvedValue({ pool: "default", balance: 0n }),
+    simulateOrder: vi.fn().mockResolvedValue({ impactBps: 0n }),
+    submitOrder: vi.fn().mockResolvedValue({ hash: "0x", success: true }),
     ...overrides?.adapter,
-  } as unknown as ExchangeAdapter;
+  };
 
   return {
     adapter,
     getRiskSnapshot: vi.fn().mockReturnValue(overrides?.riskSnapshot ?? createSafeSnapshot()),
     riskConfig: DEFAULT_RISK_CONFIG,
-    executionConfig: createTestConfig(),
+    executionConfig: {
+      ...createTestConfig(),
+      gmxMarketAddress: "0x47c031236e19d024b42f8AE6780E44A573170703",
+    },
     circuitBreaker: createMockCircuitBreaker(overrides?.isCircuitBreakerOpen ?? false),
     logger: createMockLogger(),
   };
@@ -175,29 +157,7 @@ describe("executeEnterHedge", () => {
     expect(result.aborted).toBe(true);
   });
 
-  it("should abort when slippage validation fails", async () => {
-    // Create thin order book that won't pass slippage check
-    const thinBook: OrderBook = {
-      symbol: "BTC-USD",
-      bids: [{ priceQuote: 49900n * QUOTE_SCALE, quantityBase: 10n }],
-      asks: [{ priceQuote: 50100n * QUOTE_SCALE, quantityBase: 10n }],
-      timestamp: new Date(),
-    };
-
-    const deps = createDefaultDeps({
-      adapter: { getOrderBook: vi.fn().mockResolvedValue(thinBook) },
-    });
-    const params = createDefaultParams();
-
-    const result = await executeEnterHedge(params, deps);
-
-    expect(result.success).toBe(false);
-    expect(result.aborted).toBe(true);
-    // Should fail on either slippage or liquidity
-    expect(result.reason).toBeDefined();
-  });
-
-  it("should execute successfully with filled orders", async () => {
+  it("should execute successfully and return txResult (GMX path)", async () => {
     const deps = createDefaultDeps();
     const params = createDefaultParams();
 
@@ -205,16 +165,16 @@ describe("executeEnterHedge", () => {
 
     expect(result.success).toBe(true);
     expect(result.aborted).toBe(false);
-    expect(result.perpOrder).toBeDefined();
-    expect(result.spotOrder).toBeDefined();
-    expect(result.drift).toBeDefined();
-    expect(result.slippageEstimate).toBeDefined();
+    expect(result.txResult).toBeDefined();
+    expect(result.txResult?.hash).toBe("0x");
+    expect(result.txResult?.success).toBe(true);
+    expect(deps.adapter.simulateOrder).toHaveBeenCalled();
+    expect(deps.adapter.submitOrder).toHaveBeenCalled();
   });
 
-  it("should throw ExecutionError when order placement fails", async () => {
+  it("should throw ExecutionError when submitOrder fails", async () => {
     const deps = createDefaultDeps();
-    // Make the circuit breaker's execute throw
-    vi.mocked(deps.circuitBreaker.execute).mockRejectedValueOnce(new Error("Exchange unavailable"));
+    vi.mocked(deps.adapter.submitOrder).mockRejectedValueOnce(new Error("Exchange unavailable"));
     const params = createDefaultParams();
 
     await expect(executeEnterHedge(params, deps)).rejects.toThrow(ExecutionError);

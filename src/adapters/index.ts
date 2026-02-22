@@ -1,7 +1,7 @@
 /**
  * Exchange adapter exports.
  *
- * @see {@link ../adrs/0010-exchange-adapters.md ADR-0010: Exchange Adapters}
+ * @see {@link ../../adrs/0010-exchange-adapters.md ADR-0010: Exchange Adapters}
  */
 
 export type {
@@ -13,18 +13,24 @@ export type {
   ExchangeOrderStatus,
   Fill,
   FundingRate,
+  LiquidityBalance,
+  OpenPositionParams,
   OrderBook,
   OrderBookLevel,
   OrderSide,
   OrderType,
+  PerpPositionState,
+  PnlSnapshot,
   Position,
+  PositionState,
   PositionSide,
   Ticker,
   TickerCallback,
+  TxResult,
 } from "./types";
 
-export type { ExchangeErrorCode } from "./errors";
-export { ExchangeError } from "./errors";
+export type { AdapterErrorCode, ExchangeErrorCode } from "./errors";
+export { AdapterError, ExchangeError } from "./errors";
 
 export {
   balanceSchema,
@@ -38,26 +44,35 @@ export {
   isExchangeOrder,
   isFill,
   isFundingRate,
+  isLiquidityBalance,
+  isOpenPositionParams,
   isOrderBook,
   isOrderBookLevel,
+  isPerpPositionState,
+  isPnlSnapshot,
   isPosition,
+  isPositionState,
   isTicker,
+  isTxResult,
+  liquidityBalanceSchema,
+  openPositionParamsSchema,
   orderBookLevelSchema,
   orderBookSchema,
   orderSideSchema,
   orderTypeSchema,
+  pnlSnapshotSchema,
+  perpPositionStateSchema,
   positionSchema,
+  positionStateSchema,
   positionSideSchema,
   tickerSchema,
+  txResultSchema,
 } from "./types";
 
-// Factory function
-export { createExchangeAdapter } from "./factory";
+// GMX adapter (ADR-0019)
+export { createGmxAdapter } from "./gmx";
+export type { GmxAdapter, GmxAdapterConfig } from "./gmx";
 
-// Config validation
+// Config validation (legacy AdapterConfig kept for env parsing if needed)
 export type { AdapterConfig } from "./config";
 export { AdapterConfigSchema, isAdapterConfig, parseAdapterConfig } from "./config";
-
-// Adapter factory functions
-export type { PaperAdapterConfig } from "./paper";
-export { createPaperAdapter } from "./paper";

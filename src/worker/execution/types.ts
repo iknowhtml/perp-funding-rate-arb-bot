@@ -8,7 +8,7 @@
 import * as v from "valibot";
 
 import { exchangeOrderSchema } from "@/adapters/types";
-import type { ExchangeOrder } from "@/adapters/types";
+import type { ExchangeOrder, TxResult } from "@/adapters/types";
 
 // --- Execution Result ---
 
@@ -21,6 +21,8 @@ export interface ExecutionResult {
   reason?: string;
   perpOrder?: ExchangeOrder;
   spotOrder?: ExchangeOrder;
+  /** GMX path: on-chain tx result. */
+  txResult?: TxResult;
   drift?: HedgeDrift;
   slippageEstimate?: SlippageEstimate;
   timestamp: Date;
@@ -78,6 +80,8 @@ export interface ExecutionConfig {
   maxPartialFillRetries: number;
   /** Minimum liquidity depth multiplier (e.g., 3 = need 3x depth). */
   minLiquidityMultiplier: bigint;
+  /** GMX market address (for GmxAdapter path). */
+  gmxMarketAddress?: string;
 }
 
 export const ExecutionConfigSchema = v.object({
@@ -88,6 +92,7 @@ export const ExecutionConfigSchema = v.object({
   fillPollMaxAttempts: v.pipe(v.number(), v.minValue(1)),
   maxPartialFillRetries: v.pipe(v.number(), v.minValue(1)),
   minLiquidityMultiplier: v.bigint(),
+  gmxMarketAddress: v.optional(v.string()),
 });
 
 export const DEFAULT_EXECUTION_CONFIG: ExecutionConfig = {

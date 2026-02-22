@@ -5,7 +5,7 @@
  * @see {@link ../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
-import { createExchangeAdapter } from "@/adapters/factory";
+import { BTC_USD_MARKET, createGmxAdapter } from "@/adapters/gmx";
 import { derivePosition } from "@/domains/position";
 import type { PositionConfig } from "@/domains/position";
 import { DEFAULT_RISK_CONFIG, type RiskSnapshot } from "@/domains/risk";
@@ -59,16 +59,8 @@ const SLOW_EVALUATION_WARN_MS = 1500;
 export const startWorker = async (config: StartWorkerConfig): Promise<WorkerHandle> => {
   const { env, logger } = config;
 
-  const adapterConfig =
-    env.COINBASE_API_KEY && env.COINBASE_API_SECRET
-      ? {
-          exchange: "coinbase" as const,
-          apiKey: env.COINBASE_API_KEY,
-          apiSecret: env.COINBASE_API_SECRET,
-        }
-      : { exchange: "paper" as const };
-
-  const adapter = createExchangeAdapter(adapterConfig);
+  const baseUrl = env.GMX_ORACLE_URL ?? "https://arbitrum-api.gmxinfra.io";
+  const adapter = createGmxAdapter({ baseUrl });
   const stateStore = createStateStore();
   const executionQueue = createSerialQueue();
   const circuitBreaker = createExecutionCircuitBreaker(logger);
@@ -76,6 +68,8 @@ export const startWorker = async (config: StartWorkerConfig): Promise<WorkerHand
   const reconcilerConfig = {
     ...DEFAULT_RECONCILER_CONFIG,
     perpSymbol: DEFAULT_PERP_SYMBOL,
+    gmxMarket: BTC_USD_MARKET,
+    gmxPool: "default",
   };
 
   const positionConfig: PositionConfig = {
@@ -103,6 +97,8 @@ export const startWorker = async (config: StartWorkerConfig): Promise<WorkerHand
     stateStore,
     logger,
     symbols: DEFAULT_SYMBOLS,
+    gmxMarket: reconcilerConfig.gmxMarket ?? BTC_USD_MARKET,
+    gmxPool: reconcilerConfig.gmxPool ?? "default",
   });
 
   await dataPlane.start();
@@ -191,7 +187,7 @@ export const startWorker = async (config: StartWorkerConfig): Promise<WorkerHand
     freshnessConfig: DEFAULT_FRESHNESS_CONFIG,
     riskConfig: DEFAULT_RISK_CONFIG,
     strategyConfig: DEFAULT_STRATEGY_CONFIG,
-    executionConfig: DEFAULT_EXECUTION_CONFIG,
+    executionConfig: { ...DEFAULT_EXECUTION_CONFIG, gmxMarketAddress: BTC_USD_MARKET },
     circuitBreaker,
     logger,
     symbol: DEFAULT_SYMBOLS[0] ?? "BTC-USD",

@@ -31,6 +31,10 @@ export interface ReconcilerConfig {
   quoteAsset: string;
   /** Base asset decimal places. */
   baseDecimals: number;
+  /** GMX market address (for GmxAdapter path). */
+  gmxMarket?: string;
+  /** GMX pool id (for GmxAdapter path). */
+  gmxPool?: string;
 }
 
 export const ReconcilerConfigSchema = v.object({
@@ -42,6 +46,8 @@ export const ReconcilerConfigSchema = v.object({
   baseAsset: v.string(),
   quoteAsset: v.string(),
   baseDecimals: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(18)),
+  gmxMarket: v.optional(v.string()),
+  gmxPool: v.optional(v.string()),
 });
 
 export const DEFAULT_RECONCILER_CONFIG: ReconcilerConfig = {

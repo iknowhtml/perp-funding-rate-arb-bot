@@ -2,9 +2,78 @@
  * Exchange adapter interface and shared domain types.
  *
  * @see {@link ../../../adrs/0010-exchange-adapters.md ADR-0010: Exchange Adapters}
+ * @see {@link ../../../adrs/0022-regime-based-gmx-arb.md ADR-0022: Regime-Based GMX Arb}
+ * @see {@link ../../../adrs/0021-on-chain-pnl-accounting.md ADR-0021: On-Chain P&L Accounting}
  */
 
 import * as v from "valibot";
+
+// --- On-chain / GMX domain types (ADR-0019, ADR-0022, ADR-0021) ---
+
+/** Result of a submitted on-chain transaction. */
+export interface TxResult {
+  /** Transaction hash (0x-prefixed hex). */
+  hash: string;
+  /** Whether the transaction was broadcast successfully. */
+  success: boolean;
+}
+
+/** Parameters for opening a short perp position on GMX. */
+export interface OpenPositionParams {
+  /** Market identifier (e.g. GMX market address). */
+  market: string;
+  /** Size in collateral/size units (bigint). */
+  sizeUsd: bigint;
+  /** Maximum acceptable execution price (slippage guard). */
+  acceptablePrice: bigint;
+}
+
+/** GM liquidity balance (GM token / LP share). */
+export interface LiquidityBalance {
+  /** Pool or market identifier. */
+  pool: string;
+  /** Balance in smallest unit (bigint). */
+  balance: bigint;
+}
+
+/** Perp position subset for position_state (ADR-0022 appendix). */
+export interface PerpPositionState {
+  sizeUsd: bigint;
+  entryPrice: bigint;
+  pnlUsd: bigint;
+  liquidationPrice: bigint | null;
+}
+
+/**
+ * Position state snapshot (ADR-0022 appendix).
+ * ts, market, perp_position, gm_balance, gm_cost_basis, gm_mtm_value
+ */
+export interface PositionState {
+  ts: Date;
+  market: string;
+  perpPosition: PerpPositionState | null;
+  gmBalance: bigint;
+  gmCostBasisUsd: bigint;
+  gmMtmValueUsd: bigint;
+}
+
+/**
+ * P&L snapshot (ADR-0022 appendix, ADR-0021).
+ * ts, trade_id, perp_funding_usd, perp_fees_usd, gm_value_change_usd,
+ * gm_fee_accrual_usd, gas_usd, impact_usd, net_usd
+ * USD amounts in smallest unit (e.g. 6 decimals: 1_000_000 = $1).
+ */
+export interface PnlSnapshot {
+  ts: Date;
+  tradeId: string;
+  perpFundingUsd: bigint;
+  perpFeesUsd: bigint;
+  gmValueChangeUsd: bigint;
+  gmFeeAccrualUsd: bigint;
+  gasUsd: bigint;
+  impactUsd: bigint;
+  netUsd: bigint;
+}
 
 // Enums
 export type OrderSide = "BUY" | "SELL";
@@ -219,6 +288,52 @@ export const createOrderParamsSchema = v.object({
   reduceOnly: v.optional(v.boolean()),
 });
 
+// --- On-chain / GMX schemas (ADR-0022, ADR-0021) ---
+
+export const txResultSchema = v.object({
+  hash: v.string(),
+  success: v.boolean(),
+});
+
+export const openPositionParamsSchema = v.object({
+  market: v.string(),
+  sizeUsd: v.bigint(),
+  acceptablePrice: v.bigint(),
+});
+
+export const liquidityBalanceSchema = v.object({
+  pool: v.string(),
+  balance: v.bigint(),
+});
+
+export const perpPositionStateSchema = v.object({
+  sizeUsd: v.bigint(),
+  entryPrice: v.bigint(),
+  pnlUsd: v.bigint(),
+  liquidationPrice: v.nullable(v.bigint()),
+});
+
+export const positionStateSchema = v.object({
+  ts: v.date(),
+  market: v.string(),
+  perpPosition: v.nullable(perpPositionStateSchema),
+  gmBalance: v.bigint(),
+  gmCostBasisUsd: v.bigint(),
+  gmMtmValueUsd: v.bigint(),
+});
+
+export const pnlSnapshotSchema = v.object({
+  ts: v.date(),
+  tradeId: v.string(),
+  perpFundingUsd: v.bigint(),
+  perpFeesUsd: v.bigint(),
+  gmValueChangeUsd: v.bigint(),
+  gmFeeAccrualUsd: v.bigint(),
+  gasUsd: v.bigint(),
+  impactUsd: v.bigint(),
+  netUsd: v.bigint(),
+});
+
 // Type Guards (using Valibot)
 export const isBalance = (value: unknown): value is Balance => v.is(balanceSchema, value);
 
@@ -242,33 +357,42 @@ export const isOrderBook = (value: unknown): value is OrderBook => v.is(orderBoo
 export const isCreateOrderParams = (value: unknown): value is CreateOrderParams =>
   v.is(createOrderParamsSchema, value);
 
-// Exchange Adapter Interface
+export const isTxResult = (value: unknown): value is TxResult => v.is(txResultSchema, value);
+
+export const isOpenPositionParams = (value: unknown): value is OpenPositionParams =>
+  v.is(openPositionParamsSchema, value);
+
+export const isLiquidityBalance = (value: unknown): value is LiquidityBalance =>
+  v.is(liquidityBalanceSchema, value);
+
+export const isPerpPositionState = (value: unknown): value is PerpPositionState =>
+  v.is(perpPositionStateSchema, value);
+
+export const isPositionState = (value: unknown): value is PositionState =>
+  v.is(positionStateSchema, value);
+
+export const isPnlSnapshot = (value: unknown): value is PnlSnapshot =>
+  v.is(pnlSnapshotSchema, value);
+
+/**
+ * CEX exchange adapter interface (deprecated).
+ * @deprecated Removed in GMX pivot (ADR-0019). Worker uses GmxAdapter from @/adapters/gmx.
+ */
 export interface ExchangeAdapter {
-  // Connection management
   connect(): Promise<void>;
   disconnect(): Promise<void>;
   isConnected(): boolean;
-
-  // Account
   getBalance(asset: string): Promise<Balance>;
   getBalances(): Promise<Balance[]>;
-
-  // Orders
   createOrder(params: CreateOrderParams): Promise<ExchangeOrder>;
   cancelOrder(orderId: string): Promise<void>;
   getOrder(orderId: string): Promise<ExchangeOrder | null>;
   getOpenOrders(symbol?: string): Promise<ExchangeOrder[]>;
-
-  // Positions (for perpetuals)
   getPosition(symbol: string): Promise<Position | null>;
   getPositions(): Promise<Position[]>;
-
-  // Market data
   getTicker(symbol: string): Promise<Ticker>;
   getFundingRate(symbol: string): Promise<FundingRate>;
   getOrderBook(symbol: string, depth?: number): Promise<OrderBook>;
-
-  // WebSocket subscriptions
   subscribeTicker(symbol: string, callback: TickerCallback): void;
   unsubscribeTicker(symbol: string): void;
 }

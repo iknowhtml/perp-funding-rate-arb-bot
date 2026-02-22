@@ -1,17 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type {
-  Balance,
-  ExchangeAdapter,
-  ExchangeOrder,
-  FundingRate,
-  Position,
-} from "@/adapters/types";
+import type { GmxAdapter } from "@/adapters/gmx";
+import type { Balance, ExchangeOrder, Position } from "@/adapters/types";
 import type { Logger } from "@/lib/logger";
 import { createStateStore } from "@/worker/state";
 
 import type { ReconcilerConfig } from "../types";
 import { runReconcile } from "./reconcile";
+
+const GMX_MARKET = "0x47c031236e19d024b42f8AE6780E44A573170703";
+const GMX_POOL = "default";
 
 const DEFAULT_CONFIG: ReconcilerConfig = {
   intervalMs: 60_000,
@@ -22,6 +20,8 @@ const DEFAULT_CONFIG: ReconcilerConfig = {
   baseAsset: "BTC",
   quoteAsset: "USD",
   baseDecimals: 8,
+  gmxMarket: GMX_MARKET,
+  gmxPool: GMX_POOL,
 };
 
 const makeBalance = (asset: string, totalBase: bigint, availableBase?: bigint): Balance => ({
@@ -44,46 +44,51 @@ const makePosition = (overrides: Partial<Position> = {}): Position => ({
   ...overrides,
 });
 
+const createMockGmxAdapter = (
+  positionState: Awaited<ReturnType<GmxAdapter["getPositionState"]>>,
+  liquidityBalance: Awaited<ReturnType<GmxAdapter["getLiquidityBalance"]>>,
+): GmxAdapter => ({
+  getMarketsInfo: vi.fn().mockResolvedValue([]),
+  getTickers: vi.fn().mockResolvedValue([]),
+  getPositionState: vi.fn().mockResolvedValue(positionState),
+  getLiquidityBalance: vi.fn().mockResolvedValue(liquidityBalance),
+  simulateOrder: vi.fn().mockResolvedValue({ impactBps: 0n }),
+  submitOrder: vi.fn().mockResolvedValue({ hash: "0x", success: true }),
+});
+
 describe("runReconcile", () => {
-  let mockAdapter: ExchangeAdapter;
+  let mockAdapter: GmxAdapter;
   let mockLogger: Logger;
   let stateStore: ReturnType<typeof createStateStore>;
 
-  const exchangeBalances: Balance[] = [
+  const _exchangeBalances: Balance[] = [
     makeBalance("BTC", 100_000_000n),
     makeBalance("USD", 5_000_000_000n),
   ];
 
   const exchangePosition: Position = makePosition();
 
-  const exchangeOrders: ExchangeOrder[] = [];
+  const _exchangeOrders: ExchangeOrder[] = [];
 
   beforeEach(() => {
     vi.useFakeTimers();
 
-    mockAdapter = {
-      connect: vi.fn().mockResolvedValue(undefined),
-      disconnect: vi.fn().mockResolvedValue(undefined),
-      isConnected: vi.fn().mockReturnValue(true),
-      getBalance: vi.fn(),
-      getBalances: vi.fn().mockResolvedValue(exchangeBalances),
-      createOrder: vi.fn(),
-      cancelOrder: vi.fn(),
-      getOrder: vi.fn(),
-      getOpenOrders: vi.fn().mockResolvedValue(exchangeOrders),
-      getPosition: vi.fn(),
-      getPositions: vi.fn().mockResolvedValue([exchangePosition]),
-      getTicker: vi.fn(),
-      getFundingRate: vi.fn().mockResolvedValue({
-        symbol: "BTC-USD-PERP",
-        rateBps: 10n,
-        nextFundingTime: new Date(),
-        timestamp: new Date(),
-      } as FundingRate),
-      getOrderBook: vi.fn(),
-      subscribeTicker: vi.fn(),
-      unsubscribeTicker: vi.fn(),
-    };
+    mockAdapter = createMockGmxAdapter(
+      {
+        ts: new Date(),
+        market: GMX_MARKET,
+        perpPosition: {
+          sizeUsd: exchangePosition.sizeBase,
+          entryPrice: exchangePosition.entryPriceQuote,
+          pnlUsd: exchangePosition.unrealizedPnlQuote,
+          liquidationPrice: exchangePosition.liquidationPriceQuote,
+        },
+        gmBalance: 0n,
+        gmCostBasisUsd: 0n,
+        gmMtmValueUsd: 0n,
+      },
+      { pool: GMX_POOL, balance: 0n },
+    );
 
     mockLogger = {
       debug: vi.fn(),
@@ -101,8 +106,8 @@ describe("runReconcile", () => {
   });
 
   it("should return consistent when state matches exchange", async () => {
-    // Pre-populate state with same data the exchange will return
-    stateStore.updateBalances(exchangeBalances);
+    // Pre-populate state to match GMX mock (one perp position, GM balance 0)
+    stateStore.updateBalances([]);
     stateStore.updatePositions([exchangePosition]);
     stateStore.updateTicker({
       symbol: "BTC-USD-PERP",
@@ -128,7 +133,9 @@ describe("runReconcile", () => {
     stateStore.updatePositions([
       makePosition({ sizeBase: 200_000_000n }), // 2 BTC in state
     ]);
-    stateStore.updateBalances(exchangeBalances);
+    stateStore.updateBalances([
+      { asset: `GM-${GMX_POOL}`, availableBase: 0n, heldBase: 0n, totalBase: 0n },
+    ]);
     stateStore.updateTicker({
       symbol: "BTC-USD-PERP",
       bidPriceQuote: 50_000_000_000n,
@@ -138,8 +145,20 @@ describe("runReconcile", () => {
       timestamp: new Date(),
     });
 
-    // Exchange returns 1 BTC
-    vi.mocked(mockAdapter.getPositions).mockResolvedValue([exchangePosition]);
+    // GMX returns 1 BTC perp
+    vi.mocked(mockAdapter.getPositionState).mockResolvedValue({
+      ts: new Date(),
+      market: GMX_MARKET,
+      perpPosition: {
+        sizeUsd: 100_000_000n,
+        entryPrice: 50_000_000_000n,
+        pnlUsd: 0n,
+        liquidationPrice: null,
+      },
+      gmBalance: 0n,
+      gmCostBasisUsd: 0n,
+      gmMtmValueUsd: 0n,
+    });
 
     const result = await runReconcile(mockAdapter, stateStore, DEFAULT_CONFIG, mockLogger);
 
@@ -149,11 +168,20 @@ describe("runReconcile", () => {
   });
 
   it("should not report balance drift within tolerance", async () => {
-    // State balance slightly different but within 50 bps tolerance
-    // 100_000_000 * 50 / 10000 = 500_000 threshold
-    const stateBalance = makeBalance("BTC", 100_040_000n); // ~4 bps diff
-    stateStore.updateBalances([stateBalance, makeBalance("USD", 5_000_000_000n)]);
+    // GM balance slightly different but within 50 bps tolerance
+    const stateBalance = {
+      asset: `GM-${GMX_POOL}`,
+      availableBase: 100_040_000n,
+      heldBase: 0n,
+      totalBase: 100_040_000n,
+    };
+    stateStore.updateBalances([stateBalance]);
     stateStore.updatePositions([exchangePosition]);
+
+    vi.mocked(mockAdapter.getLiquidityBalance).mockResolvedValue({
+      pool: GMX_POOL,
+      balance: 100_000_000n,
+    });
 
     const result = await runReconcile(mockAdapter, stateStore, DEFAULT_CONFIG, mockLogger);
 
@@ -161,11 +189,19 @@ describe("runReconcile", () => {
   });
 
   it("should detect balance drift exceeding tolerance as warning", async () => {
-    // State balance differs by > 50 bps but < 500 bps (critical threshold)
-    // 100_000_000 * 100 / 10000 = 1_000_000 → 100 bps diff
-    const stateBalance = makeBalance("BTC", 101_000_000n); // 100 bps diff
-    stateStore.updateBalances([stateBalance, makeBalance("USD", 5_000_000_000n)]);
+    const stateBalance = {
+      asset: `GM-${GMX_POOL}`,
+      availableBase: 101_000_000n,
+      heldBase: 0n,
+      totalBase: 101_000_000n,
+    };
+    stateStore.updateBalances([stateBalance]);
     stateStore.updatePositions([exchangePosition]);
+
+    vi.mocked(mockAdapter.getLiquidityBalance).mockResolvedValue({
+      pool: GMX_POOL,
+      balance: 100_000_000n,
+    });
 
     const result = await runReconcile(mockAdapter, stateStore, DEFAULT_CONFIG, mockLogger);
 
@@ -173,16 +209,24 @@ describe("runReconcile", () => {
     const b0 = result.balanceInconsistencies[0];
     expect(b0).toBeDefined();
     expect(b0!.severity).toBe("warning");
-    expect(b0!.asset).toBe("BTC");
+    expect(b0!.asset).toBe(`GM-${GMX_POOL}`);
     expect(result.consistent).toBe(false);
   });
 
   it("should detect critical balance drift", async () => {
-    // State balance differs by > 500 bps (5%)
-    // 100_000_000 * 600 / 10000 = 6_000_000 → 600 bps diff
-    const stateBalance = makeBalance("BTC", 106_000_000n); // 600 bps diff
-    stateStore.updateBalances([stateBalance, makeBalance("USD", 5_000_000_000n)]);
+    const stateBalance = {
+      asset: `GM-${GMX_POOL}`,
+      availableBase: 106_000_000n,
+      heldBase: 0n,
+      totalBase: 106_000_000n,
+    };
+    stateStore.updateBalances([stateBalance]);
     stateStore.updatePositions([exchangePosition]);
+
+    vi.mocked(mockAdapter.getLiquidityBalance).mockResolvedValue({
+      pool: GMX_POOL,
+      balance: 100_000_000n,
+    });
 
     const result = await runReconcile(mockAdapter, stateStore, DEFAULT_CONFIG, mockLogger);
 
@@ -194,47 +238,44 @@ describe("runReconcile", () => {
     expect(mockLogger.warn).toHaveBeenCalled();
   });
 
-  it("should update state from REST truth", async () => {
-    const newBalances: Balance[] = [
-      makeBalance("BTC", 200_000_000n),
-      makeBalance("USD", 10_000_000_000n),
-    ];
-    const newPositions: Position[] = [makePosition({ sizeBase: 300_000_000n })];
-    const newOrders: ExchangeOrder[] = [
-      {
-        id: "order-1",
-        exchangeOrderId: "ex-1",
-        symbol: "BTC-USD-PERP",
-        side: "BUY",
-        type: "LIMIT",
-        status: "OPEN",
-        quantityBase: 50_000_000n,
-        filledQuantityBase: 0n,
-        priceQuote: 49_000_000_000n,
-        avgFillPriceQuote: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+  it("should update state from GMX truth", async () => {
+    vi.mocked(mockAdapter.getPositionState).mockResolvedValue({
+      ts: new Date(),
+      market: GMX_MARKET,
+      perpPosition: {
+        sizeUsd: 300_000_000n,
+        entryPrice: 50_000_000_000n,
+        pnlUsd: 0n,
+        liquidationPrice: null,
       },
-    ];
-
-    vi.mocked(mockAdapter.getBalances).mockResolvedValue(newBalances);
-    vi.mocked(mockAdapter.getPositions).mockResolvedValue(newPositions);
-    vi.mocked(mockAdapter.getOpenOrders).mockResolvedValue(newOrders);
+      gmBalance: 0n,
+      gmCostBasisUsd: 0n,
+      gmMtmValueUsd: 0n,
+    });
+    vi.mocked(mockAdapter.getLiquidityBalance).mockResolvedValue({
+      pool: GMX_POOL,
+      balance: 0n,
+    });
 
     await runReconcile(mockAdapter, stateStore, DEFAULT_CONFIG, mockLogger);
 
     const state = stateStore.getState();
-    expect(state.balances.get("BTC")?.totalBase).toBe(200_000_000n);
-    expect(state.balances.get("USD")?.totalBase).toBe(10_000_000_000n);
     expect(state.positions.get("BTC-USD-PERP")?.sizeBase).toBe(300_000_000n);
-    expect(state.openOrders.get("order-1")).toEqual(newOrders[0]);
   });
 
   it("should handle no position in state (flat)", async () => {
-    // Empty state — no positions, no balances
-    vi.mocked(mockAdapter.getPositions).mockResolvedValue([]);
-    vi.mocked(mockAdapter.getBalances).mockResolvedValue([]);
-    vi.mocked(mockAdapter.getOpenOrders).mockResolvedValue([]);
+    vi.mocked(mockAdapter.getPositionState).mockResolvedValue({
+      ts: new Date(),
+      market: GMX_MARKET,
+      perpPosition: null,
+      gmBalance: 0n,
+      gmCostBasisUsd: 0n,
+      gmMtmValueUsd: 0n,
+    });
+    vi.mocked(mockAdapter.getLiquidityBalance).mockResolvedValue({
+      pool: GMX_POOL,
+      balance: 0n,
+    });
 
     const result = await runReconcile(mockAdapter, stateStore, DEFAULT_CONFIG, mockLogger);
 
@@ -244,10 +285,10 @@ describe("runReconcile", () => {
   });
 
   it("should handle no ticker in state", async () => {
-    // State has positions but no ticker (lastPriceQuote should default to 0n)
     stateStore.updatePositions([exchangePosition]);
-    stateStore.updateBalances(exchangeBalances);
-    // No ticker update — ticker is null
+    stateStore.updateBalances([
+      { asset: `GM-${GMX_POOL}`, availableBase: 0n, heldBase: 0n, totalBase: 0n },
+    ]);
 
     const result = await runReconcile(mockAdapter, stateStore, DEFAULT_CONFIG, mockLogger);
 
@@ -257,19 +298,19 @@ describe("runReconcile", () => {
   });
 
   it("should only report drifted balances with multiple assets", async () => {
-    // Exchange returns 3 balances, only BTC is drifted
-    const multiBalances: Balance[] = [
-      makeBalance("BTC", 100_000_000n),
-      makeBalance("USD", 5_000_000_000n),
-      makeBalance("ETH", 10_000_000_000n),
-    ];
-    vi.mocked(mockAdapter.getBalances).mockResolvedValue(multiBalances);
+    vi.mocked(mockAdapter.getLiquidityBalance).mockResolvedValue({
+      pool: GMX_POOL,
+      balance: 100_000_000n,
+    });
 
-    // State has BTC drifted (> 50 bps), USD and ETH match
     stateStore.updateBalances([
-      makeBalance("BTC", 101_000_000n), // 100 bps drift
-      makeBalance("USD", 5_000_000_000n), // exact match
-      makeBalance("ETH", 10_000_000_000n), // exact match
+      {
+        asset: `GM-${GMX_POOL}`,
+        availableBase: 101_000_000n,
+        heldBase: 0n,
+        totalBase: 101_000_000n,
+      },
+      makeBalance("USD", 5_000_000_000n),
     ]);
     stateStore.updatePositions([exchangePosition]);
 
@@ -278,16 +319,18 @@ describe("runReconcile", () => {
     expect(result.balanceInconsistencies).toHaveLength(1);
     const b0Multi = result.balanceInconsistencies[0];
     expect(b0Multi).toBeDefined();
-    expect(b0Multi!.asset).toBe("BTC");
+    expect(b0Multi!.asset).toBe(`GM-${GMX_POOL}`);
   });
 
   it("should report both position and balance inconsistencies", async () => {
-    // Position mismatch: state has 2 BTC, exchange has 1 BTC
     stateStore.updatePositions([makePosition({ sizeBase: 200_000_000n })]);
-    // Balance mismatch: state has drifted BTC balance
     stateStore.updateBalances([
-      makeBalance("BTC", 106_000_000n), // 600 bps drift → critical
-      makeBalance("USD", 5_000_000_000n),
+      {
+        asset: `GM-${GMX_POOL}`,
+        availableBase: 106_000_000n,
+        heldBase: 0n,
+        totalBase: 106_000_000n,
+      },
     ]);
     stateStore.updateTicker({
       symbol: "BTC-USD-PERP",
@@ -298,7 +341,23 @@ describe("runReconcile", () => {
       timestamp: new Date(),
     });
 
-    vi.mocked(mockAdapter.getPositions).mockResolvedValue([exchangePosition]);
+    vi.mocked(mockAdapter.getPositionState).mockResolvedValue({
+      ts: new Date(),
+      market: GMX_MARKET,
+      perpPosition: {
+        sizeUsd: 100_000_000n,
+        entryPrice: 50_000_000_000n,
+        pnlUsd: 0n,
+        liquidationPrice: null,
+      },
+      gmBalance: 100_000_000n,
+      gmCostBasisUsd: 0n,
+      gmMtmValueUsd: 0n,
+    });
+    vi.mocked(mockAdapter.getLiquidityBalance).mockResolvedValue({
+      pool: GMX_POOL,
+      balance: 100_000_000n,
+    });
 
     const result = await runReconcile(mockAdapter, stateStore, DEFAULT_CONFIG, mockLogger);
 

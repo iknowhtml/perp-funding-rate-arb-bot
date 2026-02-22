@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ExchangeAdapter } from "@/adapters/types";
+import type { GmxAdapter } from "@/adapters/gmx";
 import type { Logger } from "@/lib/logger";
 import type { StateStore } from "@/worker/state";
 
@@ -18,7 +18,14 @@ const createMockLogger = (): Logger => ({
   error: vi.fn(),
 });
 
-const createMockAdapter = (): ExchangeAdapter => ({}) as unknown as ExchangeAdapter;
+const createMockAdapter = (): GmxAdapter => ({
+  getMarketsInfo: vi.fn().mockResolvedValue([]),
+  getTickers: vi.fn().mockResolvedValue([]),
+  getPositionState: vi.fn().mockResolvedValue(null),
+  getLiquidityBalance: vi.fn().mockResolvedValue({ pool: "default", balance: 0n }),
+  simulateOrder: vi.fn().mockResolvedValue({ impactBps: 0n }),
+  submitOrder: vi.fn().mockRejectedValue(new Error("not implemented")),
+});
 
 const createMockStateStore = (): StateStore =>
   ({

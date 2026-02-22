@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ExchangeAdapter, ExchangeOrder, Position } from "@/adapters/types";
+import type { GmxAdapter } from "@/adapters/gmx";
+import type { ExchangeOrder } from "@/adapters/types";
 import type { Logger } from "@/lib/logger";
 
 import { DEFAULT_EXECUTION_CONFIG, ExecutionError } from "../types";
@@ -12,7 +13,7 @@ import type { ExitHedgeDeps, ExitHedgeExecutionParams } from "./exit-hedge";
 const QUOTE_SCALE = 1_000_000n;
 
 /** Create a mock filled order. */
-const createFilledOrder = (overrides?: Partial<ExchangeOrder>): ExchangeOrder => ({
+const _createFilledOrder = (overrides?: Partial<ExchangeOrder>): ExchangeOrder => ({
   id: "order-1",
   exchangeOrderId: "exch-1",
   symbol: "BTC-USD",
@@ -50,114 +51,72 @@ const createDefaultParams = (): ExitHedgeExecutionParams => ({
   intentId: "intent-exit-1",
 });
 
-const createDefaultDeps = (overrides?: {
-  adapter?: Partial<ExchangeAdapter>;
-}): ExitHedgeDeps => {
-  const spotSellOrder = createFilledOrder({
-    id: "spot-sell-1",
-    symbol: "BTC-USD",
-    side: "SELL",
-  });
-  const perpBuyOrder = createFilledOrder({
-    id: "perp-buy-1",
-    symbol: "BTC-USD-PERP",
-    side: "BUY",
-  });
+const GMX_MARKET = "0x47c031236e19d024b42f8AE6780E44A573170703";
 
-  const adapter = {
-    createOrder: vi.fn().mockResolvedValueOnce(spotSellOrder).mockResolvedValueOnce(perpBuyOrder),
-    getOrder: vi.fn().mockResolvedValueOnce(spotSellOrder).mockResolvedValueOnce(perpBuyOrder),
-    getPosition: vi.fn().mockResolvedValue(null), // Flat after exit
+const createDefaultDeps = (overrides?: {
+  adapter?: Partial<GmxAdapter>;
+}): ExitHedgeDeps => {
+  const adapter: GmxAdapter = {
+    getMarketsInfo: vi.fn().mockResolvedValue([]),
+    getTickers: vi.fn().mockResolvedValue([]),
+    getPositionState: vi.fn().mockResolvedValue(null),
+    getLiquidityBalance: vi.fn().mockResolvedValue({ pool: "default", balance: 0n }),
+    simulateOrder: vi.fn().mockResolvedValue({ impactBps: 0n }),
+    submitOrder: vi.fn().mockResolvedValue({ hash: "0x", success: true }),
     ...overrides?.adapter,
-  } as unknown as ExchangeAdapter;
+  };
 
   return {
     adapter,
-    executionConfig: createTestConfig(),
+    executionConfig: { ...createTestConfig(), gmxMarketAddress: GMX_MARKET },
     logger: createMockLogger(),
   };
 };
 
 describe("verifyFlatPosition", () => {
-  it("should return true when both positions are null", async () => {
-    const adapter = {
-      getPosition: vi.fn().mockResolvedValue(null),
-    } as unknown as ExchangeAdapter;
+  it("should return true when position state has no perp position", async () => {
+    const adapter = createDefaultDeps().adapter;
+    vi.mocked(adapter.getPositionState).mockResolvedValue(null);
 
-    const result = await verifyFlatPosition(adapter, "BTC-USD", "BTC-USD-PERP");
-
-    expect(result).toBe(true);
-    expect(adapter.getPosition).toHaveBeenCalledTimes(2);
-  });
-
-  it("should return true when positions have zero size", async () => {
-    const zeroPosition: Position = {
-      symbol: "BTC-USD",
-      side: "LONG",
-      sizeBase: 0n,
-      entryPriceQuote: 50000n * QUOTE_SCALE,
-      markPriceQuote: 50000n * QUOTE_SCALE,
-      liquidationPriceQuote: null,
-      unrealizedPnlQuote: 0n,
-      leverageBps: 0n,
-      marginQuote: 0n,
-    };
-
-    const adapter = {
-      getPosition: vi.fn().mockResolvedValue(zeroPosition),
-    } as unknown as ExchangeAdapter;
-
-    const result = await verifyFlatPosition(adapter, "BTC-USD", "BTC-USD-PERP");
+    const result = await verifyFlatPosition(adapter, "BTC-USD", "BTC-USD-PERP", GMX_MARKET);
 
     expect(result).toBe(true);
+    expect(adapter.getPositionState).toHaveBeenCalledWith(GMX_MARKET);
   });
 
-  it("should return false when spot position has size", async () => {
-    const spotPosition: Position = {
-      symbol: "BTC-USD",
-      side: "LONG",
-      sizeBase: 100000n, // Not flat
-      entryPriceQuote: 50000n * QUOTE_SCALE,
-      markPriceQuote: 50000n * QUOTE_SCALE,
-      liquidationPriceQuote: null,
-      unrealizedPnlQuote: 0n,
-      leverageBps: 10000n,
-      marginQuote: 50000n * QUOTE_SCALE,
-    };
+  it("should return true when perp position has zero size", async () => {
+    const adapter = createDefaultDeps().adapter;
+    vi.mocked(adapter.getPositionState).mockResolvedValue({
+      ts: new Date(),
+      market: GMX_MARKET,
+      perpPosition: { sizeUsd: 0n, entryPrice: 0n, pnlUsd: 0n, liquidationPrice: null },
+      gmBalance: 0n,
+      gmCostBasisUsd: 0n,
+      gmMtmValueUsd: 0n,
+    });
 
-    const adapter = {
-      getPosition: vi
-        .fn()
-        .mockResolvedValueOnce(spotPosition) // spot has position
-        .mockResolvedValueOnce(null), // perp is flat
-    } as unknown as ExchangeAdapter;
+    const result = await verifyFlatPosition(adapter, "BTC-USD", "BTC-USD-PERP", GMX_MARKET);
 
-    const result = await verifyFlatPosition(adapter, "BTC-USD", "BTC-USD-PERP");
-
-    expect(result).toBe(false);
+    expect(result).toBe(true);
   });
 
   it("should return false when perp position has size", async () => {
-    const perpPosition: Position = {
-      symbol: "BTC-USD-PERP",
-      side: "SHORT",
-      sizeBase: 100000n,
-      entryPriceQuote: 50000n * QUOTE_SCALE,
-      markPriceQuote: 50000n * QUOTE_SCALE,
-      liquidationPriceQuote: 75000n * QUOTE_SCALE,
-      unrealizedPnlQuote: 0n,
-      leverageBps: 10000n,
-      marginQuote: 50000n * QUOTE_SCALE,
-    };
+    const adapter = createDefaultDeps().adapter;
+    vi.mocked(adapter.getPositionState).mockResolvedValue({
+      ts: new Date(),
+      market: GMX_MARKET,
+      perpPosition: {
+        sizeUsd: 100000n,
+        entryPrice: 50000n * QUOTE_SCALE,
+        pnlUsd: 0n,
+        liquidationPrice: null,
+      },
+      gmBalance: 0n,
+      gmCostBasisUsd: 0n,
+      gmMtmValueUsd: 0n,
+    });
 
-    const adapter = {
-      getPosition: vi
-        .fn()
-        .mockResolvedValueOnce(null) // spot is flat
-        .mockResolvedValueOnce(perpPosition), // perp has position
-    } as unknown as ExchangeAdapter;
-
-    const result = await verifyFlatPosition(adapter, "BTC-USD", "BTC-USD-PERP");
+    const result = await verifyFlatPosition(adapter, "BTC-USD", "BTC-USD-PERP", GMX_MARKET);
 
     expect(result).toBe(false);
   });
@@ -179,123 +138,24 @@ describe("executeExitHedge", () => {
     expect(result.reason).toBe("No position to exit");
   });
 
-  it("should execute successfully with filled orders", async () => {
+  it("should throw when exit hedge not implemented for GMX", async () => {
     const deps = createDefaultDeps();
     const params = createDefaultParams();
 
-    const result = await executeExitHedge(params, deps);
-
-    expect(result.success).toBe(true);
-    expect(result.aborted).toBe(false);
-    expect(result.spotOrder).toBeDefined();
-    expect(result.perpOrder).toBeDefined();
+    await expect(executeExitHedge(params, deps)).rejects.toThrow(ExecutionError);
+    await expect(executeExitHedge(params, deps)).rejects.toThrow("not yet implemented for GMX");
   });
 
-  it("should place spot sell before perp close", async () => {
+  it("should return aborted when gmxMarketAddress not set", async () => {
+    const { gmxMarketAddress: _omit, ...configWithoutMarket } = createTestConfig();
     const deps = createDefaultDeps();
-    const params = createDefaultParams();
-
-    await executeExitHedge(params, deps);
-
-    const createOrderCalls = vi.mocked(deps.adapter.createOrder).mock.calls;
-    expect(createOrderCalls).toHaveLength(2);
-
-    // First call: spot sell
-    expect(createOrderCalls[0]?.[0]).toMatchObject({
-      symbol: "BTC-USD",
-      side: "SELL",
-    });
-
-    // Second call: perp buy (close)
-    expect(createOrderCalls[1]?.[0]).toMatchObject({
-      symbol: "BTC-USD-PERP",
-      side: "BUY",
-      reduceOnly: true,
-    });
-  });
-
-  it("should return partial result when second order fails", async () => {
-    const spotSellOrder = createFilledOrder({
-      id: "spot-sell-1",
-      symbol: "BTC-USD",
-      side: "SELL",
-    });
-
-    const deps = createDefaultDeps({
-      adapter: {
-        createOrder: vi
-          .fn()
-          .mockResolvedValueOnce(spotSellOrder)
-          .mockRejectedValueOnce(new Error("Exchange error")),
-        getOrder: vi.fn().mockResolvedValueOnce(spotSellOrder),
-        getPosition: vi.fn().mockResolvedValue(null),
-      },
-    });
+    deps.executionConfig = configWithoutMarket as ExecutionConfig;
     const params = createDefaultParams();
 
     const result = await executeExitHedge(params, deps);
 
     expect(result.success).toBe(false);
-    expect(result.aborted).toBe(false);
-    expect(result.spotOrder).toBeDefined();
-    expect(result.perpOrder).toBeUndefined();
-    expect(result.reason).toContain("Partial exit failure");
-  });
-
-  it("should throw ExecutionError when first order fails", async () => {
-    const deps = createDefaultDeps({
-      adapter: {
-        createOrder: vi.fn().mockRejectedValueOnce(new Error("Exchange down")),
-        getOrder: vi.fn(),
-        getPosition: vi.fn(),
-      },
-    });
-    const params = createDefaultParams();
-
-    await expect(executeExitHedge(params, deps)).rejects.toThrow(ExecutionError);
-  });
-
-  it("should log error when not flat after exit", async () => {
-    const spotSellOrder = createFilledOrder({ id: "spot-sell-1", side: "SELL" });
-    const perpBuyOrder = createFilledOrder({ id: "perp-buy-1", side: "BUY" });
-
-    // Position still exists after exit
-    const remainingPosition: Position = {
-      symbol: "BTC-USD-PERP",
-      side: "SHORT",
-      sizeBase: 1000n, // Still has a position
-      entryPriceQuote: 50000n * QUOTE_SCALE,
-      markPriceQuote: 50000n * QUOTE_SCALE,
-      liquidationPriceQuote: 75000n * QUOTE_SCALE,
-      unrealizedPnlQuote: 0n,
-      leverageBps: 10000n,
-      marginQuote: 50000n * QUOTE_SCALE,
-    };
-
-    const deps = createDefaultDeps({
-      adapter: {
-        createOrder: vi
-          .fn()
-          .mockResolvedValueOnce(spotSellOrder)
-          .mockResolvedValueOnce(perpBuyOrder),
-        getOrder: vi.fn().mockResolvedValueOnce(spotSellOrder).mockResolvedValueOnce(perpBuyOrder),
-        getPosition: vi
-          .fn()
-          .mockResolvedValueOnce(null) // spot flat
-          .mockResolvedValueOnce(remainingPosition), // perp not flat
-      },
-    });
-    const params = createDefaultParams();
-
-    const result = await executeExitHedge(params, deps);
-
-    // Should still succeed (orders were placed)
-    expect(result.success).toBe(true);
-    // But logger.error should have been called about not being flat
-    expect(deps.logger.error).toHaveBeenCalledWith(
-      "Not flat after exit",
-      expect.any(Error),
-      expect.objectContaining({ intentId: "intent-exit-1" }),
-    );
+    expect(result.aborted).toBe(true);
+    expect(result.reason).toContain("GMX market address not configured");
   });
 });
