@@ -13,7 +13,7 @@ pre-commit:
 # Pre-push: run checks only for changed (pushed) files.
 # - biome-ci: only on pushed *.{js,ts,...} files
 # - typecheck: only when at least one TS/TSX file is pushed (still runs full tsc)
-# - test: only tests affected by pushed changes (vitest --changed)
+# - test: run all tests
 pre-push:
   parallel: true
   commands:
