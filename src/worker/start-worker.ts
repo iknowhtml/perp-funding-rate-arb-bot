@@ -8,15 +8,14 @@
 import { createExchangeAdapter } from "@/adapters/factory";
 import { derivePosition } from "@/domains/position";
 import type { PositionConfig } from "@/domains/position";
-import { DEFAULT_RISK_CONFIG } from "@/domains/risk/config";
-import type { RiskSnapshot } from "@/domains/risk/types";
-import { DEFAULT_STRATEGY_CONFIG } from "@/domains/strategy/config";
-import type {
-  FundingRateSnapshot,
-  StrategyInput,
-  StrategyPosition,
-} from "@/domains/strategy/types";
-import type { DatabaseInstance } from "@/lib/db/client";
+import { DEFAULT_RISK_CONFIG, type RiskSnapshot } from "@/domains/risk";
+import {
+  DEFAULT_STRATEGY_CONFIG,
+  type FundingRateSnapshot,
+  type StrategyInput,
+  type StrategyPosition,
+} from "@/domains/strategy";
+import type { DatabaseInstance } from "@/lib/db";
 import type { Env } from "@/lib/env";
 import type { Logger } from "@/lib/logger";
 

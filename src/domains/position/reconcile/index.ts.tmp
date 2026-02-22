@@ -1,0 +1,2 @@
+export { derivePosition } from "./reconcile";
+export type { DerivedPosition, Inconsistency, PositionConfig, ReconciliationResult } from "../types";

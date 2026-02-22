@@ -2,24 +2,32 @@
  * Worker module exports.
  */
 
-export {
-  evaluate,
-  runStartupSequence,
-  type EvaluatorDeps,
-  type HealthAction,
-  type HealthResponse,
-  type HealthSnapshot,
-  type StartupDeps,
+export type {
+  EvaluatorDeps,
+  HealthAction,
+  HealthResponse,
+  HealthSnapshot,
+  StartupDeps,
 } from "./evaluator";
+export type { DataPlane, DataPlaneConfig } from "./data-plane";
+export type {
+  EnterHedgeDeps,
+  EnterHedgeExecutionParams,
+  ExecutionConfig,
+  ExecutionResult,
+  ExitHedgeDeps,
+  ExitHedgeExecutionParams,
+  HedgeDrift,
+  SlippageEstimate,
+} from "./execution";
+export type { FreshnessConfig } from "./freshness";
+export type { BalanceInconsistency, ReconcilerConfig, ReconcilerResult } from "./reconciler";
+export type { StartWorkerConfig, WorkerHandle } from "./start-worker";
+export type { BotState, StateStore } from "./state";
 
+export { evaluate, runStartupSequence } from "./evaluator";
+export { createDataPlane } from "./data-plane";
 export {
-  createDataPlane,
-  type DataPlane,
-  type DataPlaneConfig,
-} from "./data-plane";
-
-export {
-  // Execution engine
   createExecutionCircuitBreaker,
   DEFAULT_EXECUTION_CONFIG,
   EXECUTION_CIRCUIT_BREAKER_CONFIG,
@@ -28,40 +36,8 @@ export {
   executeExitHedge,
   OrderFillTimeoutError,
   SlippageExceededError,
-  type EnterHedgeDeps,
-  type EnterHedgeExecutionParams,
-  type ExecutionConfig,
-  type ExecutionResult,
-  type ExitHedgeDeps,
-  type ExitHedgeExecutionParams,
-  type HedgeDrift,
-  type SlippageEstimate,
 } from "./execution";
-
-export {
-  DEFAULT_FRESHNESS_CONFIG,
-  FreshnessConfigSchema,
-  isStateFresh,
-  type FreshnessConfig,
-} from "./freshness";
-
-export {
-  DEFAULT_RECONCILER_CONFIG,
-  ReconcilerConfigSchema,
-  runReconcile,
-  type BalanceInconsistency,
-  type ReconcilerConfig,
-  type ReconcilerResult,
-} from "./reconciler";
-
-export {
-  startWorker,
-  type StartWorkerConfig,
-  type WorkerHandle,
-} from "./start-worker";
-
-export {
-  createStateStore,
-  type BotState,
-  type StateStore,
-} from "./state";
+export { DEFAULT_FRESHNESS_CONFIG, FreshnessConfigSchema, isStateFresh } from "./freshness";
+export { DEFAULT_RECONCILER_CONFIG, ReconcilerConfigSchema, runReconcile } from "./reconciler";
+export { startWorker } from "./start-worker";
+export { createStateStore } from "./state";

@@ -1,10 +1,7 @@
 /**
  * Generic rate limiting types and utilities.
  *
- * Exchange-specific configurations are now co-located with their adapters:
- * - Coinbase: `src/adapters/coinbase/rate-limits.ts`
- * - Binance: `src/adapters/binance/rate-limits.ts`
- * - Bybit: `src/adapters/bybit/rate-limits.ts`
+ * Exchange presets (COINBASE_RATE_LIMITS, etc.) are in `./presets.ts`.
  *
  * @see {@link ../../../../adrs/0011-exchange-rate-limiting.md ADR-0011: Exchange Rate Limiting}
  */

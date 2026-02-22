@@ -1,31 +1,14 @@
+export type { WebSocketManager, WebSocketConfig, WebSocketState, CloseCategory } from "./websocket";
+export type { MessageQueue, MessageQueueConfig } from "./message-queue";
+export type { MessageParser, MessageParserConfig, MessageHandler } from "./message-parser";
+export type { HealthMonitor, HealthMonitorConfig, StreamId, StreamConfig } from "./health-monitor";
+
 export {
   createWebSocketManager,
   classifyCloseCode,
   MaxReconnectsExceededError,
   WebSocketAuthError,
-  type WebSocketManager,
-  type WebSocketConfig,
-  type WebSocketState,
-  type CloseCategory,
 } from "./websocket";
-
-export {
-  createMessageQueue,
-  type MessageQueue,
-  type MessageQueueConfig,
-} from "./message-queue";
-
-export {
-  createMessageParser,
-  type MessageParser,
-  type MessageParserConfig,
-  type MessageHandler,
-} from "./message-parser";
-
-export {
-  createHealthMonitor,
-  type HealthMonitor,
-  type HealthMonitorConfig,
-  type StreamId,
-  type StreamConfig,
-} from "./health-monitor";
+export { createMessageQueue } from "./message-queue";
+export { createMessageParser } from "./message-parser";
+export { createHealthMonitor } from "./health-monitor";

@@ -23,8 +23,8 @@ export type {
   TickerCallback,
 } from "./types";
 
-export { ExchangeError } from "./errors";
 export type { ExchangeErrorCode } from "./errors";
+export { ExchangeError } from "./errors";
 
 export {
   balanceSchema,
@@ -55,20 +55,9 @@ export {
 export { createExchangeAdapter } from "./factory";
 
 // Config validation
-export { AdapterConfigSchema, isAdapterConfig, parseAdapterConfig } from "./config";
 export type { AdapterConfig } from "./config";
-
-// Exchange-specific rate limit configurations
-export { COINBASE_RATE_LIMITS } from "./coinbase";
-export {
-  BINANCE_ENDPOINT_WEIGHTS,
-  BINANCE_RATE_LIMITS,
-  getBinanceEndpointWeight,
-} from "./binance";
-export { BYBIT_RATE_LIMITS } from "./bybit";
+export { AdapterConfigSchema, isAdapterConfig, parseAdapterConfig } from "./config";
 
 // Adapter factory functions
-export { createCoinbaseAdapter } from "./coinbase";
-export type { CoinbaseAdapterConfig } from "./coinbase";
-export { createPaperAdapter } from "./paper";
 export type { PaperAdapterConfig } from "./paper";
+export { createPaperAdapter } from "./paper";

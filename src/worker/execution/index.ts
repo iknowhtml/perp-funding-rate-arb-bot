@@ -66,12 +66,12 @@ export {
 } from "./drift";
 
 // Enter hedge
-export { executeEnterHedge } from "./enter-hedge";
 export type { EnterHedgeDeps, EnterHedgeExecutionParams } from "./enter-hedge";
+export { executeEnterHedge } from "./enter-hedge";
 
 // Exit hedge
-export { executeExitHedge, verifyFlatPosition } from "./exit-hedge";
 export type { ExitHedgeDeps, ExitHedgeExecutionParams } from "./exit-hedge";
+export { executeExitHedge, verifyFlatPosition } from "./exit-hedge";
 
 // Circuit breaker
 export {

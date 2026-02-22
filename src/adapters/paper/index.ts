@@ -2,5 +2,4 @@
  * Paper adapter exports.
  */
 
-export { createPaperAdapter } from "./adapter";
-export type { PaperAdapterConfig } from "./adapter";
+export { createPaperAdapter, type PaperAdapterConfig } from "./adapter";

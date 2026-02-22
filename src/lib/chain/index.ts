@@ -1,3 +1,4 @@
+export type { RpcHealthStatus } from "./health";
 export {
   ARBITRUM_CHAIN,
   ARBITRUM_CHAIN_ID,
@@ -6,5 +7,3 @@ export {
 } from "./constants";
 export { createArbitrumPublicClient, createArbitrumWalletClient } from "./client";
 export { checkRpcHealth } from "./health";
-
-export type { RpcHealthStatus } from "./health";
