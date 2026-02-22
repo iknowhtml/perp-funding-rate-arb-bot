@@ -181,6 +181,34 @@ export const createUser = (overrides?: Partial<User>): User => ({
 const user = createUser({ name: "Custom Name" });
 ```
 
+## Asserting Types in Tests
+
+Use Vitest built-ins only; no custom type-assertion helpers. Follow these conventions:
+
+| Assert | Use |
+|--------|-----|
+| Value is a **bigint** | `expect(typeof value).toBe("bigint")` |
+| Value is a **class instance** | `expect(value).toBeInstanceOf(ClassName)` |
+| Value is a **function** | `expect(typeof value).toBe("function")` |
+
+```typescript
+// ✅ Good: assert bigint type
+const fee = await estimator.estimateExecutionFeeWei(orderType);
+expect(typeof fee).toBe("bigint");
+
+// ✅ Good: assert class instance
+expect(err).toBeInstanceOf(ChainError);
+expect(err.code).toBe("TX_REVERTED");
+
+// ✅ Good: assert function
+expect(typeof estimator.estimateExecutionFeeWei).toBe("function");
+
+// ❌ Bad: redundant boolean wrapper
+expect(typeof fee === "bigint").toBe(true);
+```
+
+For **bigint value equality**, use `expect(actual).toBe(expected)` directly (e.g. `expect(fee).toBe(100_000n)`).
+
 ## Testing BigInt Values
 
 ```typescript
