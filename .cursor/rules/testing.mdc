@@ -77,6 +77,33 @@ it("should calculate fee correctly", () => {
 });
 ```
 
+## Asserting Optional Values
+
+**`expect(x).toBeDefined()` does not narrow the type** — TypeScript still treats `x` as possibly undefined. Do not rely on non-null assertion (`!`) after a toBeDefined; narrow with an `if` so the type is correct and the test stays type-safe.
+
+```typescript
+// ✅ Good: assert existence, then narrow with if — TypeScript narrows, no ! needed
+const tickerStatus = status.ticker;
+expect(tickerStatus).toBeDefined();
+if (tickerStatus) {
+  expect(tickerStatus.lastMessageTime).toBeLessThan(100);
+}
+
+// ❌ Bad: toBeDefined doesn't narrow; using ! is redundant and bypasses type checking
+expect(tickerStatus).toBeDefined();
+expect(tickerStatus!.lastMessageTime).toBeLessThan(100);
+```
+
+Use this pattern whenever you assert that an optional value is defined before using its properties (e.g. optional keys, array access like `result[0]`, API return values).
+
+### When `!` is acceptable in tests
+
+Only in narrow cases: (1) the value is **obviously defined by construction** in the test (e.g. you just built the object), or (2) a **documented test helper** with a clear precondition (e.g. "caller must pass non-empty array"). Do not use `!` for optional values from getters, API-shaped results, or anything that could become undefined after a refactor.
+
+### Tests vs production
+
+Using `!` in tests can imply to others that it's okay in production. **Production code should avoid non-null assertion** — use narrowing (`if`), type guards, or proper checks instead. The test-only exception above does not apply to source files outside `*.test.ts`.
+
 ## Mocking
 
 ### Mock External Services

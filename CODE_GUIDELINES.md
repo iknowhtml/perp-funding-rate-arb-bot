@@ -90,6 +90,10 @@ const parseResponse = (data: unknown): Order => v.parse(OrderSchema, data);
 const parseResponse = (data: any): Order => data;
 ```
 
+### Avoid Non-Null Assertion in Production
+
+Do not use `!` (non-null assertion) in production code. It bypasses the type checker; if the value is actually null/undefined, you get a runtime error. Use narrowing (`if (x) { ... }`), type guards, or explicit checks instead. (In tests, `!` is only acceptable when the value is obviously defined by construction or in a documented test helper; see [Testing](#asserting-optional-values).)
+
 ### Avoid Type Casts
 
 **NEVER use `as Type` casting unless absolutely necessary (e.g., interacting with untyped 3rd party libraries).**
@@ -380,6 +384,25 @@ describe("formatCents", () => {
   });
 });
 ```
+
+### Asserting Optional Values
+
+`expect(x).toBeDefined()` does not narrow the type in TypeScript. After asserting that an optional value is defined, narrow with an `if` block so you can use its properties without a non-null assertion (`!`):
+
+```typescript
+// ✅ Good: assert then narrow with if
+const item = result.items[0];
+expect(item).toBeDefined();
+if (item) {
+  expect(item.name).toBe("expected");
+}
+
+// ❌ Bad: toBeDefined doesn't narrow; ! bypasses type checking
+expect(item).toBeDefined();
+expect(item!.name).toBe("expected");
+```
+
+Use this for optional keys, array access (`result[0]`), and API-shaped values. **When `!` is acceptable in tests:** only when the value is obviously defined by construction in the test or in a documented test helper with a clear precondition. **Production code:** avoid `!`; use narrowing, type guards, or checks. The test exception does not apply outside `*.test.ts`.
 
 ### Running Tests
 

@@ -25,6 +25,7 @@ tsc --noEmit --watch
    - Fix all type errors before submitting
    - Never use `any` type - use `unknown` with Valibot validation instead
    - Never suppress type errors with `@ts-ignore` or `@ts-expect-error` without justification
+   - Avoid non-null assertion (`!`) in production code — use narrowing (`if`), type guards, or proper checks so the type system stays correct
 
 2. **Type Safety Principles**
 
