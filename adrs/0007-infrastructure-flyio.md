@@ -1,7 +1,9 @@
 # ADR 0007: Infrastructure — Fly.io Deployment
 
-- **Status:** Accepted
+- **Status:** Superseded
 - **Date:** 2026-02-04
+- **Updated:** 2026-02-22
+- **Superseded by:** [ADR-0029: Infrastructure — Railway Deployment](0029-infrastructure-railway.md)
 - **Owners:** -
 - **Related:**
   - [ADR-0001: Bot Architecture](0001-bot-architecture.md)
@@ -488,7 +490,7 @@ For application-level monitoring (metrics, alerting, logging), see [ADR-0008: Mo
 
 1. **More operational overhead** than Railway/Render (more knobs to configure)
 2. **Learning curve**: Fly.io concepts (Machines, Volumes, Postgres clusters)
-3. **Cost**: Managed Postgres adds baseline cost (~$7/mo for HA)
+3. **No free tier; paid from day one**: Fly.io no longer offers a free tier. Machines and Managed Postgres are paid from the start (e.g. ~$7/mo for Postgres HA; Machines billed by usage). Budget accordingly when planning deployment.
 
 ### Risks
 

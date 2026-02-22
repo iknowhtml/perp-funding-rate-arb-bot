@@ -2,8 +2,8 @@
 name: Deployment
 overview: Protocol-agnostic infra. New env vars for Arbitrum, GMX, regime config.
 todos:
-  - id: flyio-config
-    content: Update Fly.io config for Arbitrum RPC
+  - id: railway-config
+    content: Update Railway config for Arbitrum RPC
     status: pending
   - id: env-vars
     content: Add ARBITRUM_*, GMX_*, regime env vars
@@ -29,6 +29,6 @@ isProject: false
 
 ## Overview
 
-Deployment on Fly.io. Protocol-agnostic; new env vars for chain, GMX, regime thresholds. Per ADR-0022 Key Configurations.
+Deployment on Railway. Protocol-agnostic; new env vars for chain, GMX, regime thresholds. Per ADR-0022 Key Configurations. See [ADR-0029: Infrastructure — Railway](../../../../../adrs/0029-infrastructure-railway.md).
 
 See deprecated [phase-e-testing-deployment/live-testing/0008-deployment.md](../../../../deprecated/0002-gmx-pivot-v1/phase-e-testing-deployment/live-testing/0008-deployment.md).

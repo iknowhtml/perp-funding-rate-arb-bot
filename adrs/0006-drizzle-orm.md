@@ -31,7 +31,7 @@ We considered:
 1. **"If you know SQL, you know Drizzle"**: The API mirrors SQL closely, reducing the abstraction gap.
 2. **Zero Runtime Overhead**: It's a thin wrapper around the driver, compiling to SQL strings at build/runtime with minimal processing.
 3. **Schema-First**: You define the schema in TypeScript, and Drizzle generates the SQL migrations. This is the single source of truth.
-4. **Serverless Ready**: Works perfectly with Fly.io and potential future edge deployments (no heavy binary to ship).
+4. **Serverless Ready**: Works perfectly with Railway and potential future edge deployments (no heavy binary to ship).
 5. **Functional**: It uses functional patterns (passing db instance, query builders) rather than Active Record classes.
 
 ## Implementation

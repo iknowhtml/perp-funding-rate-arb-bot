@@ -459,7 +459,7 @@ export const transitionOrder = (order: Order, event: OrderEvent): Order => {
 | [0005](adrs/0005-validation-strategy.md) | Validation Strategy | Accepted |
 | [0006](adrs/0006-backend-framework-hono.md) | Backend Framework — Hono | Accepted |
 | [0007](adrs/0007-database-strategy.md) | Database Strategy | Accepted |
-| [0008](adrs/0008-infrastructure-flyio.md) | Infrastructure — Fly.io | Accepted |
+| [0029](adrs/0029-infrastructure-railway.md) | Infrastructure — Railway | Accepted |
 | [0009](adrs/0009-monitoring-observability.md) | Monitoring & Observability | Accepted |
 | [0010](adrs/0010-dev-tooling.md) | Development Tooling | Accepted |
 | [0011](adrs/0011-risk-management.md) | Risk Management Engine | Planned |

@@ -6,7 +6,7 @@
 - **Related:**
   - [ADR-0001: Bot Architecture](0001-bot-architecture.md)
   - [ADR-0002: Hexagonal-Inspired Architecture](0002-hexagonal-inspired-architecture.md)
-  - [ADR-0007: Infrastructure — Fly.io Deployment](0007-infrastructure-flyio.md)
+  - [ADR-0029: Infrastructure — Railway Deployment](0029-infrastructure-railway.md)
 
 ## Context
 
@@ -66,7 +66,7 @@ SQLite is a valid MVP choice for absolute simplicity (single file, no service), 
 |--------|--------|----------|
 | **Multi-process access** | File locking issues | Concurrent connections |
 | **Remote access** | Not designed for network | Built for client-server |
-| **Managed services** | None | Supabase, Neon, RDS, Fly.io |
+| **Managed services** | None | Supabase, Neon, RDS, Railway |
 | **Backups** | File copy | `pg_dump`, point-in-time recovery |
 | **Scaling path** | Limited | Scales to SaaS multi-tenant |
 
@@ -291,7 +291,7 @@ ORDER BY snapshot_at DESC;
 1. **Durable storage**: Postgres ACID guarantees ensure no lost fills
 2. **Transactional consistency**: Orders and fills stay in sync
 3. **Industry-standard tooling**: `pg_dump`, `pg_restore`, standard SQL
-4. **Managed services**: Fly.io, Supabase, Neon provide HA and backups
+4. **Managed services**: Railway, Supabase, Neon provide HA and backups
 5. **Scaling path**: Same database can serve multiple workers and dashboards
 6. **Audit trail**: Complete history of all decisions and executions
 
@@ -321,4 +321,4 @@ ORDER BY snapshot_at DESC;
 
 - [ADR-0001: Bot Architecture](0001-bot-architecture.md) — Worker loop and state management
 - [ADR-0002: Hexagonal-Inspired Architecture](0002-hexagonal-inspired-architecture.md) — Repository pattern for database abstraction
-- [ADR-0007: Infrastructure — Fly.io Deployment](0007-infrastructure-flyio.md) — Managed Postgres setup
+- [ADR-0029: Infrastructure — Railway Deployment](0029-infrastructure-railway.md) — Managed Postgres setup

@@ -6,7 +6,7 @@
 - **Related:**
   - [ADR-0019: On-Chain Perps Pivot](0019-on-chain-perps-pivot.md)
   - [ADR-0020: Contract Interaction Patterns](0020-contract-interaction-patterns.md)
-  - [ADR-0007: Infrastructure (Fly.io)](0007-infrastructure-flyio.md)
+  - [ADR-0029: Infrastructure — Railway](0029-infrastructure-railway.md)
 
 ## Context
 
@@ -22,7 +22,7 @@ The plan (A-01) loads `ARBITRUM_PRIVATE_KEY` from an environment variable. This 
 
 | Threat | Impact | Likelihood |
 |--------|--------|------------|
-| Server compromise (Fly.io) → key extracted from env/memory | Total loss | Low |
+| Server compromise (Railway) → key extracted from env/memory | Total loss | Low |
 | Env var leaked in logs/error messages | Total loss | Low (if careful) |
 | Unlimited token approval exploited via contract vulnerability | Loss up to approved amount | Low |
 | Nonce manipulation from concurrent access | Stuck transactions | Medium (mitigated by serial queue) |
@@ -31,7 +31,7 @@ The plan (A-01) loads `ARBITRUM_PRIVATE_KEY` from an environment variable. This 
 ### Open Questions
 
 1. **Key storage**: How should the private key be stored and loaded?
-   - **Option A**: Environment variable (current plan) — simplest, standard for server apps, relies on platform security (Fly.io secrets)
+   - **Option A**: Environment variable (current plan) — simplest, standard for server apps, relies on platform security (Railway variables)
    - **Option B**: Encrypted keystore file (password from env) — adds a layer, but password is still in env
    - **Option C**: Cloud KMS (AWS KMS, GCP KMS) for signing — key never leaves HSM, but adds latency and vendor dependency
    - **Option D**: Hardware wallet (Ledger) via USB — most secure, but incompatible with headless server deployment
@@ -80,7 +80,7 @@ _To be filled after decision._
 
 ## References
 
-- [Fly.io Secrets](https://fly.io/docs/reference/secrets/)
+- [Railway Variables](https://docs.railway.com/develop/variables)
 - [viem Account Management](https://viem.sh/docs/accounts/local)
 - [ERC20 Approval Best Practices](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#IERC20-approve-address-uint256-)
 - Plan A-01: Viem Client Setup

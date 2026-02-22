@@ -5,7 +5,7 @@
 - **Owners:** -
 - **Related:**
   - [ADR-0001: Bot Architecture](0001-bot-architecture.md)
-  - [ADR-0007: Infrastructure — Fly.io Deployment](0007-infrastructure-flyio.md)
+  - [ADR-0029: Infrastructure — Railway Deployment](0029-infrastructure-railway.md)
   - [ADR-0004: Backend Framework — Hono](0004-backend-framework-hono.md)
 
 ## Context
@@ -21,7 +21,7 @@ Without proper monitoring, failures go unnoticed until positions are at risk or 
 ## Decision
 
 **Implement a multi-layered monitoring strategy:**
-1. **Health checks** for infrastructure-level monitoring (Fly.io, restart on failure)
+1. **Health checks** for infrastructure-level monitoring (Railway; restart on failure)
 2. **Application metrics** for trading activity and performance
 3. **Alerting** for critical events (Discord/Telegram)
 
@@ -105,10 +105,10 @@ export const calculateHealth = (state: BotState): HealthStatus => {
 
 ### Infrastructure Health Checks
 
-Fly.io uses the health endpoint to restart unhealthy containers:
+Railway can use the health endpoint to restart unhealthy containers if health checks are configured:
 
 ```toml
-# fly.toml
+# Platform config (e.g. Railway health check or fly.toml if using Fly.io)
 [checks]
   [checks.health]
     port = 8080
@@ -123,7 +123,7 @@ Fly.io uses the health endpoint to restart unhealthy containers:
 **Health check behavior:**
 - Returns `200 OK` when healthy (all systems operational)
 - Returns `503 Service Unavailable` when unhealthy (stale data, disconnected)
-- Fly.io restarts the container if health checks fail repeatedly
+- Platform restarts the container if health checks fail repeatedly (when configured)
 
 ## Application Metrics
 
@@ -440,6 +440,6 @@ pnpm add prom-client
 ## References
 
 - [ADR-0001: Bot Architecture](0001-bot-architecture.md) — Worker loop and state management
-- [ADR-0007: Infrastructure — Fly.io Deployment](0007-infrastructure-flyio.md) — Health check configuration
+- [ADR-0029: Infrastructure — Railway Deployment](0029-infrastructure-railway.md) — Health check configuration
 - [ADR-0004: Backend Framework — Hono](0004-backend-framework-hono.md) — HTTP server implementation
 - [Prometheus Client Library](https://github.com/siimon/prom-client) — Node.js metrics library

@@ -121,7 +121,7 @@ This roadmap implements a regime-based GMX v2 arbitrage bot per ADR-0022. It use
 
 - [ ] Backtest on GMX historical data shows positive Sharpe
 - [ ] Monitoring covers regime, GM drift, impact alerts
-- [ ] Deployment works on Fly.io with Arbitrum RPC
+- [ ] Deployment works on Railway with Arbitrum RPC
 - [ ] Operational runbook (ADR-0022) documented and followed
 - [ ] Bot runs 24/7 with acceptable gas overhead
 

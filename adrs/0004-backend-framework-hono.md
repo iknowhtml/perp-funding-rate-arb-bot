@@ -4,13 +4,13 @@
 - **Date:** 2026-02-04
 - **Owners:** -
 - **Related:**
-  - [ADR-0007: Infrastructure — Fly.io Deployment](0007-infrastructure-flyio.md)
+  - [ADR-0029: Infrastructure — Railway Deployment](0029-infrastructure-railway.md)
   - [ADR-0008: Monitoring & Observability](0008-monitoring-observability.md)
 
 ## Context
 
 The trading bot requires HTTP endpoints for:
-- **Health checks**: Infrastructure monitoring (Fly.io health probes)
+- **Health checks**: Infrastructure monitoring (Railway / platform health probes)
 - **Metrics**: Prometheus scraping endpoint (`/metrics`)
 - **Future API**: Dashboard/control plane endpoints (when building SaaS)
 
@@ -271,5 +271,5 @@ src/
 
 - [Hono Documentation](https://hono.dev/)
 - [Hono OpenAPI Guide](https://hono.dev/guides/openapi)
-- [ADR-0007: Infrastructure — Fly.io Deployment](0007-infrastructure-flyio.md) — Health check requirements
+- [ADR-0029: Infrastructure — Railway Deployment](0029-infrastructure-railway.md) — Health check requirements
 - [ADR-0008: Monitoring & Observability](0008-monitoring-observability.md) — Health checks and metrics

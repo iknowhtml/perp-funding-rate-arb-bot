@@ -6,7 +6,7 @@
 - **Related:**
   - [ADR-0022: Regime-Based GMX v2 Funding Arb Bot](0022-regime-based-gmx-arb.md)
   - [ADR-0019: On-Chain Perps Pivot](0019-on-chain-perps-pivot.md)
-  - [ADR-0007: Infrastructure (Fly.io)](0007-infrastructure-flyio.md)
+  - [ADR-0029: Infrastructure — Railway](0029-infrastructure-railway.md)
 
 ## Context
 
