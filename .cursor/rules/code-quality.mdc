@@ -59,6 +59,8 @@ pnpm biome check --write .
 
 **Note**: Only use auto-fix for formatting/import issues. Review changes before committing. After auto-fixing, re-run the code-reviewer subagent to verify all issues are resolved.
 
+**When auto-fix isn't applied** (e.g. "unsafe" fixes skipped, or rule conflicts with TypeScript): fix the underlying issue manually—e.g. satisfy the rule in a type-safe way (narrow types, add assertions, or use literal keys where the type allows) so both Biome and TypeScript pass. Do not leave Biome errors unresolved.
+
 ## Integration with Git Hooks
 
 Checks also run automatically via Lefthook:

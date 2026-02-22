@@ -8,5 +8,7 @@ alwaysApply: true
 
 ## AI/Cursor Guidelines
 
-**ALWAYS run Run `pnpm lint:fix` & `pnpm format` on created or modified files**
+**ALWAYS run `pnpm lint:fix` & `pnpm format` on created or modified files.**
+
+**If Biome reports errors that auto-fix does not fix** (e.g. "Skipped N suggested fixes", "unsafe" fixes): resolve them manually so that both Biome and TypeScript pass—e.g. use literal keys where the type allows, add type assertions in tests, or refactor to satisfy the rule without breaking types. Do not leave Biome errors in place.
 

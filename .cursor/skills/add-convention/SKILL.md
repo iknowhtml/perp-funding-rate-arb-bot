@@ -29,7 +29,7 @@ When adding or changing a project rule, convention, or standard, update all thre
 1. **Identify checkable patterns** — Decide what is searchable (e.g. single-letter params, wrong file names, `any` usage, `as` casts). Use `grep` / codebase search for the old or violating pattern; exclude test/fixture noise if appropriate.
 2. **Fix violations** — Where scope is reasonable, fix each violation (rename, restructure, replace with the convention). Prefer fixing over reporting when the change set stays small and low-risk.
 3. **Report if needed** — If violations are numerous, risky, or out of scope for the current change, list files/locations and a short summary so the user or a follow-up task can address them.
-4. **Verify** — After fixes, run `pnpm biome check --write .`, `pnpm typecheck`, and `pnpm test:run` to ensure nothing broke.
+4. **Verify** — After fixes, run `pnpm biome check --write .`, `pnpm typecheck`, and `pnpm test:run` to ensure nothing broke. If Biome reports errors that auto-fix did not fix (e.g. unsafe/skipped fixes), resolve them manually so both Biome and TypeScript pass.
 
 **Examples:** single-letter callback params → grep and rename to descriptive names; wrong naming → search for the old pattern and update; new banned construct → search for that construct and replace or document exceptions.
 
