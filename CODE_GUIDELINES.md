@@ -61,6 +61,24 @@ items.find((t) => t.id === id);
 
 **Exception:** Idiomatic callbacks where the meaning is obvious are acceptable: e.g. `.sort((a, b) => ...)`, `.reduce((acc, value) => ...)`, or framework conventions like Hono's `(c) =>` for context.
 
+### No abbreviated variable names
+
+**Use descriptive variable names.** Do not use abbreviated names like `ts`, `dt`, `tmp`, `val`, `msg`, `err` (as variable names) when a clearer name is available.
+
+```typescript
+// ✅ Good
+const snapshotTime = new Date();
+return { ts: snapshotTime, market, ... };
+const errorMessage = err instanceof Error ? err.message : String(err);
+
+// ❌ Bad
+const ts = new Date();
+return { ts, market, ... };
+const msg = err instanceof Error ? err.message : String(err);
+```
+
+**Exception:** When the type or API mandates a short property name (e.g. `ts` in a schema), use a descriptive local variable and assign to the short key: `const snapshotTime = new Date(); return { ts: snapshotTime };`. Loop variables like `i`, `j` in simple loops are acceptable; prefer `index` or descriptive names when it improves clarity.
+
 ### Function Prefixes
 
 | Prefix | Use Case | Example |
@@ -119,6 +137,7 @@ Instead, use:
 1. **Valibot Validation**: Validate data at the boundary
 2. **Type Guards**: Check types at runtime
 3. **Type Inference**: Let TypeScript infer the type
+4. **Type the variable**: Prefer declaring the variable with an explicit type so the compiler checks the shape; avoid casting the whole object (e.g. `as unknown as Config`). If only one property is a mock or untyped, cast only that property.
 
 ```typescript
 // ✅ Good: Valibot validation
@@ -131,6 +150,16 @@ if (isErrorResponse(response)) {
 
 // ❌ Bad: Type cast
 const order = response as Order;
+
+// ❌ Bad: Casting the whole object to satisfy a type
+const config = { baseUrl, publicClient: mockClient, account } as unknown as Config;
+
+// ✅ Good: Type the variable; cast only the property that needs it (e.g. test mock)
+const config: Config = {
+  baseUrl,
+  publicClient: mockClient as Config["publicClient"],
+  account,
+};
 
 // ❌ Bad: Casting environment variables
 const level = process.env.LOG_LEVEL as LogLevel; // Unsafe!
