@@ -37,10 +37,10 @@ const rawMarketRowSchema = v.object({
   name: v.string(),
   openInterestLong: v.string(),
   openInterestShort: v.string(),
-  fundingRateLong: v.string(),
-  fundingRateShort: v.string(),
-  borrowingRateLong: v.string(),
-  borrowingRateShort: v.string(),
+  fundingRateLong: v.optional(v.string(), "0"),
+  fundingRateShort: v.optional(v.string(), "0"),
+  borrowingRateLong: v.optional(v.string(), "0"),
+  borrowingRateShort: v.optional(v.string(), "0"),
 });
 
 /** Valibot schema for GET /markets/info response. */
@@ -71,10 +71,10 @@ const parseMarket = (rawMarket: RawMarketRow): GmxMarket => ({
   name: rawMarket.name,
   openInterestLong: BigInt(rawMarket.openInterestLong),
   openInterestShort: BigInt(rawMarket.openInterestShort),
-  fundingRateLong: BigInt(rawMarket.fundingRateLong),
-  fundingRateShort: BigInt(rawMarket.fundingRateShort),
-  borrowingRateLong: BigInt(rawMarket.borrowingRateLong),
-  borrowingRateShort: BigInt(rawMarket.borrowingRateShort),
+  fundingRateLong: BigInt(rawMarket.fundingRateLong ?? "0"),
+  fundingRateShort: BigInt(rawMarket.fundingRateShort ?? "0"),
+  borrowingRateLong: BigInt(rawMarket.borrowingRateLong ?? "0"),
+  borrowingRateShort: BigInt(rawMarket.borrowingRateShort ?? "0"),
 });
 
 /**

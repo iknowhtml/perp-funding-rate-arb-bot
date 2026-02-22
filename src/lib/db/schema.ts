@@ -15,7 +15,7 @@
  * - execution_estimate: Pre-execution simulation (impact, gas, acceptable price). No tx hash;
  *   optional future: txHash to link estimate → executed order for analytics.
  */
-import { bigint, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { bigint, index, numeric, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const orders = pgTable(
   "orders",
@@ -41,6 +41,9 @@ export const orders = pgTable(
   ],
 );
 
+/** Precision for numeric columns that can exceed PostgreSQL bigint (e.g. 30-decimal prices). */
+const NUMERIC_PRECISION = 78;
+
 export const marketSnapshot = pgTable(
   "market_snapshot",
   {
@@ -48,15 +51,23 @@ export const marketSnapshot = pgTable(
     timestamp: timestamp({ withTimezone: true }).notNull(),
     market: text().notNull(),
     marketName: text().notNull(),
-    price: bigint({ mode: "bigint" }).notNull(),
-    longFundingRate: bigint({ mode: "bigint" }).notNull(),
-    shortFundingRate: bigint({ mode: "bigint" }).notNull(),
-    longOpenInterestUsd: bigint({ mode: "bigint" }).notNull(),
-    shortOpenInterestUsd: bigint({ mode: "bigint" }).notNull(),
-    borrowRateLong: bigint({ mode: "bigint" }).notNull(),
-    borrowRateShort: bigint({ mode: "bigint" }).notNull(),
-    oiSkewRatio: bigint({ mode: "bigint" }),
-    gasPriceGwei: bigint({ mode: "bigint" }),
+    price: numeric({ precision: NUMERIC_PRECISION, scale: 0, mode: "bigint" }).notNull(),
+    longFundingRate: numeric({ precision: NUMERIC_PRECISION, scale: 0, mode: "bigint" }).notNull(),
+    shortFundingRate: numeric({ precision: NUMERIC_PRECISION, scale: 0, mode: "bigint" }).notNull(),
+    longOpenInterestUsd: numeric({
+      precision: NUMERIC_PRECISION,
+      scale: 0,
+      mode: "bigint",
+    }).notNull(),
+    shortOpenInterestUsd: numeric({
+      precision: NUMERIC_PRECISION,
+      scale: 0,
+      mode: "bigint",
+    }).notNull(),
+    borrowRateLong: numeric({ precision: NUMERIC_PRECISION, scale: 0, mode: "bigint" }).notNull(),
+    borrowRateShort: numeric({ precision: NUMERIC_PRECISION, scale: 0, mode: "bigint" }).notNull(),
+    oiSkewRatio: numeric({ precision: NUMERIC_PRECISION, scale: 0, mode: "bigint" }),
+    gasPriceGwei: numeric({ precision: NUMERIC_PRECISION, scale: 0, mode: "bigint" }),
     createdAt: timestamp({ withTimezone: true }).defaultNow(),
   },
   (table) => [index("idx_market_snapshot_market_timestamp").on(table.market, table.timestamp)],
@@ -68,10 +79,14 @@ export const executionEstimate = pgTable(
     id: uuid().primaryKey().defaultRandom(),
     timestamp: timestamp({ withTimezone: true }).notNull(),
     market: text().notNull(),
-    sizeUsd: bigint({ mode: "bigint" }).notNull(),
-    simulatedImpactBps: bigint({ mode: "bigint" }).notNull(),
-    estimatedGasUsd: bigint({ mode: "bigint" }),
-    acceptablePrice: bigint({ mode: "bigint" }),
+    sizeUsd: numeric({ precision: NUMERIC_PRECISION, scale: 0, mode: "bigint" }).notNull(),
+    simulatedImpactBps: numeric({
+      precision: NUMERIC_PRECISION,
+      scale: 0,
+      mode: "bigint",
+    }).notNull(),
+    estimatedGasUsd: numeric({ precision: NUMERIC_PRECISION, scale: 0, mode: "bigint" }),
+    acceptablePrice: numeric({ precision: NUMERIC_PRECISION, scale: 0, mode: "bigint" }),
     createdAt: timestamp({ withTimezone: true }).defaultNow(),
   },
   (table) => [index("idx_execution_estimate_market_timestamp").on(table.market, table.timestamp)],

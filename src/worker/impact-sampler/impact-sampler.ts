@@ -82,8 +82,8 @@ export const createImpactSampler = (deps: ImpactSamplerDeps): ImpactSampler => {
             market: address,
             sizeUsd: SAMPLE_SIZE_USD,
             simulatedImpactBps: result.simulatedImpactBps,
-            estimatedGasUsd: result.estimatedGasUsd,
-            acceptablePrice: result.acceptablePrice,
+            estimatedGasUsd: result.estimatedGasUsd ?? undefined,
+            acceptablePrice: result.acceptablePrice ?? undefined,
           });
 
           logger.debug("Recorded impact sample", {

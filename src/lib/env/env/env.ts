@@ -8,7 +8,10 @@ export const parseEnv = (): Env => {
     if (v.isValiError(error)) {
       console.error("Environment variable validation failed:");
       for (const issue of error.issues) {
-        console.error(`  - ${issue.path?.map(String).join(".")}: ${issue.message}`);
+        const pathStr =
+          issue.path?.map((p) => (typeof p === "string" ? p : String(p))).join(".") ?? "";
+        const prefix = pathStr && !pathStr.includes("[object Object]") ? `${pathStr}: ` : "";
+        console.error(`  - ${prefix}${issue.message}`);
       }
       process.exit(1);
     }

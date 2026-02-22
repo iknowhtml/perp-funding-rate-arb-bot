@@ -5,6 +5,7 @@
 - **Owners:** -
 - **Related:**
   - [ADR-0001: Bot Architecture](0001-bot-architecture.md)
+  - [ADR-0030: Build Tool — tsup](0030-build-tool-tsup.md) (build script)
 
 ## Context
 
@@ -263,7 +264,7 @@ export default defineConfig({
 {
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsup",
     "start": "node dist/index.js",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
@@ -277,7 +278,7 @@ export default defineConfig({
 }
 ```
 
-**Important:** Always use `test:run` when running tests from Cursor or scripts (process exits after tests complete). Use `test` for interactive watch mode during development.
+**Important:** Always use `test:run` when running tests from Cursor or scripts (process exits after tests complete). Use `test` for interactive watch mode during development. The production build uses **tsup** (see [ADR-0030: Build Tool — tsup](0030-build-tool-tsup.md)).
 
 ### Development Dependencies
 

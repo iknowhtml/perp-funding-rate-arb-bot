@@ -6,6 +6,8 @@
  * @see {@link ../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
+import "dotenv/config";
+
 import { createDatabase } from "./lib/db";
 import { getEnv } from "./lib/env";
 import { createLogger } from "./lib/logger";

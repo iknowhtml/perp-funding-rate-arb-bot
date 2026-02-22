@@ -58,9 +58,9 @@ const createLogEntry = (
 
 const formatLog = (entry: LogEntry): string => {
   if (config.server.nodeEnv === "development") {
-    return `${entry.timestamp} [${entry.level.toUpperCase()}] ${entry.message}${
-      entry.context ? ` ${JSON.stringify(entry.context)}` : ""
-    }`;
+    const contextStr = entry.context ? ` ${JSON.stringify(entry.context)}` : "";
+    const errorStr = entry.error ? ` — ${entry.error.name}: ${entry.error.message}` : "";
+    return `${entry.timestamp} [${entry.level.toUpperCase()}] ${entry.message}${contextStr}${errorStr}`;
   }
   return JSON.stringify(entry);
 };

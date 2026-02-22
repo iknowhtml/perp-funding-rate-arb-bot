@@ -2,10 +2,10 @@ CREATE TABLE "execution_estimate" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"timestamp" timestamp with time zone NOT NULL,
 	"market" text NOT NULL,
-	"size_usd" bigint NOT NULL,
-	"simulated_impact_bps" bigint NOT NULL,
-	"estimated_gas_usd" bigint,
-	"acceptable_price" bigint,
+	"size_usd" numeric(78, 0) NOT NULL,
+	"simulated_impact_bps" numeric(78, 0) NOT NULL,
+	"estimated_gas_usd" numeric(78, 0),
+	"acceptable_price" numeric(78, 0),
 	"created_at" timestamp with time zone DEFAULT now()
 );
 --> statement-breakpoint
@@ -14,15 +14,15 @@ CREATE TABLE "market_snapshot" (
 	"timestamp" timestamp with time zone NOT NULL,
 	"market" text NOT NULL,
 	"market_name" text NOT NULL,
-	"price" bigint NOT NULL,
-	"long_funding_rate" bigint NOT NULL,
-	"short_funding_rate" bigint NOT NULL,
-	"long_open_interest_usd" bigint NOT NULL,
-	"short_open_interest_usd" bigint NOT NULL,
-	"borrow_rate_long" bigint NOT NULL,
-	"borrow_rate_short" bigint NOT NULL,
-	"oi_skew_ratio" bigint,
-	"gas_price_gwei" bigint,
+	"price" numeric(78, 0) NOT NULL,
+	"long_funding_rate" numeric(78, 0) NOT NULL,
+	"short_funding_rate" numeric(78, 0) NOT NULL,
+	"long_open_interest_usd" numeric(78, 0) NOT NULL,
+	"short_open_interest_usd" numeric(78, 0) NOT NULL,
+	"borrow_rate_long" numeric(78, 0) NOT NULL,
+	"borrow_rate_short" numeric(78, 0) NOT NULL,
+	"oi_skew_ratio" numeric(78, 0),
+	"gas_price_gwei" numeric(78, 0),
 	"created_at" timestamp with time zone DEFAULT now()
 );
 --> statement-breakpoint

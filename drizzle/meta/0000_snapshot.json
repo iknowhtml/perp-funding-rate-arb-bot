@@ -1,5 +1,5 @@
 {
-  "id": "3068a07f-24d3-47f5-8774-4212c08a3ae9",
+  "id": "e4d0348a-2928-4983-8049-39f161c607e0",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -29,25 +29,25 @@
         },
         "size_usd": {
           "name": "size_usd",
-          "type": "bigint",
+          "type": "numeric(78, 0)",
           "primaryKey": false,
           "notNull": true
         },
         "simulated_impact_bps": {
           "name": "simulated_impact_bps",
-          "type": "bigint",
+          "type": "numeric(78, 0)",
           "primaryKey": false,
           "notNull": true
         },
         "estimated_gas_usd": {
           "name": "estimated_gas_usd",
-          "type": "bigint",
+          "type": "numeric(78, 0)",
           "primaryKey": false,
           "notNull": false
         },
         "acceptable_price": {
           "name": "acceptable_price",
-          "type": "bigint",
+          "type": "numeric(78, 0)",
           "primaryKey": false,
           "notNull": false
         },
@@ -120,55 +120,55 @@
         },
         "price": {
           "name": "price",
-          "type": "bigint",
+          "type": "numeric(78, 0)",
           "primaryKey": false,
           "notNull": true
         },
         "long_funding_rate": {
           "name": "long_funding_rate",
-          "type": "bigint",
+          "type": "numeric(78, 0)",
           "primaryKey": false,
           "notNull": true
         },
         "short_funding_rate": {
           "name": "short_funding_rate",
-          "type": "bigint",
+          "type": "numeric(78, 0)",
           "primaryKey": false,
           "notNull": true
         },
         "long_open_interest_usd": {
           "name": "long_open_interest_usd",
-          "type": "bigint",
+          "type": "numeric(78, 0)",
           "primaryKey": false,
           "notNull": true
         },
         "short_open_interest_usd": {
           "name": "short_open_interest_usd",
-          "type": "bigint",
+          "type": "numeric(78, 0)",
           "primaryKey": false,
           "notNull": true
         },
         "borrow_rate_long": {
           "name": "borrow_rate_long",
-          "type": "bigint",
+          "type": "numeric(78, 0)",
           "primaryKey": false,
           "notNull": true
         },
         "borrow_rate_short": {
           "name": "borrow_rate_short",
-          "type": "bigint",
+          "type": "numeric(78, 0)",
           "primaryKey": false,
           "notNull": true
         },
         "oi_skew_ratio": {
           "name": "oi_skew_ratio",
-          "type": "bigint",
+          "type": "numeric(78, 0)",
           "primaryKey": false,
           "notNull": false
         },
         "gas_price_gwei": {
           "name": "gas_price_gwei",
-          "type": "bigint",
+          "type": "numeric(78, 0)",
           "primaryKey": false,
           "notNull": false
         },
