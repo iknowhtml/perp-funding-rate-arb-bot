@@ -4,11 +4,11 @@
  * @see {@link ../../../../adrs/0020-contract-interaction-patterns.md ADR-0020: Contract Interaction Patterns}
  */
 
-import type { Address } from "viem";
+import type { Address, Hex } from "viem";
 
 export type MulticallPayload = {
   /** Encoded call data for each call in the multicall. */
-  calls: readonly `0x${string}`[];
+  calls: readonly Hex[];
   /** Native token value to send with the multicall (wei). */
   valueWei: bigint;
 };

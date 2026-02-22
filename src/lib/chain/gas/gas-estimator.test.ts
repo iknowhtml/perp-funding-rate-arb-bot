@@ -29,7 +29,7 @@ import {
   createGasEstimator,
   estimateExecutionFeeWeiOrThrow,
 } from "./gas-estimator";
-import type { GasEstimatorDeps, OrderType } from "./gas-estimator";
+import type { GasEstimatorDeps, GasOrderType } from "./gas-estimator";
 
 const mockPublicClient = {
   readContract: async () => 500_000n,
@@ -96,14 +96,14 @@ describe("estimateExecutionFeeWeiOrThrow", () => {
   });
 });
 
-describe("OrderType", () => {
-  const orderTypes: OrderType[] = ["increase", "decrease", "deposit", "withdrawal"];
+describe("GasOrderType", () => {
+  const orderTypes: GasOrderType[] = ["increase", "decrease", "deposit", "withdrawal"];
 
   it("estimateExecutionFeeWei resolves for all order types", async () => {
     const estimator = createGasEstimator(deps);
     for (const orderType of orderTypes) {
       const fee = await estimator.estimateExecutionFeeWei(orderType);
-      expect(typeof fee === "bigint").toBe(true);
+      expect(typeof fee).toBe("bigint");
     }
   });
 });

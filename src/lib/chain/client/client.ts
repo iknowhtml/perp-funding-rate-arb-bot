@@ -3,7 +3,7 @@ import { privateKeyToAccount } from "viem/accounts";
 
 import { ARBITRUM_CHAIN } from "../constants";
 
-import type { PublicClient, WalletClient } from "viem";
+import type { Hex, PublicClient, WalletClient } from "viem";
 
 export const createArbitrumPublicClient = (rpcUrl: string): PublicClient =>
   createPublicClient({
@@ -12,10 +12,7 @@ export const createArbitrumPublicClient = (rpcUrl: string): PublicClient =>
     batch: { multicall: true },
   });
 
-export const createArbitrumWalletClient = (
-  rpcUrl: string,
-  privateKey: `0x${string}`,
-): WalletClient =>
+export const createArbitrumWalletClient = (rpcUrl: string, privateKey: Hex): WalletClient =>
   createWalletClient({
     account: privateKeyToAccount(privateKey),
     chain: ARBITRUM_CHAIN,

@@ -14,15 +14,13 @@ import {
   increaseOrderGasLimitKey,
   withdrawalGasLimitKey,
 } from "@gmx-io/sdk/configs/dataStore";
-import type { PublicClient } from "viem";
+import { type Hex, type PublicClient, isHex } from "viem";
 import { ChainError } from "../errors";
 
-export type OrderType = "increase" | "decrease" | "deposit" | "withdrawal";
+export type GasOrderType = "increase" | "decrease" | "deposit" | "withdrawal";
 
 const EXECUTION_FEE_BUFFER_NUMERATOR = 3n;
 const EXECUTION_FEE_BUFFER_DENOMINATOR = 2n;
-
-const isHex = (s: string): s is `0x${string}` => typeof s === "string" && s.startsWith("0x");
 
 export type GasEstimatorDeps = {
   publicClient: PublicClient;
@@ -30,7 +28,7 @@ export type GasEstimatorDeps = {
   maxExecutionFeeWei: bigint;
 };
 
-const getExecutionGasLimitKey = (orderType: OrderType): `0x${string}` => {
+const getExecutionGasLimitKey = (orderType: GasOrderType): Hex => {
   const raw =
     orderType === "increase"
       ? increaseOrderGasLimitKey()
@@ -53,7 +51,7 @@ const getExecutionGasLimitKey = (orderType: OrderType): `0x${string}` => {
  */
 export const estimateExecutionFeeWei = async (
   deps: GasEstimatorDeps,
-  orderType: OrderType,
+  orderType: GasOrderType,
 ): Promise<bigint> => {
   const chainId = deps.chainId ?? ARBITRUM;
   const dataStoreAddress = getContract(chainId, "DataStore");
@@ -90,7 +88,7 @@ export const checkExecutionFeeOrThrow = (deps: GasEstimatorDeps, feeWei: bigint)
  */
 export const estimateExecutionFeeWeiOrThrow = async (
   deps: GasEstimatorDeps,
-  orderType: OrderType,
+  orderType: GasOrderType,
 ): Promise<bigint> => {
   const feeWei = await estimateExecutionFeeWei(deps, orderType);
   checkExecutionFeeOrThrow(deps, feeWei);
@@ -99,12 +97,18 @@ export const estimateExecutionFeeWeiOrThrow = async (
 
 export type CreateGasEstimatorConfig = GasEstimatorDeps;
 
+export type GasEstimator = {
+  estimateExecutionFeeWei: (orderType: GasOrderType) => Promise<bigint>;
+  checkExecutionFeeOrThrow: (feeWei: bigint) => void;
+  estimateExecutionFeeWeiOrThrow: (orderType: GasOrderType) => Promise<bigint>;
+};
+
 /**
  * Factory for gas estimation and circuit breaker. Returns functions that use the given deps.
  */
-export const createGasEstimator = (config: CreateGasEstimatorConfig) => ({
-  estimateExecutionFeeWei: (orderType: OrderType) => estimateExecutionFeeWei(config, orderType),
+export const createGasEstimator = (config: CreateGasEstimatorConfig): GasEstimator => ({
+  estimateExecutionFeeWei: (orderType: GasOrderType) => estimateExecutionFeeWei(config, orderType),
   checkExecutionFeeOrThrow: (feeWei: bigint) => checkExecutionFeeOrThrow(config, feeWei),
-  estimateExecutionFeeWeiOrThrow: (orderType: OrderType) =>
+  estimateExecutionFeeWeiOrThrow: (orderType: GasOrderType) =>
     estimateExecutionFeeWeiOrThrow(config, orderType),
 });

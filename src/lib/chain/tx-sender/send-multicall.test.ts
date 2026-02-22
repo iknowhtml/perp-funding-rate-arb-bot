@@ -10,7 +10,7 @@ vi.mock("@gmx-io/sdk/configs/contracts", () => ({
 vi.mock("@gmx-io/sdk/configs/chainIds", () => ({ ARBITRUM: 42161 }));
 
 const payload: MulticallPayload = {
-  calls: ["0x01" as `0x${string}`, "0x02" as `0x${string}`],
+  calls: ["0x01", "0x02"],
   valueWei: 100_000n,
 };
 

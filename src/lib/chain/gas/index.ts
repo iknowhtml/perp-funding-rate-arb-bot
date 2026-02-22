@@ -6,6 +6,7 @@ export {
 } from "./gas-estimator";
 export type {
   CreateGasEstimatorConfig,
+  GasEstimator,
   GasEstimatorDeps,
-  OrderType,
+  GasOrderType,
 } from "./gas-estimator";

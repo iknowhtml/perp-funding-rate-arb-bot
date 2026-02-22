@@ -17,8 +17,9 @@ export {
 } from "./gas";
 export type {
   CreateGasEstimatorConfig,
+  GasEstimator,
   GasEstimatorDeps,
-  OrderType as GasOrderType,
+  GasOrderType,
 } from "./gas";
 export {
   buildDecreaseOrderPayload,

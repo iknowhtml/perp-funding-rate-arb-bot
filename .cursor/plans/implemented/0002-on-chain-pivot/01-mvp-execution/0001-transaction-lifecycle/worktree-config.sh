@@ -20,7 +20,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(cd "$SCRIPT_DIR" && git rev-parse --show-toplevel)"
+# Allow REPO override so merge/verify/cleanup can run from main repo when plan lives in a worktree
+REPO="${REPO:-$(cd "$SCRIPT_DIR" && git rev-parse --show-toplevel)}"
 WORKTREE_ROOT="${WORKTREE_ROOT:-$(dirname "$REPO")/worktrees}"
 
 source "$REPO/.cursor/scripts/worktree-lib.sh"
