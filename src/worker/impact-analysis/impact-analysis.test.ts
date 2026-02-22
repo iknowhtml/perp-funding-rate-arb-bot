@@ -57,22 +57,28 @@ describe("evaluateGoNoGo", () => {
     const d = calculateImpactDistribution([1n, 2n, 2n], "0x123");
     const result = evaluateGoNoGo([d]);
     expect(result.passed).toBe(true);
-    expect(result.markets[0].medianPassed).toBe(true);
-    expect(result.markets[0].p90Passed).toBe(true);
+    const m0 = result.markets[0];
+    expect(m0).toBeDefined();
+    expect(m0!.medianPassed).toBe(true);
+    expect(m0!.p90Passed).toBe(true);
   });
 
   it("fails when median >= 3", () => {
     const d = calculateImpactDistribution([3n, 4n, 5n], "0x123");
     const result = evaluateGoNoGo([d]);
     expect(result.passed).toBe(false);
-    expect(result.markets[0].medianPassed).toBe(false);
+    const m0 = result.markets[0];
+    expect(m0).toBeDefined();
+    expect(m0!.medianPassed).toBe(false);
   });
 
   it("fails when p90 >= 8", () => {
     const d = calculateImpactDistribution([1n, 2n, 8n], "0x123");
     const result = evaluateGoNoGo([d]);
     expect(result.passed).toBe(false);
-    expect(result.markets[0].p90Passed).toBe(false);
+    const m0 = result.markets[0];
+    expect(m0).toBeDefined();
+    expect(m0!.p90Passed).toBe(false);
   });
 
   it("uses custom thresholds", () => {
@@ -113,7 +119,9 @@ describe("getImpactDistributions", () => {
 
     const result = await getImpactDistributions(mockDb, { sinceDaysAgo: 1 });
     expect(result).toHaveLength(1);
-    expect(result[0].market).toBe("0x123");
-    expect(result[0].sampleCount).toBe(2);
+    const r0 = result[0];
+    expect(r0).toBeDefined();
+    expect(r0!.market).toBe("0x123");
+    expect(r0!.sampleCount).toBe(2);
   });
 });

@@ -1,10 +1,28 @@
+import type { Mock } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 import { MaxReconnectsExceededError, classifyCloseCode, createWebSocketManager } from "./websocket";
 
+/** Mock WebSocket instance shape for tests (ws is mocked). */
+interface MockWsInstance {
+  on: Mock;
+  send: Mock;
+  close: Mock;
+  ping: Mock;
+  removeAllListeners: Mock;
+  removeListener?: Mock;
+  readyState?: number;
+}
+
+/** Predicate for .on() mock calls: event name is first element. */
+const callEventIs =
+  (event: string) =>
+  (call: unknown[]): boolean =>
+    call[0] === event;
+
 // Mock ws module
 vi.mock("ws", () => {
-  const createMockInstance = () => ({
+  const createMockInstance = (): MockWsInstance => ({
     on: vi.fn(),
     send: vi.fn(),
     close: vi.fn(),
@@ -14,12 +32,7 @@ vi.mock("ws", () => {
   });
 
   const mockWs = vi.fn(() => createMockInstance());
-
-  // Add WebSocket constants
-  mockWs.CONNECTING = 0;
-  mockWs.OPEN = 1;
-  mockWs.CLOSING = 2;
-  mockWs.CLOSED = 3;
+  Object.assign(mockWs, { CONNECTING: 0, OPEN: 1, CLOSING: 2, CLOSED: 3 });
 
   return {
     default: mockWs,
@@ -51,13 +64,13 @@ describe("classifyCloseCode", () => {
 });
 
 describe("createWebSocketManager", () => {
-  let latestMockInstance: ReturnType<typeof WebSocket> | undefined;
+  let latestMockInstance: MockWsInstance | undefined;
 
   beforeEach(() => {
     vi.useFakeTimers();
     latestMockInstance = undefined;
     vi.mocked(WebSocket).mockImplementation(() => {
-      const instance = {
+      const instance: MockWsInstance = {
         on: vi.fn(),
         send: vi.fn(),
         close: vi.fn(),
@@ -71,12 +84,12 @@ describe("createWebSocketManager", () => {
         writable: true,
         configurable: true,
       });
-      latestMockInstance = instance as unknown as ReturnType<typeof WebSocket>;
-      return latestMockInstance;
+      latestMockInstance = instance;
+      return latestMockInstance as unknown as WebSocket;
     });
   });
 
-  const getMockInstance = (): ReturnType<typeof WebSocket> => {
+  const getMockInstance = (): MockWsInstance => {
     if (!latestMockInstance) {
       throw new Error("Mock instance not created yet - call ws.connect() first");
     }
@@ -109,7 +122,7 @@ describe("createWebSocketManager", () => {
       const mockInstance = getMockInstance();
       const onOpen = vi
         .mocked(mockInstance.on)
-        .mock.calls.find((call) => call[0] === "open")?.[1] as () => void;
+        .mock.calls.find(callEventIs("open"))?.[1] as () => void;
       expect(onOpen).toBeDefined();
 
       // Trigger open
@@ -135,7 +148,7 @@ describe("createWebSocketManager", () => {
       const mockInstance = getMockInstance();
       const onOpen = vi
         .mocked(mockInstance.on)
-        .mock.calls.find((call) => call[0] === "open")?.[1] as () => void;
+        .mock.calls.find(callEventIs("open"))?.[1] as () => void;
       onOpen?.();
 
       await Promise.all([promise1, promise2]);
@@ -154,7 +167,7 @@ describe("createWebSocketManager", () => {
       const connectPromise = ws.connect();
       const onOpen = vi
         .mocked(getMockInstance().on)
-        .mock.calls.find((call) => call[0] === "open")?.[1] as () => void;
+        .mock.calls.find(callEventIs("open"))?.[1] as () => void;
       onOpen?.();
       await connectPromise;
 
@@ -166,7 +179,7 @@ describe("createWebSocketManager", () => {
       const connectPromise2 = ws.connect();
       const onOpen2 = vi
         .mocked(getMockInstance().on)
-        .mock.calls.find((call) => call[0] === "open")?.[1] as () => void;
+        .mock.calls.find(callEventIs("open"))?.[1] as () => void;
       onOpen2?.();
       await connectPromise2;
 
@@ -182,7 +195,7 @@ describe("createWebSocketManager", () => {
       const connectPromise = ws.connect();
       const onOpen = vi
         .mocked(getMockInstance().on)
-        .mock.calls.find((call) => call[0] === "open")?.[1] as () => void;
+        .mock.calls.find(callEventIs("open"))?.[1] as () => void;
       onOpen?.();
       await connectPromise;
 
@@ -197,7 +210,7 @@ describe("createWebSocketManager", () => {
       const connectPromise = ws.connect();
       const onOpen = vi
         .mocked(getMockInstance().on)
-        .mock.calls.find((call) => call[0] === "open")?.[1] as () => void;
+        .mock.calls.find(callEventIs("open"))?.[1] as () => void;
       onOpen?.();
       await connectPromise;
 
@@ -217,17 +230,14 @@ describe("createWebSocketManager", () => {
       const connectPromise = ws.connect();
       const onOpen = vi
         .mocked(getMockInstance().on)
-        .mock.calls.find((call) => call[0] === "open")?.[1] as () => void;
+        .mock.calls.find(callEventIs("open"))?.[1] as () => void;
       onOpen?.();
       await connectPromise;
 
       // Simulate close
       const onClose = vi
         .mocked(getMockInstance().on)
-        .mock.calls.find((call) => call[0] === "close")?.[1] as (
-        code: number,
-        reason: Buffer,
-      ) => void;
+        .mock.calls.find(callEventIs("close"))?.[1] as (code: number, reason: Buffer) => void;
       onClose?.(1006, Buffer.from(""));
 
       // Advance timer to trigger reconnect attempt
@@ -250,7 +260,7 @@ describe("createWebSocketManager", () => {
       const mockInstance = getMockInstance();
       const onOpen = vi
         .mocked(mockInstance.on)
-        .mock.calls.find((call) => call[0] === "open")?.[1] as () => void;
+        .mock.calls.find(callEventIs("open"))?.[1] as () => void;
       onOpen?.();
       await connectPromise;
 
@@ -282,7 +292,7 @@ describe("createWebSocketManager", () => {
       const mockInstance = getMockInstance();
       const onOpen = vi
         .mocked(mockInstance.on)
-        .mock.calls.find((call) => call[0] === "open")?.[1] as () => void;
+        .mock.calls.find(callEventIs("open"))?.[1] as () => void;
 
       // Set readyState to OPEN before triggering open event
       Object.defineProperty(mockInstance, "readyState", {
@@ -308,7 +318,7 @@ describe("createWebSocketManager", () => {
       const connectPromise = ws.connect();
       const onOpen = vi
         .mocked(getMockInstance().on)
-        .mock.calls.find((call) => call[0] === "open")?.[1] as () => void;
+        .mock.calls.find(callEventIs("open"))?.[1] as () => void;
       onOpen?.();
       await connectPromise;
 
@@ -317,7 +327,7 @@ describe("createWebSocketManager", () => {
       // Simulate message
       const onMessage = vi
         .mocked(getMockInstance().on)
-        .mock.calls.find((call) => call[0] === "message")?.[1] as (data: WebSocket.RawData) => void;
+        .mock.calls.find(callEventIs("message"))?.[1] as (data: WebSocket.RawData) => void;
       onMessage?.(Buffer.from(JSON.stringify({ type: "test", data: "value" })));
 
       expect(handler).toHaveBeenCalledTimes(1);
@@ -333,7 +343,7 @@ describe("createWebSocketManager", () => {
       const connectPromise = ws.connect();
       const onOpen = vi
         .mocked(getMockInstance().on)
-        .mock.calls.find((call) => call[0] === "open")?.[1] as () => void;
+        .mock.calls.find(callEventIs("open"))?.[1] as () => void;
       onOpen?.();
       await connectPromise;
 
@@ -341,7 +351,7 @@ describe("createWebSocketManager", () => {
 
       const onMessage = vi
         .mocked(getMockInstance().on)
-        .mock.calls.find((call) => call[0] === "message")?.[1] as (data: WebSocket.RawData) => void;
+        .mock.calls.find(callEventIs("message"))?.[1] as (data: WebSocket.RawData) => void;
       onMessage?.(Buffer.from(JSON.stringify({ type: "test" })));
 
       expect(handler).not.toHaveBeenCalled();
@@ -369,16 +379,14 @@ describe("createWebSocketManager", () => {
       let mockInstance = getMockInstance();
       const onOpen = vi
         .mocked(mockInstance.on)
-        .mock.calls.find((call) => call[0] === "open")?.[1] as () => void;
+        .mock.calls.find(callEventIs("open"))?.[1] as () => void;
       onOpen?.();
       await connectPromise;
 
       expect(ws.getState()).toBe("CONNECTED");
 
       // Simulate close
-      const onClose = vi
-        .mocked(mockInstance.on)
-        .mock.calls.find((call) => call[0] === "close")?.[1] as (
+      const onClose = vi.mocked(mockInstance.on).mock.calls.find(callEventIs("close"))?.[1] as (
         code: number,
         reason: Buffer,
       ) => void;
@@ -394,7 +402,7 @@ describe("createWebSocketManager", () => {
       mockInstance = getMockInstance();
       const onOpen2 = vi
         .mocked(mockInstance.on)
-        .mock.calls.find((call) => call[0] === "open")?.[1] as () => void;
+        .mock.calls.find(callEventIs("open"))?.[1] as () => void;
       onOpen2?.();
       await vi.advanceTimersByTimeAsync(1);
 
@@ -424,8 +432,8 @@ describe("createWebSocketManager", () => {
         const mockInstance = getMockInstance();
         const onCalls = vi.mocked(mockInstance.on).mock.calls;
         return {
-          onOpen: onCalls.find((call) => call[0] === "open")?.[1] as () => void,
-          onClose: onCalls.find((call) => call[0] === "close")?.[1] as (
+          onOpen: onCalls.find(callEventIs("open"))?.[1] as () => void,
+          onClose: onCalls.find(callEventIs("close"))?.[1] as (
             code: number,
             reason: Buffer,
           ) => void,
@@ -488,8 +496,8 @@ describe("createWebSocketManager", () => {
         const mockInstance = getMockInstance();
         const onCalls = vi.mocked(mockInstance.on).mock.calls;
         return {
-          onOpen: onCalls.find((call) => call[0] === "open")?.[1] as () => void,
-          onClose: onCalls.find((call) => call[0] === "close")?.[1] as (
+          onOpen: onCalls.find(callEventIs("open"))?.[1] as () => void,
+          onClose: onCalls.find(callEventIs("close"))?.[1] as (
             code: number,
             reason: Buffer,
           ) => void,
@@ -546,7 +554,7 @@ describe("createWebSocketManager", () => {
       const mockInstance = getMockInstance();
       const onOpen = vi
         .mocked(mockInstance.on)
-        .mock.calls.find((call) => call[0] === "open")?.[1] as () => void;
+        .mock.calls.find(callEventIs("open"))?.[1] as () => void;
       onOpen?.();
       await connectPromise;
 
@@ -578,7 +586,7 @@ describe("createWebSocketManager", () => {
       const mockInstance = getMockInstance();
       const onOpen = vi
         .mocked(mockInstance.on)
-        .mock.calls.find((call) => call[0] === "open")?.[1] as () => void;
+        .mock.calls.find(callEventIs("open"))?.[1] as () => void;
       onOpen?.();
       await connectPromise;
 

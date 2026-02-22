@@ -11,6 +11,19 @@
 
 export type StreamId = string;
 
+export interface StreamStatus {
+  healthy: boolean;
+  // The timestamp of the last message received for this stream in unix milliseconds
+  lastMessageTime: number | null;
+}
+
+/** Per-stream health status. Explicit optional keys for known streams (ticker, orders) allow dot access; index signature covers other stream IDs. */
+export interface HealthStatus {
+  ticker?: StreamStatus;
+  orders?: StreamStatus;
+  [key: string]: StreamStatus | undefined;
+}
+
 export interface StreamConfig {
   /** Expected message interval (e.g., 1000ms for chatty ticker) */
   expectedIntervalMs: number;
@@ -41,7 +54,7 @@ export interface HealthMonitor {
   /** Check if all required streams are healthy */
   isHealthy(): boolean;
   /** Get health status for all streams */
-  getStatus(): Record<StreamId, { healthy: boolean; lastMessageMs: number | null }>;
+  getStatus(): HealthStatus;
   /** Start monitoring */
   start(): void;
   /** Stop monitoring */
@@ -172,14 +185,14 @@ export const createHealthMonitor = (config: HealthMonitorConfig): HealthMonitor 
     return true;
   };
 
-  const getStatus = (): Record<StreamId, { healthy: boolean; lastMessageMs: number | null }> => {
-    const status: Record<StreamId, { healthy: boolean; lastMessageMs: number | null }> = {};
+  const getStatus = (): HealthStatus => {
+    const status: HealthStatus = {};
     const now = Date.now();
 
     for (const [streamId, state] of streamStates.entries()) {
       const healthy = isStreamHealthy(streamId);
       const lastMessageMs = state.lastMessageTime ? now - state.lastMessageTime : null;
-      status[streamId] = { healthy, lastMessageMs };
+      status[streamId] = { healthy, lastMessageTime: lastMessageMs };
     }
 
     return status;

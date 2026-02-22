@@ -60,6 +60,8 @@ describe("health route", () => {
 
     expect(mockExecute).toHaveBeenCalled();
     // Check that it was called with a SQL object (can't directly compare sql template tags)
-    expect(mockExecute.mock.calls[0][0]).toBeDefined();
+    const firstCall = mockExecute.mock.calls[0];
+    expect(firstCall).toBeDefined();
+    expect(firstCall?.[0]).toBeDefined();
   });
 });

@@ -372,22 +372,25 @@ describe("createSerialQueue", () => {
         });
 
         // Resolve jobs one by one (they execute serially)
-        if (resolvers.length > 0) {
-          resolvers[0](); // Resolve first job
+        const r0 = resolvers[0];
+        if (r0) {
+          r0(); // Resolve first job
           await new Promise((resolve) => {
             setTimeout(resolve, 50);
           });
         }
 
-        if (resolvers.length > 1) {
-          resolvers[1](); // Resolve second job
+        const r1 = resolvers[1];
+        if (r1) {
+          r1(); // Resolve second job
           await new Promise((resolve) => {
             setTimeout(resolve, 50);
           });
         }
 
-        if (resolvers.length > 2) {
-          resolvers[2](); // Resolve third job
+        const r2 = resolvers[2];
+        if (r2) {
+          r2(); // Resolve third job
         }
 
         // Wait for idle with timeout

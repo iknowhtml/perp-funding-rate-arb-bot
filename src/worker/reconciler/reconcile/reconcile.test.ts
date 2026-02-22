@@ -170,8 +170,10 @@ describe("runReconcile", () => {
     const result = await runReconcile(mockAdapter, stateStore, DEFAULT_CONFIG, mockLogger);
 
     expect(result.balanceInconsistencies).toHaveLength(1);
-    expect(result.balanceInconsistencies[0].severity).toBe("warning");
-    expect(result.balanceInconsistencies[0].asset).toBe("BTC");
+    const b0 = result.balanceInconsistencies[0];
+    expect(b0).toBeDefined();
+    expect(b0!.severity).toBe("warning");
+    expect(b0!.asset).toBe("BTC");
     expect(result.consistent).toBe(false);
   });
 
@@ -185,7 +187,9 @@ describe("runReconcile", () => {
     const result = await runReconcile(mockAdapter, stateStore, DEFAULT_CONFIG, mockLogger);
 
     expect(result.balanceInconsistencies).toHaveLength(1);
-    expect(result.balanceInconsistencies[0].severity).toBe("critical");
+    const b0Critical = result.balanceInconsistencies[0];
+    expect(b0Critical).toBeDefined();
+    expect(b0Critical!.severity).toBe("critical");
     expect(result.consistent).toBe(false);
     expect(mockLogger.warn).toHaveBeenCalled();
   });
@@ -272,7 +276,9 @@ describe("runReconcile", () => {
     const result = await runReconcile(mockAdapter, stateStore, DEFAULT_CONFIG, mockLogger);
 
     expect(result.balanceInconsistencies).toHaveLength(1);
-    expect(result.balanceInconsistencies[0].asset).toBe("BTC");
+    const b0Multi = result.balanceInconsistencies[0];
+    expect(b0Multi).toBeDefined();
+    expect(b0Multi!.asset).toBe("BTC");
   });
 
   it("should report both position and balance inconsistencies", async () => {

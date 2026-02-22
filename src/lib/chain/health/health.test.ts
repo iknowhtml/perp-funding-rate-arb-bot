@@ -31,7 +31,9 @@ describe("checkRpcHealth", () => {
 
     const result = await checkRpcHealth(mockClient as never, 60n);
     expect(result.status).toBe("unhealthy");
-    expect(result.error).toContain("Block age");
+    if (result.status === "unhealthy") {
+      expect(result.error).toContain("Block age");
+    }
   });
 
   it("returns unhealthy on RPC error", async () => {
@@ -42,6 +44,8 @@ describe("checkRpcHealth", () => {
 
     const result = await checkRpcHealth(mockClient as never);
     expect(result.status).toBe("unhealthy");
-    expect(result.error).toBe("network error");
+    if (result.status === "unhealthy") {
+      expect(result.error).toBe("network error");
+    }
   });
 });

@@ -268,9 +268,17 @@ describe("createScheduler", () => {
       expect(callTimes.length).toBe(4);
 
       // Check that delays increase exponentially
-      const delay1 = callTimes[1] - callTimes[0];
-      const delay2 = callTimes[2] - callTimes[1];
-      const delay3 = callTimes[3] - callTimes[2];
+      const t0 = callTimes[0];
+      const t1 = callTimes[1];
+      const t2 = callTimes[2];
+      const t3 = callTimes[3];
+      expect(t0).toBeDefined();
+      expect(t1).toBeDefined();
+      expect(t2).toBeDefined();
+      expect(t3).toBeDefined();
+      const delay1 = t1! - t0!;
+      const delay2 = t2! - t1!;
+      const delay3 = t3! - t2!;
 
       // Allow some tolerance for timing
       expect(delay1).toBeGreaterThanOrEqual(900);

@@ -140,7 +140,8 @@ describe("createDataPlane", () => {
 
       // Get the callback passed to subscribeTicker
       const subscribeCall = vi.mocked(mockAdapter.subscribeTicker).mock.calls[0];
-      const tickerCallback = subscribeCall[1] as (ticker: Ticker) => void;
+      expect(subscribeCall).toBeDefined();
+      const tickerCallback = subscribeCall![1] as (ticker: Ticker) => void;
 
       const ticker: Ticker = {
         symbol: "BTC-USD",

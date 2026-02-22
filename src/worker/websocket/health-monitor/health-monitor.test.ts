@@ -23,7 +23,11 @@ describe("createHealthMonitor", () => {
       health.recordMessage("ticker");
 
       const status = health.getStatus();
-      expect(status.ticker.lastMessageMs).toBeLessThan(100);
+      const tickerStatus = status.ticker;
+      expect(tickerStatus).toBeDefined();
+      if (tickerStatus) {
+        expect(tickerStatus.lastMessageTime).toBeLessThan(100);
+      }
     });
   });
 
@@ -149,14 +153,19 @@ describe("createHealthMonitor", () => {
       health.recordMessage("ticker");
 
       const status = health.getStatus();
+      const tickerStatus = status.ticker;
+      expect(tickerStatus).toBeDefined();
+      if (tickerStatus) {
+        expect(tickerStatus.healthy).toBe(true);
+        expect(tickerStatus.lastMessageTime).toBeLessThan(100);
+      }
 
-      expect(status.ticker).toBeDefined();
-      expect(status.ticker.healthy).toBe(true);
-      expect(status.ticker.lastMessageMs).toBeLessThan(100);
-
-      expect(status.orders).toBeDefined();
-      expect(status.orders.healthy).toBe(false);
-      expect(status.orders.lastMessageMs).toBeNull();
+      const ordersStatus = status.orders;
+      expect(ordersStatus).toBeDefined();
+      if (ordersStatus) {
+        expect(ordersStatus.healthy).toBe(false);
+        expect(ordersStatus.lastMessageTime).toBeNull();
+      }
     });
   });
 
@@ -270,7 +279,11 @@ describe("createHealthMonitor", () => {
       health.recordMessage("orders");
 
       const status = health.getStatus();
-      expect(status.orders.lastMessageMs).toBeLessThan(100);
+      const ordersStatus = status.orders;
+      expect(ordersStatus).toBeDefined();
+      if (ordersStatus) {
+        expect(ordersStatus.lastMessageTime).toBeLessThan(100);
+      }
     });
   });
 });

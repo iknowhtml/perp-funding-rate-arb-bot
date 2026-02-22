@@ -106,8 +106,10 @@ describe("parseAdapterConfig", () => {
     });
 
     expect(config.exchange).toBe("coinbase");
-    expect(config.apiKey).toBe("test-key");
-    expect(config.apiSecret).toBe("test-secret");
+    if (config.exchange === "coinbase") {
+      expect(config.apiKey).toBe("test-key");
+      expect(config.apiSecret).toBe("test-secret");
+    }
   });
 
   it("should parse valid Binance config", () => {
@@ -118,8 +120,10 @@ describe("parseAdapterConfig", () => {
     });
 
     expect(config.exchange).toBe("binance");
-    expect(config.apiKey).toBe("test-key");
-    expect(config.apiSecret).toBe("test-secret");
+    if (config.exchange === "binance") {
+      expect(config.apiKey).toBe("test-key");
+      expect(config.apiSecret).toBe("test-secret");
+    }
   });
 
   it("should parse valid Bybit config", () => {
@@ -130,8 +134,10 @@ describe("parseAdapterConfig", () => {
     });
 
     expect(config.exchange).toBe("bybit");
-    expect(config.apiKey).toBe("test-key");
-    expect(config.apiSecret).toBe("test-secret");
+    if (config.exchange === "bybit") {
+      expect(config.apiKey).toBe("test-key");
+      expect(config.apiSecret).toBe("test-secret");
+    }
   });
 
   it("should parse valid paper config with balances", () => {
@@ -141,7 +147,9 @@ describe("parseAdapterConfig", () => {
     });
 
     expect(config.exchange).toBe("paper");
-    expect(config.initialBalances).toEqual({ USD: 1000n, BTC: 1n });
+    if (config.exchange === "paper") {
+      expect(config.initialBalances).toEqual({ USD: 1000n, BTC: 1n });
+    }
   });
 
   it("should parse valid paper config without balances", () => {
@@ -150,7 +158,9 @@ describe("parseAdapterConfig", () => {
     });
 
     expect(config.exchange).toBe("paper");
-    expect(config.initialBalances).toBeUndefined();
+    if (config.exchange === "paper") {
+      expect(config.initialBalances).toBeUndefined();
+    }
   });
 
   it("should reject config with missing apiKey", () => {
