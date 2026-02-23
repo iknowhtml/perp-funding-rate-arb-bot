@@ -1,11 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/logger", () => ({
-  logger: {
+vi.mock("@/lib/logger", () => {
+  const mockLogger = {
+    debug: vi.fn(),
+    info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
-  },
-}));
+  };
+  return {
+    createLogger: () => mockLogger,
+  };
+});
 
 import { type ScheduledTask, createScheduler } from "./scheduler";
 
@@ -194,7 +199,8 @@ describe("createScheduler", () => {
     });
 
     it("should log error after all retries exhausted", async () => {
-      const { logger } = await import("@/lib/logger");
+      const { createLogger } = await import("@/lib/logger");
+      const logger = createLogger();
       const scheduler = createScheduler();
 
       const taskFn = vi.fn().mockRejectedValue(new Error("Always fails"));
@@ -431,7 +437,8 @@ describe("createScheduler", () => {
     });
 
     it("should timeout if tasks take too long", async () => {
-      const { logger } = await import("@/lib/logger");
+      const { createLogger } = await import("@/lib/logger");
+      const logger = createLogger();
       const scheduler = createScheduler();
 
       // Task that never completes
@@ -474,7 +481,8 @@ describe("createScheduler", () => {
 
   describe("error handling", () => {
     it("should catch and log errors without crashing", async () => {
-      const { logger } = await import("@/lib/logger");
+      const { createLogger } = await import("@/lib/logger");
+      const logger = createLogger();
       const scheduler = createScheduler();
 
       const error = new Error("Task error");

@@ -2,15 +2,17 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createStateTransition, createTransitionLogger } from "./persistence";
 
-// Mock logger to avoid environment variable requirements in tests
-vi.mock("@/lib/logger", () => ({
-  logger: {
+vi.mock("@/lib/logger", () => {
+  const mockLogger = {
+    debug: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
-    debug: vi.fn(),
-  },
-}));
+  };
+  return {
+    createLogger: () => mockLogger,
+  };
+});
 
 describe("persistence", () => {
   describe("createStateTransition", () => {

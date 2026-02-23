@@ -9,9 +9,11 @@
 
 import { randomUUID } from "node:crypto";
 
-import { logger } from "@/lib/logger";
+import { createLogger } from "@/lib/logger";
 
 import type { StateTransition } from "../types";
+
+const logger = createLogger();
 
 /**
  * Transition logger interface for recording state transitions.

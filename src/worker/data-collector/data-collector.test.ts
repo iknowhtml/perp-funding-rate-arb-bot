@@ -1,13 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/env/env", () => ({
-  env: {
+vi.mock("@/lib/env", () => {
+  const mockEnv = {
     DATABASE_URL: "postgresql://localhost/test",
     PORT: 3000,
     NODE_ENV: "test",
     ARBITRUM_RPC_URL: "https://arb1.arbitrum.io/rpc",
-  },
-}));
+  };
+  return { env: mockEnv, getEnv: () => mockEnv };
+});
 
 import { createDataCollector } from "./data-collector";
 

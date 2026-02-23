@@ -1,5 +1,5 @@
 import { type Database, executionEstimate } from "@/lib/db";
-import { logger } from "@/lib/logger";
+import { createLogger } from "@/lib/logger";
 import { gte } from "drizzle-orm";
 
 export const DEFAULT_MEDIAN_THRESHOLD_BPS = 3n;
@@ -122,6 +122,7 @@ export const runGoNoGoCheck = async (
 ): Promise<GoNoGoResult> => {
   const distributions = await getImpactDistributions(database);
   const result = evaluateGoNoGo(distributions, thresholds);
+  const logger = createLogger();
 
   for (const m of result.markets) {
     const status = m.medianPassed && m.p90Passed ? "PASS" : "FAIL";

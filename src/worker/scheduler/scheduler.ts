@@ -1,4 +1,4 @@
-import { logger } from "@/lib/logger";
+import { createLogger } from "@/lib/logger";
 
 export interface ScheduledTask {
   id: string;
@@ -45,6 +45,7 @@ const executeWithRetry = async (
       lastError = error instanceof Error ? error : new Error(String(error));
       if (attempt < config.maxRetries) {
         const delay = config.retryDelayMs * config.backoffMultiplier ** attempt;
+        const logger = createLogger();
         logger.warn(
           `Task ${taskId} failed (attempt ${attempt + 1}/${config.maxRetries + 1}), retrying in ${delay}ms`,
           {
@@ -94,6 +95,7 @@ export const createScheduler = (): Scheduler => {
       try {
         await executeWithRetry(task.fn, task.id);
       } catch (error) {
+        const logger = createLogger();
         logger.error(
           `Task ${task.id} failed after retries`,
           error instanceof Error ? error : new Error(String(error)),
@@ -139,6 +141,7 @@ export const createScheduler = (): Scheduler => {
       );
     }
     if (runningTasks.size > 0) {
+      const logger = createLogger();
       logger.warn(
         `Some tasks did not complete within timeout: ${Array.from(runningTasks).join(", ")}`,
       );

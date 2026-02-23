@@ -1,6 +1,6 @@
 import { BTC_USD_MARKET, ETH_USD_MARKET, type GmxTicker, fetchGmxTickers } from "@/adapters/gmx";
 import { type Database, executionEstimate } from "@/lib/db";
-import { logger } from "@/lib/logger";
+import { createLogger } from "@/lib/logger";
 import { createScheduler } from "@/worker/scheduler";
 import type { PublicClient, WalletClient } from "viem";
 
@@ -86,11 +86,13 @@ export const createImpactSampler = (deps: ImpactSamplerDeps): ImpactSampler => {
             acceptablePrice: result.acceptablePrice ?? undefined,
           });
 
+          const logger = createLogger();
           logger.debug("Recorded impact sample", {
             market: address,
             impactBps: result.simulatedImpactBps.toString(),
           });
         } catch (err) {
+          const logger = createLogger();
           logger.error(
             `Impact sample failed for ${name}`,
             err instanceof Error ? err : new Error(String(err)),
@@ -98,6 +100,7 @@ export const createImpactSampler = (deps: ImpactSamplerDeps): ImpactSampler => {
         }
       }
     } catch (err) {
+      const logger = createLogger();
       logger.error("Impact sampler failed", err instanceof Error ? err : new Error(String(err)));
     }
   };

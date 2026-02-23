@@ -1,16 +1,12 @@
 import { createWriteStream, existsSync, mkdirSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock config before importing logger (logger.ts imports from "../../config")
-vi.mock("../../config", () => ({
-  config: {
-    logging: {
-      level: "debug",
-    },
-    server: {
-      nodeEnv: "test",
-    },
-  },
+// Mock config before importing logger (logger imports getConfig from lib/config)
+vi.mock("@/lib/config", () => ({
+  getConfig: () => ({
+    logging: { level: "debug" as const },
+    server: { nodeEnv: "test" },
+  }),
 }));
 
 vi.mock("node:fs", () => ({
@@ -23,10 +19,11 @@ vi.mock("node:path", () => ({
   join: vi.fn((...args) => args.join("/")),
 }));
 
-import { createRotatingLogStream, logger } from "./logger";
+import { createLogger, createRotatingLogStream } from "@/lib/logger";
 
-describe("logger", () => {
+describe("createLogger", () => {
   it("should log info messages", () => {
+    const logger = createLogger();
     const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     logger.info("test message");
     expect(consoleSpy).toHaveBeenCalled();
@@ -34,6 +31,7 @@ describe("logger", () => {
   });
 
   it("should log error messages", () => {
+    const logger = createLogger();
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     logger.error("test error", new Error("test"));
     expect(consoleSpy).toHaveBeenCalled();
@@ -41,6 +39,7 @@ describe("logger", () => {
   });
 
   it("should include context in logs", () => {
+    const logger = createLogger();
     const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     logger.info("test message", { foo: "bar" });
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('"foo":"bar"'));

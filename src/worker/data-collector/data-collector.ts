@@ -1,7 +1,9 @@
 import { type GmxMarket, fetchGmxMarketsInfo, fetchGmxTickers } from "@/adapters/gmx";
 import { type Database, marketSnapshot } from "@/lib/db";
-import { logger } from "@/lib/logger";
+import { createLogger } from "@/lib/logger";
 import { createScheduler } from "@/worker/scheduler";
+
+const logger = createLogger();
 import type { PublicClient } from "viem";
 
 const COLLECT_INTERVAL_MS = 60_000;

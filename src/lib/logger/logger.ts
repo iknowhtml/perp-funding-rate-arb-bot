@@ -1,9 +1,9 @@
 import { type WriteStream, createWriteStream, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { config } from "../../config";
+import { getConfig } from "../config";
 
-import type { LogLevel } from "../schema";
+import type { LogLevel } from "./schema";
 
 export interface LoggerConfig {
   level: LogLevel;
@@ -57,6 +57,7 @@ const createLogEntry = (
 };
 
 const formatLog = (entry: LogEntry): string => {
+  const config = getConfig();
   if (config.server.nodeEnv === "development") {
     const contextStr = entry.context ? ` ${JSON.stringify(entry.context)}` : "";
     const errorStr = entry.error ? ` — ${entry.error.name}: ${entry.error.message}` : "";
@@ -72,39 +73,35 @@ export interface Logger {
   error: (message: string, error?: Error, context?: Record<string, unknown>) => void;
 }
 
-export const createLogger = (
-  loggerConfig: LoggerConfig = { level: config.logging.level },
-): Logger => {
+export const createLogger = (loggerConfig?: LoggerConfig): Logger => {
+  const config = getConfig();
+  const level = loggerConfig?.level ?? config.logging.level;
   return {
     debug: (message: string, context?: Record<string, unknown>): void => {
-      if (shouldLog("debug", loggerConfig.level)) {
+      if (shouldLog("debug", level)) {
         console.log(formatLog(createLogEntry("debug", message, context)));
       }
     },
 
     info: (message: string, context?: Record<string, unknown>): void => {
-      if (shouldLog("info", loggerConfig.level)) {
+      if (shouldLog("info", level)) {
         console.log(formatLog(createLogEntry("info", message, context)));
       }
     },
 
     warn: (message: string, context?: Record<string, unknown>): void => {
-      if (shouldLog("warn", loggerConfig.level)) {
+      if (shouldLog("warn", level)) {
         console.warn(formatLog(createLogEntry("warn", message, context)));
       }
     },
 
     error: (message: string, error?: Error, context?: Record<string, unknown>): void => {
-      if (shouldLog("error", loggerConfig.level)) {
+      if (shouldLog("error", level)) {
         console.error(formatLog(createLogEntry("error", message, context, error)));
       }
     },
   };
 };
-
-// Export a default logger instance for backward compatibility if needed,
-// but prefer createLogger.
-export const logger = createLogger();
 
 // Log rotation utility
 const LOG_DIR = "logs";
