@@ -167,7 +167,7 @@ src/lib/env/
 ├── env.ts      # parseEnv, env, getEnv, type Env
 ├── schema.ts     # envSchema (if substantial)
 └── env.test.ts # Tests
-├── index.ts      # Re-exports from env.ts
+├── index.ts      # Re-exports from env.ts & schema.ts as needed
 ```
 
 ### Example 2: Module with Named Implementation (logger)
