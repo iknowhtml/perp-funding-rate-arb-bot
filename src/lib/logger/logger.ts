@@ -56,14 +56,19 @@ const createLogEntry = (
   return entry;
 };
 
+/** Replacer so JSON.stringify serializes bigint as string (JSON does not support bigint). */
+const customReplacerFn = (_key: string, value: unknown): unknown =>
+  typeof value === "bigint" ? value.toString() : value;
+
 const formatLog = (entry: LogEntry): string => {
   const config = getConfig();
   if (config.server.nodeEnv === "development") {
-    const contextStr = entry.context ? ` ${JSON.stringify(entry.context)}` : "";
-    const errorStr = entry.error ? ` — ${entry.error.name}: ${entry.error.message}` : "";
-    return `${entry.timestamp} [${entry.level.toUpperCase()}] ${entry.message}${contextStr}${errorStr}`;
+    const contextStr = entry.context ? ` ${JSON.stringify(entry.context, customReplacerFn)}` : "";
+    const errorLine = entry.error ? ` — ${entry.error.name}: ${entry.error.message}` : "";
+    const stackStr = entry.error?.stack ? `\n${entry.error.stack}` : "";
+    return `${entry.timestamp} [${entry.level.toUpperCase()}] ${entry.message}${contextStr}${errorLine}${stackStr}`;
   }
-  return JSON.stringify(entry);
+  return JSON.stringify(entry, customReplacerFn);
 };
 
 export interface Logger {

@@ -45,6 +45,18 @@ describe("createLogger", () => {
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('"foo":"bar"'));
     consoleSpy.mockRestore();
   });
+
+  it("should serialize bigint in context as string", () => {
+    const logger = createLogger();
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    logger.info("test message", { amount: 1000n, label: "ok" });
+    const output = consoleSpy.mock.calls[0]?.[0];
+    expect(output).toBeDefined();
+    expect(typeof output).toBe("string");
+    expect(output).toContain("1000");
+    expect(output).toContain("ok");
+    consoleSpy.mockRestore();
+  });
 });
 
 describe("createRotatingLogStream", () => {
