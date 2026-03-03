@@ -8,9 +8,10 @@ description: Runs the dev server, waits for error/warning logs to appear, analyz
 Iteratively run the dev server, observe logs, fix issues, and re-verify until no errors or warnings remain.
 
 ## Workflow
-1. **Check if the dev server is already running**
-   - If it is, use the existing process.
-   - If it is not, start the dev server.
+1. **Tail the existing dev server; only start if none is running**
+   - **Always check port 3000 first**: e.g. `lsof -i :3000` (or equivalent) to see if the app is already listening. The dev server in this project listens on port 3000.
+   - If something is on port 3000, treat that as the running dev server: **tail that process’s output** (e.g. read the corresponding terminal file in the terminals folder). Do not start a second dev server (it would fail with EADDRINUSE).
+   - If port 3000 is free, start the dev server and capture its output (e.g. run in background and note the output file path).
 
 2. **Wait for logs to appear**
    - Allow enough time for the app to start and for periodic work (polling, sampling, cron) to run so that error or warning lines show up (e.g. 15–30 seconds, or longer if the first run is slow).
@@ -42,6 +43,8 @@ Iteratively run the dev server, observe logs, fix issues, and re-verify until no
 
 ## Conventions
 
+- **Port 3000**: The dev server listens on port 3000. Always check whether 3000 is in use before starting a new process; if it is, tail the existing process instead of starting another.
+- **Tail existing process**: Prefer tailing the existing dev server (read its terminal output file) rather than starting a new one. Only start `pnpm dev` when port 3000 is free.
 - **Terminal output**: Prefer reading the process output via the path given by the runner (e.g. `terminals/<id>.txt` or the path from the “Output will be written to …” message) rather than assuming a different location.
 - **Wait duration**: When in doubt, wait longer (e.g. 20–30 s) so that startup and one full polling/sampling interval complete.
 - **One fix per iteration**: Prefer one logical fix per loop iteration so that the cause of any new log line is clear.
@@ -49,7 +52,7 @@ Iteratively run the dev server, observe logs, fix issues, and re-verify until no
 
 ## Checklist (per iteration)
 
-- [ ] Dev server is running (background) and output is being captured.
+- [ ] Port 3000 checked; tailing existing dev server if in use, or dev server started and output captured.
 - [ ] Waited long enough for errors/warnings to appear.
 - [ ] Read the dev server terminal output fully.
 - [ ] Identified root cause and relevant code.
