@@ -31,65 +31,102 @@
 
 | Type | Convention | Example |
 |------|------------|---------|
-| Modules | kebab-case | `order-service.ts`, `risk-engine.ts` |
-| Test files | `*.test.ts` | `order-service.test.ts` |
+| Modules | kebab-case | `diff-detector.ts`, `context-store.ts` |
+| Test files | `*.test.ts` / `*.test.tsx` | `capture.test.ts`, `OverlayShell.test.tsx` |
 | Type files | kebab-case | `types.ts`, `schemas.ts` |
-| Directories | kebab-case | `lib/`, `utils/` |
+| React components | PascalCase | `OverlayShell.tsx` |
+| Directories | kebab-case | `lib/`, `components/` |
 
 ### Code
 
 | Type | Convention | Example |
 |------|------------|---------|
-| Functions | camelCase + verb | `calculateFee`, `getUser` |
+| Functions | camelCase + verb | `getFundingRate`, `getMarketInfo` |
 | Variables | camelCase | `fundingRate`, `spotPrice` |
-| Constants | SCREAMING_SNAKE_CASE | `MAX_RETRIES`, `DEFAULT_TIMEOUT_MS` |
-| Types | PascalCase | `OrderStatus`, `UserConfig` |
-| BigInt amounts | camelCase + unit suffix | `notionalCents`, `priceSats`, `rateBps` |
-| Records | `<plural>By<Key>` | `ordersById`, `usersByEmail` |
+| Constants | SCREAMING_SNAKE_CASE | `MAX_RETRIES`, `DEFAULT_DELAY_MS` |
+| Types | PascalCase | `OrderStatus`, `CaptureResult` |
+| BigInt amounts | camelCase + unit suffix | `durationMs`, `amountCents`, `rateBps` |
+| Records | `<plural>By<Key>` | `ordersById`, `handlersByChannel` |
 
-### No single-letter parameter names
+### Descriptive names (parameters and variables)
 
-**Use descriptive parameter names.** Do not use single-letter shorthands like `m`, `t`, `p`, `r`, `d` for parameters.
+**Use clear, descriptive names for parameters and variables.** Avoid single-letter names (`m`, `t`, `p`, `r`, `d`, `i`, `j`) and cryptic shorthands (`prev`, `curr`, `ts`, `dt`, `tmp`, `val`, `msg`, `err`) when a fuller name is clearer.
+
+- **Parameters:** Prefer names that convey meaning (e.g. `raw`, `item`, `previous`, `current`).
+- **Locals:** Prefer descriptive names (e.g. `snapshotTime`, `errorMessage`, `previousRow`, `sourceLength`).
+- **Schema/API-mandated short keys:** When the type or API requires a short property name (e.g. `ts`), use a descriptive local and assign to the key: `const snapshotTime = new Date(); return { ts: snapshotTime };`.
 
 ```typescript
 // ✅ Good
-const parseMarket = (rawMarket: GmxMarketsInfoResponse["markets"][number]): GmxMarket => ({ ... });
+const parseMarket = (raw: GmxMarketsInfoResponse["markets"][number]): GmxMarket => ({ ... });
 items.find((item) => item.id === id);
-
-// ❌ Bad
-const parseMarket = (m: GmxMarketsInfoResponse["markets"][number]): GmxMarket => ({ ... });
-items.find((t) => t.id === id);
-```
-
-**Exception:** Idiomatic callbacks where the meaning is obvious are acceptable: e.g. `.sort((a, b) => ...)`, `.reduce((acc, value) => ...)`, or framework conventions like Hono's `(c) =>` for context.
-
-### No abbreviated variable names
-
-**Use descriptive variable names.** Do not use abbreviated names like `ts`, `dt`, `tmp`, `val`, `msg`, `err` (as variable names) when a clearer name is available.
-
-```typescript
-// ✅ Good
 const snapshotTime = new Date();
 return { ts: snapshotTime, market, ... };
 const errorMessage = err instanceof Error ? err.message : String(err);
+const previousRow = Array.from({ length: targetLength + 1 }, (_, index) => index);
+const currentRow = new Array<number>(targetLength + 1);
 
 // ❌ Bad
+const parseMarket = (r: GmxMarketsInfoResponse["markets"][number]): GmxMarket => ({ ... });
+items.find((t) => t.id === id);
 const ts = new Date();
 return { ts, market, ... };
 const msg = err instanceof Error ? err.message : String(err);
+const prev = Array.from({ length: n + 1 }, (_, i) => i);
+const curr = new Array(n + 1);
 ```
 
-**Exception:** When the type or API mandates a short property name (e.g. `ts` in a schema), use a descriptive local variable and assign to the short key: `const snapshotTime = new Date(); return { ts: snapshotTime };`. Loop variables like `i`, `j` in simple loops are acceptable; prefer `index` or descriptive names when it improves clarity.
+**Exceptions:** Idiomatic callbacks (e.g. `.sort((a, b) => ...)`, `.reduce((acc, value) => ...)`, React `(e) =>` for events) and very short loop indices in tight numeric code may use short names when the meaning is obvious. Prefer `index` or a descriptive name when it improves clarity.
+
+
+**If a function is a React component** (used in JSX or passed to a `components` map), **name it like a component** (PascalCase). Do not use a `render` prefix.
+
+```typescript
+// ✅ Good: component name
+const CodeBlock: Components["code"] = (props) => <SyntaxHighlighter ... />;
+<ReactMarkdown components={{ code: CodeBlock }} />
+
+// ❌ Bad: "render" prefix for something that is just a component
+const renderCodeBlock = (props) => <SyntaxHighlighter ... />;
+<ReactMarkdown components={{ code: renderCodeBlock }} />
+```
+
+**Use "render" only when it fits the role:** a callback that returns JSX in a specific context, not a standalone component.
+
+- **Render props:** the prop is a function that "renders" with injected data: `render={(data) => <View data={data} />}` or `children={(state) => <div>{state.value}</div>`.
+- **Item/row renderers:** callbacks that render one item in a list or table: `renderItem={(item) => <Row key={item.id}>...</Row>}`, `renderRow={(row) => ...}`.
+- **Library APIs that expect a render callback:** e.g. a column definition `{ key: "name", render: (value) => <strong>{value}</strong> }`.
+
+In those cases the name describes the role (render prop, item renderer), not a component identity.
+
+### Omit explicit types when the type can be inferred
+
+**Do not add explicit type annotations on variables when TypeScript can infer the type.** Let the compiler infer from the initializer or from usage.
+
+```typescript
+// ✅ Good
+const previousRow = Array.from({ length: targetLength + 1 }, (_, index) => index);  // inferred number[]
+const currentRow = new Array<number>(targetLength + 1);                            // inferred number[]
+const items = getItems();                                                          // inferred from getItems()
+
+// ❌ Bad: redundant type annotations
+const previousRow: number[] = Array.from({ length: targetLength + 1 }, (_, index) => index);
+const currentRow: number[] = new Array(targetLength + 1);
+const items: Item[] = getItems();
+```
+
+**Exception:** Add an explicit type when it improves readability (e.g. complex union), when the initializer is `null`/`undefined` and you want a specific type, or when documenting the expected shape for other developers. Exported function **return types** should remain explicit (see [Explicit return types for exports](#explicit-return-types-for-exports)), except React components (see that section).
 
 ### Function Prefixes
 
 | Prefix | Use Case | Example |
 |--------|----------|---------|
-| `get*` | Retrieve data | `getUser`, `getBalance` |
+| `get*` | Retrieve data | `getUser`, `getBalance`, `getFundingRate` |
 | `calculate*` | Pure deterministic math | `calculateFee`, `calculateTotal` |
 | `check*` | Return boolean | `checkIsValid`, `checkHasPermission` |
 | `parse*` | Parse serialized data | `parseResponse`, `parseConfig` |
 | `create*` | Construct new values | `createOrder`, `createClient` |
+| `format*` | Format for display | `formatAmount`, `formatCents` |
 | `is*` | Type guards only | `isError`, `isValidOrder` |
 
 ---
@@ -116,6 +153,43 @@ function calculateTotal(items: Item[]): bigint {
 - **Factory functions over classes**: `createClient(config)` not `new Client(config)`
 - **Pure functions**: Minimize side effects, pass dependencies as arguments
 - **Immutable data**: Avoid mutating objects; use spread syntax
+
+### Parameter Destructuring
+
+Choose destructuring based on readability and how many properties you use.
+
+- **SHOULD** destructure when using **3+ properties** from an object parameter
+- **SHOULD** use the object reference when using **1–2 properties**
+- **SHOULD** use the object reference when the property name needs context for clarity
+- **SHOULD** use the object reference in long function bodies or when the full object is needed
+- **MUST** keep the same style within a module
+
+```typescript
+// ✅ Good: 3+ properties — destructure for clarity
+transactions.map(({ txHash, action, amount, network }) =>
+  formatRow(txHash, action, amount, network)
+);
+
+// ✅ Good: 1–2 properties — use object reference
+transactions.map((tx) => tx.txHash);
+transactions.map((tx) => tx.amount);
+
+// ✅ Good: Property needs context
+chains.map((chain) => chain.chainId); // clearer than destructuring to just `chainId`
+
+// ✅ Good: Full object needed
+transactions.map((tx) => ({ ...tx, status: "confirmed" }));
+```
+
+```typescript
+// ❌ Bad: Destructuring when using only 1 property — unnecessary ceremony
+transactions.map(({ txHash }) => txHash);
+
+// ❌ Bad: Not destructuring when using many properties — repetitive
+transactions.map((tx) =>
+  formatRow(tx.txHash, tx.action, tx.amount, tx.network, tx.date)
+);
+```
 
 ### Never Use `any`
 
@@ -169,11 +243,11 @@ const level = process.env.LOG_LEVEL as LogLevel; // Unsafe!
 
 ### Explicit Return Types for Exports
 
+**Exported functions should have an explicit return type.** This documents the contract and catches accidental return-type drift.
+
 ```typescript
 // ✅ Good
-export const formatAmount = (cents: bigint): string => {
-  return `$${(cents / 100n).toString()}`;
-};
+export const formatAmount = (cents: bigint): string => `$${(cents / 100n).toString()}`;
 
 // ❌ Bad: Inferred return type
 export const formatAmount = (cents: bigint) => {
