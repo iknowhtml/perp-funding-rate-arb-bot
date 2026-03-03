@@ -17,6 +17,29 @@ import { startWorker } from "./worker";
 const main = async (): Promise<void> => {
   const logger = createLogger({ level: "info" });
 
+  // Global handlers so fatal errors are logged and the process exits cleanly.
+  // uncaughtException: sync throws that escape every try/catch (e.g. at top level).
+  // unhandledRejection: Promise rejections with no .catch() or await in try/catch.
+  // We log, print stack to stderr for the terminal, then exit(1) so the process
+  // can be restarted by the OS or process manager.
+  process.on("uncaughtException", (error: unknown) => {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error("Uncaught exception", err);
+    if (err.stack) {
+      console.error(err.stack);
+    }
+    process.exit(1);
+  });
+
+  process.on("unhandledRejection", (reason: unknown) => {
+    const err = reason instanceof Error ? reason : new Error(String(reason));
+    logger.error("Unhandled rejection", err);
+    if (err.stack) {
+      console.error(err.stack);
+    }
+    process.exit(1);
+  });
+
   logger.info("Funding Rate Arbitrage Bot starting...");
 
   try {
@@ -72,11 +95,18 @@ const main = async (): Promise<void> => {
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error("Fatal error during startup", err);
+    if (err.stack) {
+      console.error(err.stack);
+    }
     process.exit(1);
   }
 };
 
 main().catch((error) => {
-  console.error("Unhandled error:", error);
+  const err = error instanceof Error ? error : new Error(String(error));
+  console.error("Unhandled error:", err.message);
+  if (err.stack) {
+    console.error(err.stack);
+  }
   process.exit(1);
 });
