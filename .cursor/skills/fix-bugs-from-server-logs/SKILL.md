@@ -8,10 +8,9 @@ description: Runs the dev server, waits for error/warning logs to appear, analyz
 Iteratively run the dev server, observe logs, fix issues, and re-verify until no errors or warnings remain.
 
 ## Workflow
-
-1. **Start the dev server**
-   - Run the project dev script (e.g. `pnpm dev` or `npm run dev`) in the background so the process keeps running and logs stream.
-   - If the project uses a specific port and it may be in use, use an alternate port (e.g. `PORT=3001 pnpm dev`) or note the EADDRINUSE message to fix binding.
+1. **Check if the dev server is already running**
+   - If it is, use the existing process.
+   - If it is not, start the dev server.
 
 2. **Wait for logs to appear**
    - Allow enough time for the app to start and for periodic work (polling, sampling, cron) to run so that error or warning lines show up (e.g. 15–30 seconds, or longer if the first run is slow).
