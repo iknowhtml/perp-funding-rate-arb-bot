@@ -7,6 +7,8 @@
 
 import { type Address, isAddress } from "viem";
 
+import { createLogger } from "@/lib/logger";
+
 import type {
   LiquidityBalance,
   OiSkew,
@@ -62,6 +64,8 @@ export interface GmxProtocolAdapter extends ProtocolAdapter {
  * @param config - Adapter config (baseUrl required; publicClient + account for chain reads).
  * @returns ProtocolAdapter implementation (GmxProtocolAdapter).
  */
+const logger = createLogger();
+
 export const createGmxProtocolAdapter = (config: GmxProtocolAdapterConfig): GmxProtocolAdapter => {
   const { baseUrl, publicClient, account, chainId } = config;
   const readsDeps: GmxReadsDeps | null =
@@ -84,7 +88,14 @@ export const createGmxProtocolAdapter = (config: GmxProtocolAdapterConfig): GmxP
       return { pool, balance };
     },
     simulateOrder: async (params: OpenPositionParams): Promise<{ impactBps: bigint }> => {
-      if (readsDeps == null || !isAddress(params.market)) {
+      if (readsDeps == null) {
+        logger.warn("impactBps zero: publicClient not configured");
+        return { impactBps: 0n };
+      }
+      if (!isAddress(params.market)) {
+        logger.warn("impactBps zero: invalid market address", {
+          market: params.market,
+        });
         return { impactBps: 0n };
       }
       const tickers = await getTickersRead(baseUrl);
@@ -97,12 +108,17 @@ export const createGmxProtocolAdapter = (config: GmxProtocolAdapterConfig): GmxP
           ? tickers.find((t) => t.tokenSymbol === "BTC")
           : null;
       if (!ticker) {
+        logger.warn("impactBps zero: no ticker for market", {
+          market: params.market,
+          marketNorm,
+          availableSymbols: tickers.map((t) => t.tokenSymbol),
+        });
         return { impactBps: 0n };
       }
       try {
         const result = await getExecutionPriceFromReader(
           readsDeps,
-          params.market as Address,
+          params.market,
           ticker.minPrice,
           ticker.maxPrice,
           -params.sizeUsd,
@@ -112,7 +128,13 @@ export const createGmxProtocolAdapter = (config: GmxProtocolAdapterConfig): GmxP
           result.priceImpactUsd < 0n ? -result.priceImpactUsd : result.priceImpactUsd;
         const impactBps = params.sizeUsd > 0n ? (impactUsd * 10000n) / params.sizeUsd : 0n;
         return { impactBps };
-      } catch {
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        logger.warn("impactBps zero: getExecutionPriceFromReader failed", {
+          market: params.market,
+          sizeUsd: params.sizeUsd,
+          error: message,
+        });
         return { impactBps: 0n };
       }
     },
