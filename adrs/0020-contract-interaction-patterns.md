@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-02-10
+- **Updated:** 2026-03-03 (reads rationale)
 - **Owners:** -
 - **Related:**
   - [ADR-0019: On-Chain Perps Pivot](0019-on-chain-perps-pivot.md)
@@ -122,6 +123,26 @@ const hash = await walletClient.writeContract(request);
 | `sdk.orders.long()` / `short()` / `createIncreaseOrder()` | These auto-submit. We want to build → simulate → send as separate steps. |
 | `sdk.markets.getMarketsInfo()` | Fetches too much data. We batch-read only what we need via multicall. |
 | graphql/subsquid integration | We use the REST API for market data, not the indexer. |
+
+### Why Not Use the SDK for Reads (Detailed Rationale)
+
+Using the SDK's read entrypoints (e.g. `sdk.markets.getMarketsInfo()`, SDK position/oracle modules) would tie us to their data sources and payload shape without meaningful gain for a capital-bearing bot.
+
+**What the SDK actually does for reads** (from [gmx-interface SDK](https://github.com/gmx-io/gmx-interface/tree/release/sdk)):
+
+- `sdk.markets.getMarketsInfo()` is not "one RPC read." It calls **oracle.getMarkets()** (their API) first, then **executeMulticall** for Reader getMarkets, DataStore configs, market values, claimable funding, constants, and composes a large MarketsInfoData + TokensData object. Optional **getDailyVolumes()** uses **Subsquid GraphQL.** So we would adopt oracle + many contract reads + optional indexer and a fixed, heavy payload.
+- Under the hood the SDK still uses `publicClient.readContract` / multicall (viem). The difference is who builds the args, who owns the response shape, and what else runs (oracle, graphql, caching).
+
+**Why we keep viem + our adapter for reads:**
+
+- **Data shape:** We need a narrow slice (funding/OI for selected markets, positions, execution price). The SDK returns a broad, UI-oriented structure and depends on their oracle and optional Subsquid. Our data plane is REST polling + RPC; we own the list of markets and the exact fields we persist.
+- **Observability:** For a bot that can move real capital we need to know exactly which call failed. With our adapter, a failure is "getAccountPositions failed" or "getExecutionPrice failed" with our ChainError; with SDK entrypoints we get "getMarketsInfo() threw" and must dig into their multicall/oracle layer. Our pattern gives clear semantic error boundaries and straightforward alerting/runbooks.
+- **Batching:** We already get batching via the same publicClient (and optionally SDK BATCH_CONFIGS). We want our own set of reads (positions + markets we need + execution price), not the SDK's one big opinionated batch.
+- **Dependency risk:** Using only ABIs/addresses/utils lets us upgrade or vendor with limited blast radius. Using SDK read entrypoints would couple us to their oracle client, multicall wrapper, and response composition; the SDK is alpha with a large dependency tree.
+
+**When to reconsider:** (1) We add a UI/dashboard that needs the same rich market/token view the SDK is built for — then a dedicated path using getMarketsInfo() might be justified **separate** from the bot's minimal read path. (2) The SDK documents a minimal read-only API (e.g. getAccountPositions only, no oracle/subsquid) — we could evaluate that single method vs our wrapper.
+
+**Conclusion:** We keep the SDK for ABIs, addresses, and pure utils; we keep viem + our adapter for all actual chain reads. That keeps the read path minimal, observable, and aligned with our data plane (REST + RPC).
 
 ### Read Pattern: Batched Multicall via viem
 
