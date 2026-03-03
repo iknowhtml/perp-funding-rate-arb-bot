@@ -4,10 +4,27 @@
 - **Date:** 2026-02-11
 - **Owners:** -
 - **Related:**
+  - [ADR-0014: Funding Rate Prediction & Strategy](0014-funding-rate-strategy.md)
   - [ADR-0019: On-Chain Perps Pivot](0019-on-chain-perps-pivot.md)
   - [ADR-0013: Risk Management Engine](0013-risk-management.md)
   - [ADR-0015: Execution Safety & Slippage](0015-execution-safety-slippage.md)
   - [ADR-0021: On-Chain Hedge Model & P&L Accounting](0021-on-chain-pnl-accounting.md)
+
+---
+
+## Strategy in Practice
+
+**Base capital:** Keep USDC when flat. All entry/exit sizing and P&L are in USD.
+
+**When the regime is profitable** (e.g. long funding 4h MA above entry threshold, risk allows):
+
+1. **Obtain pool assets** — For the target market’s GM pool we need the pool’s long and short tokens (e.g. ETH/USD: WETH + USDC) in the right amounts. From a USDC base that means buying ETH (e.g. swap USDC → WETH) so we have both sides.
+2. **Deposit into pool** — Deposit WETH + USDC into the GM pool; receive GM tokens (hedge leg). Size to match desired notional.
+3. **Open short perp** — Post collateral (USDC or WETH) and create a short increase order. Size the short to match the GM leg’s delta (approximate in MVP).
+
+**Exit:** Close the short (decrease order), withdraw from the pool (GM → WETH + USDC). Optionally sell WETH → USDC in a follow-up tx to return to full USDC.
+
+**Atomic entry (target):** The above can be done in one transaction via a multicall: swap USDC → WETH, then GMX `ExchangeRouter.multicall([…])` with deposit + short order. If any step fails, the whole tx reverts and no state changes apply.
 
 ---
 
@@ -128,6 +145,7 @@ We will build a regime-based GMX v2 arb bot that:
   2. submit
   3. monitor keeper execution
   4. reconcile
+- **Atomic entry (optional):** Entry can be a single multicall: swap (USDC → WETH) then GMX deposit + short order. If any inner call fails, the entire transaction reverts; there is nothing to reverse and no partial state.
 
 #### 6) Reconciler
 

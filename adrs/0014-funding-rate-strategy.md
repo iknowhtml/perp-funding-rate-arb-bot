@@ -7,6 +7,18 @@
   - [ADR-0001: Bot Architecture](0001-bot-architecture.md)
   - [ADR-0012: State Machines](0012-state-machines.md)
   - [ADR-0013: Risk Management Engine](0013-risk-management.md)
+  - [ADR-0022: Regime-Based GMX v2 Funding Arb](0022-regime-based-gmx-arb.md) (on-chain execution)
+
+## Strategy Summary
+
+**What we do:** Funding rate arbitrage — earn funding payments while staying delta-neutral.
+
+- **Short leg:** Short the perpetual when longs pay funding (positive funding regime).
+- **Hedge leg:** Long the underlying delta exposure so price moves don’t dominate P&L (CEX: long spot; GMX: long GM tokens in the same market pool).
+- **Entry:** Only when funding is high enough, trend/regime supportive, and risk allows. Size per risk engine.
+- **Exit:** When funding regime weakens (rate drops, trend/regime deterioration), target yield reached, or risk forces exit.
+
+The **alpha** is timing: be in the trade when shorts are paid, out before the regime flips. Signal logic (entry/exit thresholds, trend, regime) is defined in this ADR; on-chain capital flow and execution (e.g. USDC base, swap + deposit + short) are in [ADR-0022](0022-regime-based-gmx-arb.md).
 
 ## Context
 
