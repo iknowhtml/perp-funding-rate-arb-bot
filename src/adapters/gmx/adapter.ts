@@ -16,9 +16,11 @@ import type {
   TxResult,
 } from "../types";
 import type { GmxMarket, GmxTicker } from "./api";
+import { BTC_USD_MARKET, ETH_USD_MARKET } from "./api";
 import type { GmxReadsDeps } from "./reads";
 import {
   compute4hMaFundingRateBps,
+  getExecutionPriceFromReader,
   getFundingRateForMarket,
   getGmBalance,
   getMarketsInfo as getMarketsInfoRead,
@@ -81,9 +83,38 @@ export const createGmxProtocolAdapter = (config: GmxProtocolAdapterConfig): GmxP
       const balance = await getGmBalance(readsDeps, pool, account);
       return { pool, balance };
     },
-    simulateOrder: async (_params: OpenPositionParams): Promise<{ impactBps: bigint }> => {
-      // TODO: GMX simulation
-      return { impactBps: 0n };
+    simulateOrder: async (params: OpenPositionParams): Promise<{ impactBps: bigint }> => {
+      if (readsDeps == null || !isAddress(params.market)) {
+        return { impactBps: 0n };
+      }
+      const tickers = await getTickersRead(baseUrl);
+      const marketNorm = params.market.toLowerCase();
+      const isEth = marketNorm === ETH_USD_MARKET.toLowerCase();
+      const isBtc = marketNorm === BTC_USD_MARKET.toLowerCase();
+      const ticker = isEth
+        ? tickers.find((t) => t.tokenSymbol === "ETH")
+        : isBtc
+          ? tickers.find((t) => t.tokenSymbol === "BTC")
+          : null;
+      if (!ticker) {
+        return { impactBps: 0n };
+      }
+      try {
+        const result = await getExecutionPriceFromReader(
+          readsDeps,
+          params.market as Address,
+          ticker.minPrice,
+          ticker.maxPrice,
+          -params.sizeUsd,
+          false,
+        );
+        const impactUsd =
+          result.priceImpactUsd < 0n ? -result.priceImpactUsd : result.priceImpactUsd;
+        const impactBps = params.sizeUsd > 0n ? (impactUsd * 10000n) / params.sizeUsd : 0n;
+        return { impactBps };
+      } catch {
+        return { impactBps: 0n };
+      }
     },
     submitOrder: async (_params: OpenPositionParams): Promise<TxResult> => {
       // TODO: build + send tx

@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type GmxProtocolAdapterConfig, createGmxProtocolAdapter } from "./adapter";
 import {
   compute4hMaFundingRateBps,
+  getExecutionPriceFromReader,
   getFundingRateForMarket,
   getGmBalance,
   getMarketsInfo,
@@ -17,6 +18,7 @@ import {
 
 vi.mock("./reads", () => ({
   compute4hMaFundingRateBps: vi.fn(),
+  getExecutionPriceFromReader: vi.fn(),
   getFundingRateForMarket: vi.fn(),
   getGmBalance: vi.fn(),
   getMarketsInfo: vi.fn(),
@@ -32,6 +34,7 @@ const market = "0x70d95587d40A2caf56bd97485aB3Eec10Bee6336" as Address;
 describe("createGmxProtocolAdapter", () => {
   beforeEach(() => {
     vi.mocked(compute4hMaFundingRateBps).mockReset();
+    vi.mocked(getExecutionPriceFromReader).mockReset();
     vi.mocked(getFundingRateForMarket).mockReset();
     vi.mocked(getGmBalance).mockReset();
     vi.mocked(getMarketsInfo).mockReset();
@@ -176,7 +179,7 @@ describe("createGmxProtocolAdapter", () => {
     expect(skew).toEqual({ longOi: 100_000n, shortOi: 50_000n });
   });
 
-  it("simulateOrder returns zero impactBps", async () => {
+  it("simulateOrder returns zero impactBps when publicClient absent", async () => {
     const config: GmxProtocolAdapterConfig = { baseUrl };
     const adapter = createGmxProtocolAdapter(config);
 
@@ -187,6 +190,40 @@ describe("createGmxProtocolAdapter", () => {
     });
 
     expect(result).toEqual({ impactBps: 0n });
+    expect(getExecutionPriceFromReader).not.toHaveBeenCalled();
+  });
+
+  it("simulateOrder returns impactBps from Reader when publicClient provided", async () => {
+    const mockPublicClient = {} as never;
+    vi.mocked(getTickers).mockResolvedValue([
+      { tokenSymbol: "ETH", minPrice: 3000n * 10n ** 30n, maxPrice: 3010n * 10n ** 30n },
+    ] as never);
+    vi.mocked(getExecutionPriceFromReader).mockResolvedValue({
+      executionPrice: 2995n * 10n ** 30n,
+      priceImpactUsd: -50n * 10n ** 30n, // -50 USD in 30 decimals => 10 bps for 50k size
+    });
+
+    const adapter = createGmxProtocolAdapter({
+      baseUrl,
+      publicClient: mockPublicClient,
+      chainId: 42161,
+    });
+
+    const result = await adapter.simulateOrder({
+      market,
+      sizeUsd: 50_000n * 10n ** 30n,
+      acceptablePrice: 3000n * 10n ** 30n,
+    });
+
+    expect(getExecutionPriceFromReader).toHaveBeenCalledWith(
+      expect.anything(),
+      market,
+      3000n * 10n ** 30n,
+      3010n * 10n ** 30n,
+      -50_000n * 10n ** 30n,
+      false,
+    );
+    expect(result.impactBps).toBe(10n); // |priceImpactUsd| 50e30, sizeUsd 50_000e30 => 50*10000/50000 = 10 bps
   });
 
   it("submitOrder throws not yet implemented", async () => {

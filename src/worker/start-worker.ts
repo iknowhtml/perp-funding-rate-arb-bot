@@ -68,7 +68,11 @@ export const startWorker = async (config: StartWorkerConfig): Promise<WorkerHand
     ? createArbitrumWalletClient(env.ARBITRUM_RPC_URL, env.ARBITRUM_PRIVATE_KEY as `0x${string}`)
     : null;
 
-  const adapter = createGmxAdapter({ baseUrl });
+  const adapter = createGmxAdapter({
+    baseUrl,
+    publicClient,
+    chainId: env.ARBITRUM_CHAIN_ID ?? 42161,
+  });
   const stateStore = createStateStore();
   const executionQueue = createSerialQueue();
   const circuitBreaker = createExecutionCircuitBreaker(logger);
@@ -123,6 +127,9 @@ export const startWorker = async (config: StartWorkerConfig): Promise<WorkerHand
     publicClient,
     walletClient,
     gmxOracleUrl: baseUrl,
+    adapter,
+    chainId: env.ARBITRUM_CHAIN_ID ?? 42161,
+    maxExecutionFeeWei: 10n ** 18n, // 1 ETH; sampler does not enforce circuit breaker
   });
   impactSampler.start();
 

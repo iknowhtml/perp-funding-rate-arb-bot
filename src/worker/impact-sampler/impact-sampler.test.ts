@@ -32,7 +32,19 @@ vi.mock("@/lib/chain", () => ({
   createArbitrumWalletClient: vi.fn(),
 }));
 
+vi.mock("@/lib/chain/gas", () => ({
+  estimateExecutionFeeWei: vi.fn().mockResolvedValue(50_000_000_000_000_000n), // 0.05 ETH
+}));
+
 import { fetchGmxTickers } from "@/adapters/gmx";
+
+const IMPACT_SAMPLER_DEPS = {
+  db: mockDb as never,
+  publicClient: {} as never,
+  walletClient: null as never,
+  gmxOracleUrl: "https://arbitrum-api.gmxinfra.io",
+  maxExecutionFeeWei: 10n ** 18n,
+};
 
 describe("createImpactSampler", () => {
   it("sampleOnce inserts rows for both markets", async () => {
@@ -40,16 +52,11 @@ describe("createImpactSampler", () => {
     vi.mocked(mockDb.insert).mockReturnValue({ values: mockValues } as never);
 
     vi.mocked(fetchGmxTickers).mockResolvedValue([
-      { tokenSymbol: "ETH", minPrice: 2000n, maxPrice: 2010n } as never,
-      { tokenSymbol: "BTC", minPrice: 60000n, maxPrice: 60100n } as never,
+      { tokenSymbol: "ETH", minPrice: 2000n * 10n ** 30n, maxPrice: 2010n * 10n ** 30n } as never,
+      { tokenSymbol: "BTC", minPrice: 60000n * 10n ** 30n, maxPrice: 60100n * 10n ** 30n } as never,
     ]);
 
-    const sampler = createImpactSampler({
-      db: mockDb as never,
-      publicClient: {} as never,
-      walletClient: null,
-      gmxOracleUrl: "https://arbitrum-api.gmxinfra.io",
-    });
+    const sampler = createImpactSampler(IMPACT_SAMPLER_DEPS);
 
     await sampler.sampleOnce();
 
@@ -59,12 +66,7 @@ describe("createImpactSampler", () => {
   it("handles simulation errors gracefully", async () => {
     vi.mocked(fetchGmxTickers).mockRejectedValue(new Error("network error"));
 
-    const sampler = createImpactSampler({
-      db: mockDb as never,
-      publicClient: {} as never,
-      walletClient: null,
-      gmxOracleUrl: "https://arbitrum-api.gmxinfra.io",
-    });
+    const sampler = createImpactSampler(IMPACT_SAMPLER_DEPS);
 
     await sampler.sampleOnce();
 

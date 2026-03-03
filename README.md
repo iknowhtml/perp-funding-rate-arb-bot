@@ -66,7 +66,7 @@ The bot uses a single-process, event-driven architecture with in-memory state:
 - Serial execution queue
 - Startup sequence (initial reconciliation before evaluation)
 
-**GMX data pipeline:** `lib/chain/` (Arbitrum RPC via viem), `adapters/gmx/` (market data reader), `worker/data-collector.ts` (market snapshots → DB), `worker/impact-sampler.ts` (execution estimates). Tables: `market_snapshot`, `execution_estimate`.
+**GMX data pipeline:** `lib/chain/` (Arbitrum RPC via viem), `adapters/gmx/` (market data reader), `worker/data-collector.ts` (market snapshots → DB), `worker/impact-sampler.ts` (execution estimates). Execution estimates use real gas (DataStore + gas price → USD via ETH price) and protocol-based impact (GMX SyntheticsReader `getExecutionPrice`). Tables: `market_snapshot`, `execution_estimate`.
 
 See [`adrs/`](adrs/) for detailed architecture decisions.
 

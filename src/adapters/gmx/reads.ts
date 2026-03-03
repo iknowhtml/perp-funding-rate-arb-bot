@@ -259,3 +259,60 @@ export const getGmBalance = async (
   gmTokenAddress: Address,
   account: Address,
 ): Promise<bigint> => getTokenBalance(deps, gmTokenAddress, account);
+
+/** USD in 30 decimals (GMX convention). */
+const ONE_USD_30_DECIMALS = 10n ** 30n;
+
+/** Result of SyntheticsReader getExecutionPrice. */
+export interface GetExecutionPriceResult {
+  executionPrice: bigint;
+  priceImpactUsd: bigint;
+}
+
+/**
+ * Get execution price and impact for an order from SyntheticsReader.
+ * Used for simulateOrder (impact sampling). For short: sizeDeltaUsd should be negative.
+ * Throws ChainError with RPC_ERROR on read failure.
+ */
+export const getExecutionPriceFromReader = async (
+  deps: GmxReadsDeps,
+  market: Address,
+  indexTokenPriceMin: bigint,
+  indexTokenPriceMax: bigint,
+  sizeDeltaUsd: bigint,
+  isLong: boolean,
+): Promise<GetExecutionPriceResult> => {
+  const chainId = deps.chainId ?? ARBITRUM;
+  const { reader, dataStore } = getReaderAndDataStore(chainId);
+  const indexPrice = { min: indexTokenPriceMin, max: indexTokenPriceMax };
+  const longTokenPrice = indexPrice;
+  const shortTokenPrice = { min: ONE_USD_30_DECIMALS, max: ONE_USD_30_DECIMALS };
+  try {
+    const raw = await deps.publicClient.readContract({
+      address: reader,
+      abi: syntheticsReaderAbi,
+      functionName: "getExecutionPrice",
+      args: [
+        dataStore,
+        market,
+        { indexTokenPrice: indexPrice, longTokenPrice, shortTokenPrice },
+        0n,
+        0n,
+        sizeDeltaUsd,
+        0n,
+        isLong,
+      ],
+    });
+    const result = raw as {
+      priceImpactUsd: bigint;
+      executionPrice: bigint;
+    };
+    return {
+      priceImpactUsd: result.priceImpactUsd,
+      executionPrice: result.executionPrice,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new ChainError(`getExecutionPrice failed: ${message}`, "RPC_ERROR", err);
+  }
+};

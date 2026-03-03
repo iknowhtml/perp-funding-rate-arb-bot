@@ -1,5 +1,6 @@
 import * as v from "valibot";
 
+import { CONTRACTS_CHAIN_IDS } from "@gmx-io/sdk/configs/chains";
 import { logLevelSchema } from "../logger/schema";
 
 export const envSchema = v.object({
@@ -23,7 +24,7 @@ export const envSchema = v.object({
   ARBITRUM_CHAIN_ID: v.pipe(
     v.optional(v.string()),
     v.transform((s) => (s === undefined || s === "" ? 42161 : Number(s))),
-    v.number(),
+    v.picklist(CONTRACTS_CHAIN_IDS),
   ),
   GMX_ORACLE_URL: v.optional(v.string(), "https://arbitrum-api.gmxinfra.io"),
 });
