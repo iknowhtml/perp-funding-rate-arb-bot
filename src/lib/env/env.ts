@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import { type Env, envSchema } from "../schema";
+import { type Env, envSchema } from "./schema";
 
 export const parseEnv = (): Env => {
   try {
@@ -47,4 +47,4 @@ export const getEnv = (): Env => {
 };
 
 // Re-export types
-export type { Env } from "../schema";
+export type { Env } from "./schema";
