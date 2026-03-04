@@ -135,6 +135,7 @@ export const startWorker = async (config: StartWorkerConfig): Promise<WorkerHand
     adapter,
     chainId: env.ARBITRUM_CHAIN_ID ?? 42161,
     maxExecutionFeeWei: 10n ** 18n, // 1 ETH; sampler does not enforce circuit breaker
+    intervalMs: env.IMPACT_SAMPLE_INTERVAL_MS ?? 5 * 60 * 1000,
   });
   impactSampler.start();
 
