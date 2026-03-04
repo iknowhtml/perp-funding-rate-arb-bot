@@ -4,7 +4,8 @@
 
 import type { Address } from "viem";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { type GmxProtocolAdapterConfig, createGmxProtocolAdapter } from "./adapter";
+import type { GmxProtocolAdapterConfig } from "../config";
+import { createGmxProtocolAdapter } from "./adapter";
 
 vi.mock("@/lib/logger", () => ({
   createLogger: () => ({
@@ -23,9 +24,9 @@ import {
   getOiSkewForMarket,
   getPositionState,
   getTickers,
-} from "./reads";
+} from "../reads";
 
-vi.mock("./reads", () => ({
+vi.mock("../reads", () => ({
   compute4hMaFundingRateBps: vi.fn(),
   getExecutionPriceFromReader: vi.fn(),
   getFundingRateForMarket: vi.fn(),
@@ -201,7 +202,7 @@ describe("createGmxProtocolAdapter", () => {
     ] as never);
     vi.mocked(getExecutionPriceFromReader).mockResolvedValue({
       executionPrice: 2995n * 10n ** 30n,
-      priceImpactUsd: -50n * 10n ** 30n, // -50 USD in 30 decimals => 10 bps for 50k size
+      priceImpactUsd: -50n * 10n ** 30n,
     });
 
     const adapter = createGmxProtocolAdapter(minimalConfig());
@@ -220,7 +221,7 @@ describe("createGmxProtocolAdapter", () => {
         isLong: false,
       }),
     );
-    expect(result.impactBps).toBe(10n); // |priceImpactUsd| 50e30, sizeUsd 50_000e30 => 50*10000/50000 = 10 bps
+    expect(result.impactBps).toBe(10n);
   });
 
   it("submitOrder throws not yet implemented", async () => {

@@ -5,7 +5,6 @@
  * @see {@link ../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
-import { BTC_USD_MARKET, createGmxAdapter } from "@/adapters/gmx";
 import { derivePosition } from "@/domains/position";
 import type { PositionConfig } from "@/domains/position";
 import { DEFAULT_RISK_CONFIG, type RiskSnapshot } from "@/domains/risk";
@@ -16,6 +15,7 @@ import {
   type StrategyPosition,
 } from "@/domains/strategy";
 import { createArbitrumPublicClient, createArbitrumWalletClient } from "@/lib/chain";
+import { BTC_USD_MARKET, createGmxAdapter } from "@/lib/chain/protocols/gmx";
 import type { DatabaseInstance } from "@/lib/db";
 import type { Env } from "@/lib/env";
 import type { Logger } from "@/lib/logger";

@@ -12,7 +12,7 @@ vi.mock("@/lib/env", () => {
 
 import { createDataCollector } from "./data-collector";
 
-vi.mock("@/adapters/gmx", () => ({
+vi.mock("@/lib/chain/protocols/gmx", () => ({
   fetchGmxMarketsInfo: vi.fn(),
   fetchGmxTickers: vi.fn(),
 }));
@@ -30,7 +30,7 @@ vi.mock("@/lib/chain", () => ({
   createArbitrumPublicClient: vi.fn(),
 }));
 
-import { fetchGmxMarketsInfo, fetchGmxTickers } from "@/adapters/gmx";
+import { fetchGmxMarketsInfo, fetchGmxTickers } from "@/lib/chain/protocols/gmx";
 
 describe("createDataCollector", () => {
   it("inserts correct rows on collectMarketSnapshot", async () => {

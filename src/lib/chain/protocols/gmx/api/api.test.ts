@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { BTC_USD_MARKET, fetchGmxMarketsInfo, fetchGmxTickers } from "./api";
+import { BTC_USD_MARKET } from "../types";
+import { fetchGmxMarketsInfo, fetchGmxTickers } from "./api";
 
 const BASE_URL = "https://arbitrum-api.gmxinfra.io";
 

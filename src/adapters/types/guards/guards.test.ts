@@ -16,7 +16,7 @@ import {
   isPositionState,
   isTicker,
   isTxResult,
-} from "./types";
+} from "./guards";
 
 describe("type guards", () => {
   describe("isBalance", () => {

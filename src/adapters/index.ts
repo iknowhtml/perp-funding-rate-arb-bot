@@ -73,9 +73,9 @@ export {
   txResultSchema,
 } from "./types";
 
-// GMX protocol adapter (ADR-0019)
-export { createGmxAdapter } from "./gmx";
-export type { GmxProtocolAdapter, GmxProtocolAdapterConfig } from "./gmx";
+// GMX protocol adapter (ADR-0019) — lives under lib/chain/protocols/gmx
+export { createGmxAdapter } from "@/lib/chain/protocols/gmx";
+export type { GmxProtocolAdapter, GmxProtocolAdapterConfig } from "@/lib/chain/protocols/gmx";
 
 // Config validation (legacy AdapterConfig kept for env parsing if needed)
 export type { AdapterConfig } from "./config";

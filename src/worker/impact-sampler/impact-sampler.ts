@@ -1,6 +1,11 @@
-import { BTC_USD_MARKET, ETH_USD_MARKET, type GmxTicker, fetchGmxTickers } from "@/adapters/gmx";
 import type { ProtocolAdapter } from "@/adapters/types";
 import { estimateExecutionFeeWei } from "@/lib/chain/gas";
+import {
+  BTC_USD_MARKET,
+  ETH_USD_MARKET,
+  type GmxTicker,
+  fetchGmxTickers,
+} from "@/lib/chain/protocols/gmx";
 import { type Database, executionEstimate } from "@/lib/db";
 import { createLogger } from "@/lib/logger";
 import { createScheduler } from "@/worker/scheduler";

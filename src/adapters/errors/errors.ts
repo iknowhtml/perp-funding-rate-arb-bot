@@ -1,8 +1,8 @@
 /**
  * Adapter error types (CEX and on-chain).
  *
- * @see {@link ../../adrs/0010-exchange-adapters.md ADR-0010: Exchange Adapters}
- * @see {@link ../../adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
+ * @see {@link ../../../adrs/0010-exchange-adapters.md ADR-0010: Exchange Adapters}
+ * @see {@link ../../../adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
  */
 
 /** CEX and on-chain adapter error codes. */
@@ -14,7 +14,6 @@ export type AdapterErrorCode =
   | "INVALID_ORDER"
   | "NETWORK_ERROR"
   | "UNKNOWN"
-  // On-chain (ADR-0019)
   | "SIMULATION_FAILED"
   | "GAS_ESTIMATE_FAILED"
   | "USER_REJECTED"

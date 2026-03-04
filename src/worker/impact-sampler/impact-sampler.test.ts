@@ -12,7 +12,7 @@ vi.mock("@/lib/env/env", () => {
 
 import { createImpactSampler } from "./impact-sampler";
 
-vi.mock("@/adapters/gmx", () => ({
+vi.mock("@/lib/chain/protocols/gmx", () => ({
   BTC_USD_MARKET: "0x47c031236e19d024b42f8AE6780E44A573170703",
   ETH_USD_MARKET: "0x70d95587d40A2caf56bd97485aB3Eec10Bee6336",
   fetchGmxTickers: vi.fn(),
@@ -36,8 +36,8 @@ vi.mock("@/lib/chain/gas", () => ({
   estimateExecutionFeeWei: vi.fn().mockResolvedValue(50_000_000_000_000_000n), // 0.05 ETH
 }));
 
-import { fetchGmxTickers } from "@/adapters/gmx";
 import type { ProtocolAdapter } from "@/adapters/types";
+import { fetchGmxTickers } from "@/lib/chain/protocols/gmx";
 
 const mockSimulateOrder = vi.fn().mockResolvedValue({ impactBps: 0n });
 const mockAdapter = { simulateOrder: mockSimulateOrder } as unknown as ProtocolAdapter;

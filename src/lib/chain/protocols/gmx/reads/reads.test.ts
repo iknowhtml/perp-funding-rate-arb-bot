@@ -4,10 +4,9 @@
 
 import type { Address } from "viem";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ChainError } from "../../lib/chain/errors";
+import { ChainError } from "../errors";
+import type { GmxAccountPositionRaw, GmxReadsDeps } from "../types";
 import {
-  type GmxAccountPositionRaw,
-  type GmxReadsDeps,
   compute4hMaFundingRateBps,
   getAccountPositions,
   getFundingRateForMarket,
@@ -25,7 +24,7 @@ vi.mock("@gmx-io/sdk/configs/contracts", () => ({
       ? "0x470fbC46bcC0f16532691Df360A07d8Bf5ee0789"
       : "0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8",
 }));
-vi.mock("./api", () => ({
+vi.mock("../api", () => ({
   fetchGmxMarketsInfo: vi.fn(),
   fetchGmxTickers: vi.fn(),
 }));
@@ -165,7 +164,7 @@ describe("getPositionState", () => {
 
 describe("getMarketsInfo", () => {
   it("returns markets from REST API", async () => {
-    const { fetchGmxMarketsInfo } = await import("./api");
+    const { fetchGmxMarketsInfo } = await import("../api");
     vi.mocked(fetchGmxMarketsInfo).mockResolvedValue([
       {
         marketToken: market,
@@ -190,7 +189,7 @@ describe("getMarketsInfo", () => {
   });
 
   it("throws ChainError when fetch fails", async () => {
-    const { fetchGmxMarketsInfo } = await import("./api");
+    const { fetchGmxMarketsInfo } = await import("../api");
     vi.mocked(fetchGmxMarketsInfo).mockRejectedValue(new Error("HTTP 500"));
 
     await expect(getMarketsInfo("https://arbitrum-api.gmxinfra.io")).rejects.toThrow(ChainError);
@@ -202,7 +201,7 @@ describe("getMarketsInfo", () => {
 
 describe("getTickers", () => {
   it("returns tickers from REST API", async () => {
-    const { fetchGmxTickers } = await import("./api");
+    const { fetchGmxTickers } = await import("../api");
     vi.mocked(fetchGmxTickers).mockResolvedValue([
       { tokenSymbol: "ETH", minPrice: 3_000_000_000n, maxPrice: 3_100_000_000n },
     ]);
@@ -218,7 +217,7 @@ describe("getTickers", () => {
   });
 
   it("throws ChainError when fetch fails", async () => {
-    const { fetchGmxTickers } = await import("./api");
+    const { fetchGmxTickers } = await import("../api");
     vi.mocked(fetchGmxTickers).mockRejectedValue(new Error("Network error"));
 
     await expect(getTickers("https://arbitrum-api.gmxinfra.io")).rejects.toThrow(ChainError);

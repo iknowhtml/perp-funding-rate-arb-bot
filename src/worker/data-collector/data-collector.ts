@@ -1,4 +1,4 @@
-import { type GmxMarket, fetchGmxMarketsInfo, fetchGmxTickers } from "@/adapters/gmx";
+import { type GmxMarket, fetchGmxMarketsInfo, fetchGmxTickers } from "@/lib/chain/protocols/gmx";
 import { type Database, marketSnapshot } from "@/lib/db";
 import { createLogger } from "@/lib/logger";
 import { createScheduler } from "@/worker/scheduler";
