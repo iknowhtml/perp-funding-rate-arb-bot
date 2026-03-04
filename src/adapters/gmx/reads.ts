@@ -11,6 +11,7 @@ import tokenAbi from "@gmx-io/sdk/abis/Token";
 import { ARBITRUM } from "@gmx-io/sdk/configs/chainIds";
 import type { ContractsChainId } from "@gmx-io/sdk/configs/chains";
 import { getContract } from "@gmx-io/sdk/configs/contracts";
+import { PRECISION } from "@gmx-io/sdk/utils/numbers";
 import { type Address, type PublicClient, isAddress } from "viem";
 
 import * as v from "valibot";
@@ -260,53 +261,69 @@ export const getGmBalance = async (
   account: Address,
 ): Promise<bigint> => getTokenBalance(deps, gmTokenAddress, account);
 
-/** USD in 30 decimals (GMX convention). */
-const ONE_USD_30_DECIMALS = 10n ** 30n;
-
 /** Result of SyntheticsReader getExecutionPrice. */
 export interface GetExecutionPriceResult {
   executionPrice: bigint;
   priceImpactUsd: bigint;
 }
 
+/** Params for getExecutionPriceFromReader. positionSizeUsd is absolute order size in USD (30 decimals). */
+export interface GetExecutionPriceFromReaderParams {
+  deps: GmxReadsDeps;
+  market: Address;
+  /** Token price as returned by GMX Oracle API: USD_per_token × 10^(30 - tokenDecimals). Pass raw, no normalization. */
+  price: { min: bigint; max: bigint };
+  /** Absolute order size in USD (30 decimals). */
+  positionSizeUsd: bigint;
+  isLong: boolean;
+}
+
 /**
  * Get execution price and impact for an order from SyntheticsReader.
- * Used for simulateOrder (impact sampling). For short: sizeDeltaUsd should be negative.
+ * Used for simulateOrder (impact sampling).
  * Throws ChainError with RPC_ERROR on read failure.
+ *
+ * Price format: GMX Oracle API `/prices/tickers` returns prices as
+ * `USD_per_token × 10^(30 - tokenDecimals)` — e.g. ETH (18 dec) ≈ 2e15,
+ * BTC (8 dec) ≈ 8.7e26. This is exactly what the Reader contract expects;
+ * no normalization needed.
+ *
+ * sizeDeltaUsd is always **positive** (= opening / increasing a position).
+ * The contract branches on sign: positive → getExecutionPriceForIncrease,
+ * negative → getExecutionPriceForDecrease. We want the increase path because
+ * we're simulating a new order, not closing an existing one. The `isLong` flag
+ * controls which side of OI is affected.
+ *
+ * positionSizeInUsd / positionSizeInTokens are zero (no existing position);
+ * the increase path does not divide by them.
  */
 export const getExecutionPriceFromReader = async (
-  deps: GmxReadsDeps,
-  market: Address,
-  indexTokenPriceMin: bigint,
-  indexTokenPriceMax: bigint,
-  sizeDeltaUsd: bigint,
-  isLong: boolean,
+  params: GetExecutionPriceFromReaderParams,
 ): Promise<GetExecutionPriceResult> => {
+  const { deps, market, price, positionSizeUsd, isLong } = params;
+
   const chainId = deps.chainId ?? ARBITRUM;
   const { reader, dataStore } = getReaderAndDataStore(chainId);
-  const indexPrice = { min: indexTokenPriceMin, max: indexTokenPriceMax };
-  const longTokenPrice = indexPrice;
-  const shortTokenPrice = { min: ONE_USD_30_DECIMALS, max: ONE_USD_30_DECIMALS };
+
+  const shortTokenPrice = { min: PRECISION, max: PRECISION };
+
   try {
-    const raw = await deps.publicClient.readContract({
+    const result = await deps.publicClient.readContract({
       address: reader,
       abi: syntheticsReaderAbi,
       functionName: "getExecutionPrice",
       args: [
         dataStore,
         market,
-        { indexTokenPrice: indexPrice, longTokenPrice, shortTokenPrice },
-        0n,
-        0n,
-        sizeDeltaUsd,
-        0n,
+        { indexTokenPrice: price, longTokenPrice: price, shortTokenPrice },
+        0n, // positionSizeInUsd: no existing position
+        0n, // positionSizeInTokens: no existing position
+        positionSizeUsd, // positive → increase path
+        0n, // pendingImpactAmount
         isLong,
       ],
     });
-    const result = raw as {
-      priceImpactUsd: bigint;
-      executionPrice: bigint;
-    };
+
     return {
       priceImpactUsd: result.priceImpactUsd,
       executionPrice: result.executionPrice,

@@ -9,6 +9,7 @@ import { type Address, isAddress } from "viem";
 
 import { createLogger } from "@/lib/logger";
 
+import { ChainError } from "@/lib/chain/errors";
 import type {
   LiquidityBalance,
   OiSkew,
@@ -37,8 +38,10 @@ export interface GmxProtocolAdapterConfig {
   baseUrl: string;
   /** Optional: public client for chain reads (position, GM balance). */
   publicClient?: GmxReadsDeps["publicClient"];
-  /** Optional: account address for position and balance reads. */
-  account?: Address;
+  /** Optional: account address for position and balance reads.
+   * type as Address | undefined to allow for optional account from wallet client
+   */
+  account?: Address | undefined;
   /** Optional: chain ID (default Arbitrum). */
   chainId?: GmxReadsDeps["chainId"];
 }
@@ -68,8 +71,21 @@ const logger = createLogger();
 
 export const createGmxProtocolAdapter = (config: GmxProtocolAdapterConfig): GmxProtocolAdapter => {
   const { baseUrl, publicClient, account, chainId } = config;
-  const readsDeps: GmxReadsDeps | null =
-    publicClient != null ? { publicClient, ...(chainId != null ? { chainId } : {}) } : null;
+  if (baseUrl == null) {
+    throw new Error("baseUrl is required");
+  }
+  if (publicClient == null) {
+    throw new Error("publicClient is required");
+  }
+
+  if (account == null) {
+    throw new Error("account is required");
+  }
+
+  if (chainId == null) {
+    throw new Error("chainId is required");
+  }
+  const readsDeps: GmxReadsDeps = { publicClient, chainId };
 
   return {
     getMarketsInfo: () => getMarketsInfoRead(baseUrl),
@@ -80,62 +96,56 @@ export const createGmxProtocolAdapter = (config: GmxProtocolAdapterConfig): GmxP
       }
       return getPositionStateRead(readsDeps, account, market);
     },
-    getLiquidityBalance: async (pool: string): Promise<LiquidityBalance> => {
-      if (readsDeps == null || account == null || !isAddress(pool)) {
-        return { pool, balance: 0n };
-      }
+    getLiquidityBalance: async (pool: Address): Promise<LiquidityBalance> => {
       const balance = await getGmBalance(readsDeps, pool, account);
       return { pool, balance };
     },
-    simulateOrder: async (params: OpenPositionParams): Promise<{ impactBps: bigint }> => {
+    simulateOrder: async ({
+      market,
+      positionSizeUsd,
+    }: OpenPositionParams): Promise<{ impactBps: bigint }> => {
       if (readsDeps == null) {
-        logger.warn("impactBps zero: publicClient not configured");
-        return { impactBps: 0n };
+        const message = "Cannot simulate order: publicClient not configured";
+        logger.error(message);
+        throw new Error(message);
       }
-      if (!isAddress(params.market)) {
-        logger.warn("impactBps zero: invalid market address", {
-          market: params.market,
-        });
-        return { impactBps: 0n };
-      }
+
       const tickers = await getTickersRead(baseUrl);
-      const marketNorm = params.market.toLowerCase();
-      const isEth = marketNorm === ETH_USD_MARKET.toLowerCase();
-      const isBtc = marketNorm === BTC_USD_MARKET.toLowerCase();
-      const ticker = isEth
-        ? tickers.find((t) => t.tokenSymbol === "ETH")
-        : isBtc
-          ? tickers.find((t) => t.tokenSymbol === "BTC")
-          : null;
-      if (!ticker) {
-        logger.warn("impactBps zero: no ticker for market", {
-          market: params.market,
-          marketNorm,
-          availableSymbols: tickers.map((t) => t.tokenSymbol),
-        });
-        return { impactBps: 0n };
+      const marketNormalized = market.toLowerCase();
+
+      let ticker: GmxTicker | undefined;
+
+      switch (marketNormalized) {
+        case ETH_USD_MARKET.toLowerCase():
+          ticker = tickers.find((ticker) => ticker.tokenSymbol === "ETH");
+          break;
+        case BTC_USD_MARKET.toLowerCase():
+          ticker = tickers.find((ticker) => ticker.tokenSymbol === "BTC");
+          break;
       }
+
+      if (ticker === undefined) {
+        const message = `No ticker for market ${market}; available: ${tickers.map((t) => t.tokenSymbol).join(", ")}`;
+        logger.error(message);
+        throw new Error(message);
+      }
+
       try {
-        const result = await getExecutionPriceFromReader(
-          readsDeps,
-          params.market,
-          ticker.minPrice,
-          ticker.maxPrice,
-          -params.sizeUsd,
-          false,
-        );
+        const result = await getExecutionPriceFromReader({
+          deps: readsDeps,
+          market,
+          price: { min: ticker.minPrice, max: ticker.maxPrice },
+          positionSizeUsd,
+          isLong: false,
+        });
+
         const impactUsd =
           result.priceImpactUsd < 0n ? -result.priceImpactUsd : result.priceImpactUsd;
-        const impactBps = params.sizeUsd > 0n ? (impactUsd * 10000n) / params.sizeUsd : 0n;
+        const impactBps = positionSizeUsd > 0n ? (impactUsd * 10000n) / positionSizeUsd : 0n;
         return { impactBps };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        logger.warn("impactBps zero: getExecutionPriceFromReader failed", {
-          market: params.market,
-          sizeUsd: params.sizeUsd,
-          error: message,
-        });
-        return { impactBps: 0n };
+        throw new ChainError(`getExecutionPrice failed: ${message}`, "TX_REVERTED", err);
       }
     },
     submitOrder: async (_params: OpenPositionParams): Promise<TxResult> => {
