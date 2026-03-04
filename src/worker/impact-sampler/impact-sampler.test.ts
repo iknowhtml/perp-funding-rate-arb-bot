@@ -49,6 +49,7 @@ const IMPACT_SAMPLER_DEPS = {
   gmxOracleUrl: "https://arbitrum-api.gmxinfra.io",
   maxExecutionFeeWei: 10n ** 18n,
   adapter: mockAdapter,
+  intervalMs: 5 * 60 * 1000,
 };
 
 describe("createImpactSampler", () => {

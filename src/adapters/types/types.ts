@@ -7,6 +7,7 @@
  */
 
 import * as v from "valibot";
+import type { Address } from "viem";
 
 // --- On-chain / GMX domain types (ADR-0019, ADR-0022, ADR-0021) ---
 
@@ -20,12 +21,12 @@ export interface TxResult {
 
 /** Parameters for opening a short perp position on GMX. */
 export interface OpenPositionParams {
-  /** Market identifier (e.g. GMX market address). */
-  market: string;
+  /** Market smart contract address */
+  market: Address;
   /** Size in collateral/size units (bigint). */
-  sizeUsd: bigint;
+  positionSizeUsd: bigint;
   /** Maximum acceptable execution price (slippage guard). */
-  acceptablePrice: bigint;
+  acceptablePriceUsd: bigint;
 }
 
 /** GM liquidity balance (GM token / LP share). */

@@ -6,11 +6,17 @@ import { createLogger } from "@/lib/logger";
 import { createScheduler } from "@/worker/scheduler";
 import { ARBITRUM } from "@gmx-io/sdk/configs/chainIds";
 import type { ContractsChainId } from "@gmx-io/sdk/configs/chains";
-import type { PublicClient, WalletClient } from "viem";
+import { expandDecimals } from "@gmx-io/sdk/utils/numbers";
+import type { Address, PublicClient, WalletClient } from "viem";
 
-const SAMPLE_SIZE_USD = 50_000n;
-const SAMPLE_INTERVAL_MS = 5 * 60 * 1000;
-const TARGET_MARKETS = [
+/** 30-decimal USD. Position size we sample for and record in execution_estimate. */
+const SAMPLE_POSITION_SIZE_USD = expandDecimals(1_000_000n, 30);
+
+type TargetMarket = {
+  address: Address;
+  name: string;
+};
+const TARGET_MARKETS: TargetMarket[] = [
   { address: ETH_USD_MARKET, name: "ETH/USD" },
   { address: BTC_USD_MARKET, name: "BTC/USD" },
 ];
@@ -35,6 +41,8 @@ export interface ImpactSamplerDeps {
   chainId?: ContractsChainId;
   /** Max execution fee (wei) for gas estimator deps; sampler does not enforce. */
   maxExecutionFeeWei: bigint;
+  /** Interval between impact samples in ms. Default 5 min when unset. */
+  intervalMs?: number;
 }
 
 export interface ImpactSampler {
@@ -87,25 +95,25 @@ export const createImpactSampler = (deps: ImpactSamplerDeps): ImpactSampler => {
         }
       }
 
-      const { impactBps: simulatedImpactBps } = await deps.adapter.simulateOrder({
+      const { impactBps } = await deps.adapter.simulateOrder({
         market: address,
-        sizeUsd: SAMPLE_SIZE_USD,
-        acceptablePrice: price,
+        positionSizeUsd: SAMPLE_POSITION_SIZE_USD,
+        acceptablePriceUsd: price,
       });
 
       await deps.db.insert(executionEstimate).values({
         timestamp: snapshotTime,
         market: address,
-        sizeUsd: SAMPLE_SIZE_USD,
-        simulatedImpactBps,
+        positionSizeUsd: SAMPLE_POSITION_SIZE_USD,
+        simulatedImpactBps: impactBps,
         estimatedGasUsd,
-        acceptablePrice: price,
+        acceptablePriceUsd: price,
       });
 
       const logger = createLogger();
       logger.debug("Recorded impact sample", {
         market: address,
-        impactBps: simulatedImpactBps.toString(),
+        impactBps,
       });
     }
   };
@@ -117,7 +125,7 @@ export const createImpactSampler = (deps: ImpactSamplerDeps): ImpactSampler => {
       handle = scheduler.schedule({
         id: "impact-sampler",
         fn: sampleOnce,
-        intervalMs: SAMPLE_INTERVAL_MS,
+        intervalMs: deps.intervalMs ?? 5 * 60 * 1000,
         enabled: true,
       });
     },

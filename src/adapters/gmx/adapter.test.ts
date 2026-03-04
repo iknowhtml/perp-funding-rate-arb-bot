@@ -28,8 +28,8 @@ vi.mock("./reads", () => ({
 }));
 
 const baseUrl = "https://arbitrum-api.gmxinfra.io";
-const account = "0x1234567890123456789012345678901234567890" as Address;
-const market = "0x70d95587d40A2caf56bd97485aB3Eec10Bee6336" as Address;
+const account: Address = "0x1234567890123456789012345678901234567890";
+const market: Address = "0x70d95587d40A2caf56bd97485aB3Eec10Bee6336";
 
 describe("createGmxProtocolAdapter", () => {
   beforeEach(() => {
@@ -185,8 +185,8 @@ describe("createGmxProtocolAdapter", () => {
 
     const result = await adapter.simulateOrder({
       market,
-      sizeUsd: 50_000_000_000n,
-      acceptablePrice: 3_000_000_000n,
+      positionSizeUsd: 50_000n * 10n ** 30n,
+      acceptablePriceUsd: 1_200n * 10n ** 30n,
     });
 
     expect(result).toEqual({ impactBps: 0n });
@@ -211,17 +211,17 @@ describe("createGmxProtocolAdapter", () => {
 
     const result = await adapter.simulateOrder({
       market,
-      sizeUsd: 50_000n * 10n ** 30n,
-      acceptablePrice: 3000n * 10n ** 30n,
+      positionSizeUsd: 50_000n * 10n ** 30n,
+      acceptablePriceUsd: 3000n * 10n ** 30n,
     });
 
     expect(getExecutionPriceFromReader).toHaveBeenCalledWith(
-      expect.anything(),
-      market,
-      3000n * 10n ** 30n,
-      3010n * 10n ** 30n,
-      -50_000n * 10n ** 30n,
-      false,
+      expect.objectContaining({
+        market,
+        price: { min: 3000n * 10n ** 30n, max: 3010n * 10n ** 30n },
+        positionSizeUsd: 50_000n * 10n ** 30n,
+        isLong: false,
+      }),
     );
     expect(result.impactBps).toBe(10n); // |priceImpactUsd| 50e30, sizeUsd 50_000e30 => 50*10000/50000 = 10 bps
   });
@@ -233,8 +233,8 @@ describe("createGmxProtocolAdapter", () => {
     await expect(
       adapter.submitOrder({
         market,
-        sizeUsd: 50_000_000_000n,
-        acceptablePrice: 3_000_000_000n,
+        positionSizeUsd: 50_000_000_000n,
+        acceptablePriceUsd: 3_000_000_000n,
       }),
     ).rejects.toThrow("GMX submitOrder not yet implemented");
   });

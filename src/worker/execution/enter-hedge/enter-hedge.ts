@@ -6,7 +6,7 @@
  */
 
 import { BTC_USD_MARKET, ETH_USD_MARKET } from "@/adapters/gmx";
-import type { ProtocolAdapter } from "@/adapters/types";
+import type { OpenPositionParams, ProtocolAdapter } from "@/adapters/types";
 import { type RiskConfig, type RiskSnapshot, evaluateRisk } from "@/domains/risk";
 import type { Logger } from "@/lib/logger";
 import type { CircuitBreaker } from "@/lib/rate-limiter";
@@ -94,10 +94,10 @@ export const executeEnterHedge = async (
   const market =
     executionConfig.gmxMarketAddress ??
     (perpSymbol.includes("BTC") ? BTC_USD_MARKET : ETH_USD_MARKET);
-  const openParams = {
-    market,
-    sizeUsd: sizeBase,
-    acceptablePrice: 0n,
+  const openParams: OpenPositionParams = {
+    market: market as OpenPositionParams["market"],
+    positionSizeUsd: sizeBase,
+    acceptablePriceUsd: 0n,
   };
 
   try {
