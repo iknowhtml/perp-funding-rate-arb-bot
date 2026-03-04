@@ -37,6 +37,10 @@ vi.mock("@/lib/chain/gas", () => ({
 }));
 
 import { fetchGmxTickers } from "@/adapters/gmx";
+import type { ProtocolAdapter } from "@/adapters/types";
+
+const mockSimulateOrder = vi.fn().mockResolvedValue({ impactBps: 0n });
+const mockAdapter = { simulateOrder: mockSimulateOrder } as unknown as ProtocolAdapter;
 
 const IMPACT_SAMPLER_DEPS = {
   db: mockDb as never,
@@ -44,6 +48,7 @@ const IMPACT_SAMPLER_DEPS = {
   walletClient: null as never,
   gmxOracleUrl: "https://arbitrum-api.gmxinfra.io",
   maxExecutionFeeWei: 10n ** 18n,
+  adapter: mockAdapter,
 };
 
 describe("createImpactSampler", () => {
@@ -60,16 +65,15 @@ describe("createImpactSampler", () => {
 
     await sampler.sampleOnce();
 
+    expect(mockSimulateOrder).toHaveBeenCalledTimes(2);
     expect(mockValues).toHaveBeenCalledTimes(2);
   });
 
-  it("handles simulation errors gracefully", async () => {
+  it("lets errors bubble when fetch or simulation fails", async () => {
     vi.mocked(fetchGmxTickers).mockRejectedValue(new Error("network error"));
 
     const sampler = createImpactSampler(IMPACT_SAMPLER_DEPS);
 
-    await sampler.sampleOnce();
-
-    expect(sampler).toBeDefined();
+    await expect(sampler.sampleOnce()).rejects.toThrow("network error");
   });
 });

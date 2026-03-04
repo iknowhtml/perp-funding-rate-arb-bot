@@ -8,7 +8,7 @@ import { ARBITRUM } from "@gmx-io/sdk/configs/chainIds";
 import type { ContractsChainId } from "@gmx-io/sdk/configs/chains";
 import type { PublicClient, WalletClient } from "viem";
 
-const SAMPLE_SIZE_USD = 50_000n * 10n ** 30n;
+const SAMPLE_SIZE_USD = 50_000n;
 const SAMPLE_INTERVAL_MS = 5 * 60 * 1000;
 const TARGET_MARKETS = [
   { address: ETH_USD_MARKET, name: "ETH/USD" },
@@ -29,8 +29,8 @@ export interface ImpactSamplerDeps {
   publicClient: PublicClient;
   walletClient: WalletClient | null;
   gmxOracleUrl: string;
-  /** Optional: protocol adapter for simulateOrder (impact). If absent, uses stub. */
-  adapter?: ProtocolAdapter | null;
+  /** Protocol adapter for simulateOrder (impact). */
+  adapter: ProtocolAdapter;
   /** Chain ID for gas estimation (e.g. Arbitrum). */
   chainId?: ContractsChainId;
   /** Max execution fee (wei) for gas estimator deps; sampler does not enforce. */
@@ -43,105 +43,70 @@ export interface ImpactSampler {
   sampleOnce: () => Promise<void>;
 }
 
-const TARGET_SIZE_USD = 50_000n * 10n ** 30n;
-
-const estimateImpactFromMarketSize = (sizeUsd: bigint): bigint => {
-  const sizeRatio = (sizeUsd * 100n) / TARGET_SIZE_USD;
-  return (sizeRatio * 2n) / 100n;
-};
-
 export const createImpactSampler = (deps: ImpactSamplerDeps): ImpactSampler => {
   const scheduler = createScheduler();
 
-  const simulateImpact = async (
-    _market: string,
-    sizeUsd: bigint,
-    marketPrice: bigint,
-  ): Promise<ImpactResult> => {
-    const impactBps = estimateImpactFromMarketSize(sizeUsd);
-    const executionPrice = marketPrice;
-    const gasUsd = 10n * 10n ** 30n;
-
-    return {
-      simulatedImpactBps: impactBps,
-      estimatedGasUsd: gasUsd,
-      acceptablePrice: executionPrice,
-    };
-  };
-
   const sampleOnce = async (): Promise<void> => {
-    try {
-      const tickers = await fetchGmxTickers(deps.gmxOracleUrl);
-      const ethTicker = tickers.find((t: GmxTicker) => t.tokenSymbol === "ETH");
-      const btcTicker = tickers.find((t: GmxTicker) => t.tokenSymbol === "BTC");
+    const tickers = await fetchGmxTickers(deps.gmxOracleUrl);
 
-      let estimatedGasUsd: bigint | undefined;
-      const ethPrice30 = ethTicker ? (ethTicker.minPrice + ethTicker.maxPrice) / 2n : 0n;
-      try {
-        const feeWei = await estimateExecutionFeeWei(
-          {
-            publicClient: deps.publicClient,
-            chainId: deps.chainId ?? ARBITRUM,
-            maxExecutionFeeWei: deps.maxExecutionFeeWei,
-          },
-          "increase",
-        );
-        estimatedGasUsd = ethPrice30 > 0n ? (feeWei * ethPrice30) / WEI_PER_ETH : undefined;
-      } catch {
-        estimatedGasUsd = undefined;
-      }
+    const ethTicker = tickers.find((t: GmxTicker) => t.tokenSymbol === "ETH");
+    if (ethTicker === undefined) {
+      throw new Error("ETH/USD ticker not found");
+    }
+    const btcTicker = tickers.find((t: GmxTicker) => t.tokenSymbol === "BTC");
+    if (btcTicker === undefined) {
+      throw new Error("BTC/USD ticker not found");
+    }
+    const averageEthPrice = (ethTicker.minPrice + ethTicker.maxPrice) / 2n;
 
-      const snapshotTime = new Date();
+    const feeWei = await estimateExecutionFeeWei(
+      {
+        publicClient: deps.publicClient,
+        chainId: deps.chainId ?? ARBITRUM,
+        maxExecutionFeeWei: deps.maxExecutionFeeWei,
+      },
+      "increase",
+    );
 
-      for (const { address, name } of TARGET_MARKETS) {
-        try {
-          const price =
-            name === "ETH/USD"
-              ? ethPrice30
-              : btcTicker
-                ? (btcTicker.minPrice + btcTicker.maxPrice) / 2n
-                : 0n;
+    const estimatedGasUsd = (feeWei * averageEthPrice) / WEI_PER_ETH;
+    const snapshotTime = new Date();
 
-          let simulatedImpactBps: bigint;
-          let acceptablePrice: bigint | undefined = price > 0n ? price : undefined;
-          if (deps.adapter) {
-            const sim = await deps.adapter.simulateOrder({
-              market: address,
-              sizeUsd: SAMPLE_SIZE_USD,
-              acceptablePrice: price,
-            });
-            simulatedImpactBps = sim.impactBps;
-          } else {
-            const result = await simulateImpact(address, SAMPLE_SIZE_USD, price);
-            simulatedImpactBps = result.simulatedImpactBps;
-            acceptablePrice = result.acceptablePrice ?? acceptablePrice;
-          }
-
-          await deps.db.insert(executionEstimate).values({
-            timestamp: snapshotTime,
-            market: address,
-            sizeUsd: SAMPLE_SIZE_USD,
-            simulatedImpactBps,
-            estimatedGasUsd: estimatedGasUsd ?? undefined,
-            acceptablePrice,
-          });
-
-          const logger = createLogger();
-          logger.debug("Recorded impact sample", {
-            market: address,
-            impactBps: simulatedImpactBps.toString(),
-          });
-        } catch (err) {
-          const logger = createLogger();
-          logger.error(
-            `Impact sample failed for ${name}`,
-            err instanceof Error ? err : new Error(String(err)),
-          );
+    for (const { address, name } of TARGET_MARKETS) {
+      let price: bigint;
+      switch (name) {
+        case "ETH/USD":
+          price = averageEthPrice;
+          break;
+        case "BTC/USD": {
+          const averageBtcPrice = btcTicker ? (btcTicker.minPrice + btcTicker.maxPrice) / 2n : 0n;
+          price = averageBtcPrice;
+          break;
+        }
+        default: {
+          throw new Error(`Unknown market: ${name}`);
         }
       }
-    } catch (err) {
+
+      const { impactBps: simulatedImpactBps } = await deps.adapter.simulateOrder({
+        market: address,
+        sizeUsd: SAMPLE_SIZE_USD,
+        acceptablePrice: price,
+      });
+
+      await deps.db.insert(executionEstimate).values({
+        timestamp: snapshotTime,
+        market: address,
+        sizeUsd: SAMPLE_SIZE_USD,
+        simulatedImpactBps,
+        estimatedGasUsd,
+        acceptablePrice: price,
+      });
+
       const logger = createLogger();
-      logger.error("Impact sampler failed", err instanceof Error ? err : new Error(String(err)));
+      logger.debug("Recorded impact sample", {
+        market: address,
+        impactBps: simulatedImpactBps.toString(),
+      });
     }
   };
 
