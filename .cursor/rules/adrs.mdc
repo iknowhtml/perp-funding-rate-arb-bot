@@ -84,6 +84,24 @@ export const transitionOrder = (order: Order, event: OrderEvent): Order => {
 };
 ```
 
+## Code Snippets in ADRs
+
+**Minimize drift: document decisions and shapes, not implementation details.**
+
+Code in ADRs tends to drift from the codebase. To avoid that:
+
+**Keep in ADRs (stable, high value):**
+- **Port/interface definitions** — e.g. `OrderRepository`, `ProtocolAdapter`, type shapes. These change rarely and capture the decision.
+- **Directory structure diagrams** — Tree or list of where things live; update when structure changes.
+- **Pattern illustrations** — Short, generic examples that show the *approach* (e.g. "parse at boundary", "safeParse for optional data") without claiming to be real file contents. No file path comments, no import statements that will go stale.
+
+**Avoid in ADRs (high drift):**
+- **Function bodies / implementations** — e.g. full `evaluateStrategy` or worker composition. Describe the pattern in prose and say "see the source" for current behavior.
+- **Schema field lists** — Env vars, API response fields, config keys. Describe the approach and point to the actual file (e.g. `src/lib/env/schema.ts`).
+- **Wiring/composition code** — How the worker plugs things together. Prose + "see the source" is enough.
+
+**When you need to show code:** Prefer interfaces and one-off pattern snippets (e.g. "validate at boundary with `v.parse(schema, data)`"). For anything that will change as features are added, use prose and "See `path/to/file` for the current implementation."
+
 ## When to Create ADRs
 
 Create an ADR for:
