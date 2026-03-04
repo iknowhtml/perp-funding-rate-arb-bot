@@ -48,13 +48,6 @@ const executeWithRetry = async (
         const logger = createLogger();
         logger.warn(
           `Task ${taskId} failed (attempt ${attempt + 1}/${config.maxRetries + 1}), retrying in ${delay}ms`,
-          {
-            error: {
-              name: lastError.name,
-              message: lastError.message,
-              stack: lastError.stack,
-            },
-          },
         );
         await new Promise<void>((resolve) =>
           setTimeout(() => {
