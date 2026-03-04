@@ -1,0 +1,5 @@
+# Nixpacks sets NODE_ENV=production, so pnpm skips devDependencies and build fails.
+# Override install to use NODE_ENV=development so dev deps (tsup, typescript, etc.)
+# are installed. See ADR-0029.
+[phases.install]
+cmds = ["corepack enable", "NODE_ENV=development pnpm install --frozen-lockfile"]

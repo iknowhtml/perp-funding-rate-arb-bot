@@ -120,6 +120,8 @@ Update an ADR when:
 3. Dependencies or patterns change
 4. A decision is superseded by a new one
 
+**When you edit an ADR, always add or update the `Updated:` date** in the front matter (use today’s date in `YYYY-MM-DD` format). If the ADR has no `Updated:` line yet, add it after `Date:`.
+
 ## Status Values
 
 - **Proposed**: Under discussion, not yet implemented

@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-02-22
+- **Updated:** 2026-03-04
 - **Owners:** -
 - **Related:**
   - [ADR-0001: Bot Architecture](0001-bot-architecture.md)
@@ -127,6 +128,10 @@ CMD ["node", "dist/index.js"]
 ```
 
 Railway can build from this Dockerfile or use Nixpacks with `package.json`; specify root directory and start command in the dashboard or `railway.json` if needed.
+
+### Nixpacks and devDependencies
+
+When using Nixpacks (`railway.toml` with `builder = "nixpacks"`), the build runs with `NODE_ENV=production`. Unlike npm (which respects `NPM_CONFIG_PRODUCTION=false`), **pnpm** uses `NODE_ENV` to decide whether to install devDependencies, so they are skipped and `pnpm build` would fail (missing tsup, TypeScript, etc.). The repo overrides the install phase in `nixpacks.toml` so that `NODE_ENV=development pnpm install --frozen-lockfile` runs, ensuring devDependencies are available for the build. Runtime still uses `NODE_ENV=production` (set by Nixpacks for the start phase).
 
 **postinstall:** The `postinstall` script runs `lefthook install` only when **not** in CI (e.g. `CI` or `RAILWAY_ENVIRONMENT` set) and the build is inside a git repository. Railway and other CI environments either set these variables or omit `.git`, so `lefthook install` is skipped and the install succeeds. Local clones run `lefthook install` as usual.
 
