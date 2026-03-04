@@ -4,10 +4,10 @@
  * @see {@link ../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
-import * as v from "valibot";
-
 import { derivedPositionSchema, inconsistencySchema } from "@/domains/position";
 import type { DerivedPosition, Inconsistency } from "@/domains/position";
+import * as v from "valibot";
+import type { Address } from "viem";
 
 // --- Config ---
 
@@ -32,9 +32,9 @@ export interface ReconcilerConfig {
   /** Base asset decimal places. */
   baseDecimals: number;
   /** GMX market address (for ProtocolAdapter path). */
-  gmxMarket?: string;
+  gmxMarket?: Address;
   /** GMX pool id (for ProtocolAdapter path). */
-  gmxPool?: string;
+  gmxPool?: Address;
 }
 
 export const ReconcilerConfigSchema = v.object({

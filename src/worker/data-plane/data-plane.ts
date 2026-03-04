@@ -5,8 +5,17 @@
  * @see {@link ../../../adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
  */
 
+import { isAddress } from "viem";
+
 import type { GmxMarket, GmxTicker } from "@/adapters/gmx";
-import type { Balance, FundingRate, Position, ProtocolAdapter, Ticker } from "@/adapters/types";
+import type {
+  Balance,
+  FundingRate,
+  LiquidityBalance,
+  Position,
+  ProtocolAdapter,
+  Ticker,
+} from "@/adapters/types";
 import type { Logger } from "@/lib/logger";
 
 import type { StateStore } from "../state";
@@ -167,9 +176,13 @@ export const createDataPlane = (config: DataPlaneConfig): DataPlane => {
   const startAccountPolling = (): void => {
     const poll = async (): Promise<void> => {
       try {
+        const poolIsValid = gmxPool.length > 0 && isAddress(gmxPool);
+        const liquidityPromise: Promise<LiquidityBalance> = poolIsValid
+          ? adapter.getLiquidityBalance(gmxPool)
+          : Promise.resolve({ pool: "", balance: 0n });
         const [positionState, liquidityBalance] = await Promise.all([
           adapter.getPositionState(gmxMarket),
-          adapter.getLiquidityBalance(gmxPool),
+          liquidityPromise,
         ]);
         const perpSymbol = symbols[0] ?? "BTC-USD";
         const baseAsset = perpSymbol.split("-")[0] ?? "BTC";

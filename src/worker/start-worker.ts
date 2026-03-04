@@ -27,7 +27,7 @@ import { DEFAULT_EXECUTION_CONFIG, createExecutionCircuitBreaker } from "./execu
 import { DEFAULT_FRESHNESS_CONFIG } from "./freshness";
 import { createImpactSampler } from "./impact-sampler";
 import { createSerialQueue } from "./queue";
-import { DEFAULT_RECONCILER_CONFIG, runReconcile } from "./reconciler";
+import { DEFAULT_RECONCILER_CONFIG, type ReconcilerConfig, runReconcile } from "./reconciler";
 import { createStateStore } from "./state";
 import { createHealthMonitor } from "./websocket/health-monitor";
 
@@ -65,24 +65,29 @@ export const startWorker = async (config: StartWorkerConfig): Promise<WorkerHand
   const baseUrl = env.GMX_ORACLE_URL ?? "https://arbitrum-api.gmxinfra.io";
   const publicClient = createArbitrumPublicClient(env.ARBITRUM_RPC_URL);
   const walletClient = env.ARBITRUM_PRIVATE_KEY
-    ? createArbitrumWalletClient(env.ARBITRUM_RPC_URL, env.ARBITRUM_PRIVATE_KEY as `0x${string}`)
+    ? createArbitrumWalletClient(env.ARBITRUM_RPC_URL, env.ARBITRUM_PRIVATE_KEY)
     : null;
+
+  const account = walletClient?.account?.address;
 
   const adapter = createGmxAdapter({
     baseUrl,
     publicClient,
-    chainId: env.ARBITRUM_CHAIN_ID ?? 42161,
+    chainId: env.ARBITRUM_CHAIN_ID,
+    account,
   });
   const stateStore = createStateStore();
   const executionQueue = createSerialQueue();
   const circuitBreaker = createExecutionCircuitBreaker(logger);
 
-  const reconcilerConfig = {
+  const reconcilerConfig: ReconcilerConfig = {
     ...DEFAULT_RECONCILER_CONFIG,
     perpSymbol: DEFAULT_PERP_SYMBOL,
     gmxMarket: BTC_USD_MARKET,
-    gmxPool: "default",
   };
+  if (env.GMX_GM_POOL != null) {
+    reconcilerConfig.gmxPool = env.GMX_GM_POOL;
+  }
 
   const positionConfig: PositionConfig = {
     perpSymbol: reconcilerConfig.perpSymbol,
@@ -110,7 +115,7 @@ export const startWorker = async (config: StartWorkerConfig): Promise<WorkerHand
     logger,
     symbols: DEFAULT_SYMBOLS,
     gmxMarket: reconcilerConfig.gmxMarket ?? BTC_USD_MARKET,
-    gmxPool: reconcilerConfig.gmxPool ?? "default",
+    gmxPool: reconcilerConfig.gmxPool ?? "",
   });
 
   await dataPlane.start();

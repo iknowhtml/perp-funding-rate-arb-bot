@@ -1,12 +1,5 @@
-/**
- * Reconciler: fetch truth from GMX (position state + liquidity balance) and correct state drift.
- *
- * @see {@link ../../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
- * @see {@link ../../../../adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
- */
-
 import type { ProtocolAdapter } from "@/adapters/types";
-import type { Balance, Position } from "@/adapters/types";
+import type { Balance, LiquidityBalance, Position } from "@/adapters/types";
 import { derivePosition, reconcilePosition } from "@/domains/position";
 import type { PositionConfig } from "@/domains/position";
 import type { Logger } from "@/lib/logger";
@@ -72,11 +65,6 @@ const toPositionConfig = (config: ReconcilerConfig): PositionConfig => ({
 });
 
 /**
- * Absolute value for bigint.
- */
-const absBigint = (n: bigint): bigint => (n < 0n ? -n : n);
-
-/**
  * Detect balance drift between in-memory state and exchange truth.
  *
  * Compares totalBase for each balance in the exchange truth against
@@ -95,11 +83,12 @@ const detectBalanceInconsistencies = (
     if (!stateBalance) continue;
 
     // Compare totalBase
-    const diff = absBigint(stateBalance.totalBase - truthBalance.totalBase);
-    if (diff === 0n) continue;
+    const delta = stateBalance.totalBase - truthBalance.totalBase;
+    const absoluteDelta = delta < 0n ? -delta : delta;
+    if (absoluteDelta === 0n) continue;
 
     const denominator = truthBalance.totalBase > 0n ? truthBalance.totalBase : 1n;
-    const diffBps = (diff * BPS_PER_UNIT) / denominator;
+    const diffBps = (absoluteDelta * BPS_PER_UNIT) / denominator;
 
     if (diffBps > toleranceBps) {
       inconsistencies.push({
@@ -138,26 +127,43 @@ export const runReconcile = async (
   logger: Logger,
 ): Promise<ReconcilerResult> => {
   const positionConfig = toPositionConfig(config);
-  const market = config.gmxMarket ?? "";
-  const pool = config.gmxPool ?? "default";
+
+  const {
+    gmxMarket,
+    gmxPool,
+    perpSymbol,
+    baseAsset,
+    toleranceSizeBps,
+    tolerancePriceBps,
+    toleranceBalanceBps,
+  } = config;
+
+  if (gmxMarket === undefined) {
+    throw new Error("gmxMarket is required");
+  }
+
+  if (gmxPool === undefined) {
+    throw new Error("gmxPool is required");
+  }
 
   // 1. Fetch truth from GMX (position state + liquidity balance)
+  const liquidityPromise: Promise<LiquidityBalance> = adapter.getLiquidityBalance(gmxPool);
   const [positionState, liquidityBalance] = await Promise.all([
-    adapter.getPositionState(market),
-    adapter.getLiquidityBalance(pool),
+    adapter.getPositionState(gmxMarket),
+    liquidityPromise,
   ]);
   const { balances, positions } = toBalancesAndPositions(
     positionState,
     liquidityBalance,
-    config.perpSymbol,
-    config.baseAsset,
+    perpSymbol,
+    baseAsset,
   );
   const openOrders: Parameters<StateStore["updateOrders"]>[0] = [];
 
   // 2. Snapshot pre-update state and derive position for comparison
   const preState = stateStore.getState();
-  const perpPosition = preState.positions.get(config.perpSymbol) ?? null;
-  const spotBalance = preState.balances.get(config.baseAsset) ?? null;
+  const perpPosition = preState.positions.get(perpSymbol) ?? null;
+  const spotBalance = preState.balances.get(baseAsset) ?? null;
   const markPriceQuote = preState.ticker?.lastPriceQuote ?? 0n;
 
   const derivedPosition = derivePosition(
@@ -174,9 +180,9 @@ export const runReconcile = async (
   stateStore.updateOrders(openOrders);
 
   // 4. Run domain-level position reconciliation
-  const exchangePosition = positions.find((p) => p.symbol === config.perpSymbol) ?? null;
+  const exchangePosition = positions.find((p) => p.symbol === perpSymbol) ?? null;
   const exchangeSpotBalance =
-    balances.find((b) => b.asset === config.baseAsset) ??
+    balances.find((b) => b.asset === baseAsset) ??
     balances.find((b) => b.asset.startsWith("GM-")) ??
     null;
 
@@ -186,8 +192,8 @@ export const runReconcile = async (
     exchangeSpotBalance,
     markPriceQuote,
     {
-      sizeBps: config.toleranceSizeBps,
-      priceBps: config.tolerancePriceBps,
+      sizeBps: toleranceSizeBps,
+      priceBps: tolerancePriceBps,
     },
     positionConfig,
   );
@@ -196,7 +202,7 @@ export const runReconcile = async (
   const balanceInconsistencies = detectBalanceInconsistencies(
     preState.balances,
     balances,
-    config.toleranceBalanceBps,
+    toleranceBalanceBps,
   );
 
   const positionInconsistencies = result.inconsistencies;

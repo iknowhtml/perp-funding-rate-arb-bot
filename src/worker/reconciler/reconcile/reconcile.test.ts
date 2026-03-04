@@ -9,7 +9,7 @@ import type { ReconcilerConfig } from "../types";
 import { runReconcile } from "./reconcile";
 
 const GMX_MARKET = "0x47c031236e19d024b42f8AE6780E44A573170703";
-const GMX_POOL = "default";
+const GMX_POOL = "0x4277f8f2c384827b5273592ff7cebd9f2c1ac258";
 
 const DEFAULT_CONFIG: ReconcilerConfig = {
   intervalMs: 60_000,

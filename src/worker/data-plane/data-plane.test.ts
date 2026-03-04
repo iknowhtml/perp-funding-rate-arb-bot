@@ -7,7 +7,8 @@ import { createStateStore } from "../state";
 import { createDataPlane } from "./data-plane";
 
 const GMX_MARKET = "0x47c031236e19d024b42f8AE6780E44A573170703";
-const GMX_POOL = "default";
+/** Valid GM token address so getLiquidityBalance is invoked (Arbitrum). */
+const GMX_POOL = "0x4277f8f2c384827b5273592ff7cebd9f2c1ac258";
 
 const createMockProtocolAdapter = (): ProtocolAdapter => ({
   getMarketsInfo: vi.fn().mockResolvedValue([]),
