@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-02-04
+- **Updated:** 2026-03-04
 - **Owners:** -
 - **Related:**
   - [ADR-0001: Bot Architecture](0001-bot-architecture.md)
@@ -78,7 +79,6 @@ SQLite is a valid MVP choice for absolute simplicity (single file, no service), 
 
 **Serious personal bot / scaling capital:**
 - Postgres (managed if possible)
-- Easiest: Supabase / Neon / RDS / DigitalOcean Managed Postgres
 - Or Postgres container in Docker Compose (fine early)
 
 **SaaS later:**
@@ -211,61 +211,17 @@ If starting with SQLite, the migration is straightforward:
 2. **Same queries**: Standard SQL works in both
 3. **Zero rewrites**: Repository pattern (ADR-0002) abstracts the database
 
-```typescript
-// Repository interface (port) stays the same
-export interface OrderRepository {
-  create(order: CreateOrder): Promise<Order>;
-  findByExchangeOrderId(exchangeOrderId: string): Promise<Order | null>;
-  findOpenOrders(): Promise<Order[]>;
-}
-
-// SQLite adapter → Postgres adapter (swap implementation)
-export const createSqliteOrderRepository = (db: Database): OrderRepository => { /* ... */ };
-export const createPostgresOrderRepository = (client: Client): OrderRepository => { /* ... */ };
-```
+The repository port (interface) stays the same; swap the adapter implementation (SQLite vs Postgres). See ADR-0002 and `lib/db/ports/`.
 
 ## Implementation Notes
 
 ### Idempotency Keys
 
-Every order creation must include an idempotency key:
-
-```typescript
-import { randomUUID } from "node:crypto";
-
-const createOrder = async (params: CreateOrderParams) => {
-  const idempotencyKey = randomUUID();
-  
-  // Check if order already exists
-  const existing = await orderRepo.findByIdempotencyKey(idempotencyKey);
-  if (existing) {
-    return existing;  // Return existing order, don't create duplicate
-  }
-  
-  return orderRepo.create({ ...params, idempotencyKey });
-};
-```
+Every order creation must include an idempotency key; check for an existing order with that key before creating to avoid duplicates. See order creation flow in source.
 
 ### Transactional Consistency
 
-Orders and fills must be created atomically:
-
-```typescript
-const recordFill = async (fill: Fill) => {
-  await db.transaction(async (tx) => {
-    // 1. Insert fill
-    await tx.insert(fills).values(fill);
-    
-    // 2. Update order status
-    const order = await tx.select().from(orders).where(eq(orders.id, fill.orderId));
-    const newStatus = calculateOrderStatus(order, fill);
-    await tx.update(orders).set({ status: newStatus }).where(eq(orders.id, fill.orderId));
-    
-    // 3. Update position snapshot
-    await updatePositionSnapshot(tx, fill);
-  });
-};
-```
+Orders and fills must be created atomically in a single transaction: insert fill, update order status, update position snapshot. See repository or execution layer in source for current transaction scope.
 
 ### Time-Series Queries
 
@@ -299,7 +255,7 @@ ORDER BY snapshot_at DESC;
 
 1. **Operational overhead**: Requires database service (managed or self-hosted)
 2. **Connection management**: Must handle connection pooling and retries
-3. **Cost**: Managed Postgres adds baseline cost (~$7/mo for HA)
+3. **Cost**: Managed Postgres can add cost
 
 ### Risks
 

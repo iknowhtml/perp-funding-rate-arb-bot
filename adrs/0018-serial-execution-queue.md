@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-02-04
+- **Updated:** 2026-03-04
 - **Owners:** -
 - **Related:**
   - [ADR-0001: Bot Architecture](0001-bot-architecture.md)
@@ -49,65 +50,14 @@ These serve different purposes and complement each other:
 
 ### Architecture
 
-```typescript
-import PQueue from "p-queue";
-
-export type JobStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
-
-export interface SerialQueue {
-  enqueue: <T>(fn: (signal: AbortSignal) => Promise<T>, id?: string) => JobHandle<T>;
-  getStatus: (id: string) => JobStatus | null;
-  getPendingCount: () => number;
-  cancelAll: () => void;
-  waitForIdle: () => Promise<void>;
-}
-```
+SerialQueue: enqueue(fn, id?) → JobHandle; getStatus(id), getPendingCount(), cancelAll(), waitForIdle(). JobStatus: pending | running | completed | failed | cancelled. Jobs receive AbortSignal for cancellation. See source for interface and p-queue wrapper.
 
 ### Core Features
 
-#### 1. Serial Execution
-
-`p-queue` with `concurrency: 1` ensures only one job runs at a time:
-
-```typescript
-const queue = new PQueue({ concurrency: 1 });
-```
-
-#### 2. AbortController Support
-
-Jobs receive an `AbortSignal` and can be cancelled even while running:
-
-```typescript
-const job = queue.enqueue(async (signal) => {
-  // Check signal.aborted periodically
-  if (signal.aborted) {
-    throw new Error("Job cancelled");
-  }
-  // ... execute trading action
-});
-
-// Later: job.cancel(); // Cancels even if running
-```
-
-This is a critical improvement over a custom implementation, which couldn't cancel running jobs.
-
-#### 3. Job Status Tracking
-
-Thin wrapper tracks domain-specific status:
-
-```typescript
-const jobs = new Map<string, JobStatus>();
-
-// Track status transitions: pending → running → completed/failed/cancelled
-```
-
-#### 4. Graceful Shutdown
-
-`waitForIdle()` allows running jobs to complete before shutdown:
-
-```typescript
-await queue.waitForIdle(); // Wait for all jobs to complete
-```
+- **Serial execution**: p-queue with concurrency 1.
+- **AbortController**: Jobs get AbortSignal; job.cancel() can cancel running work.
+- **Job status**: Thin wrapper tracks pending → running → completed/failed/cancelled.
+- **Graceful shutdown**: waitForIdle() before process exit.
 
 ### Implementation Location
 

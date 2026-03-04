@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-02-10
+- **Updated:** 2026-03-04
 - **Owners:** -
 - **Related:**
   - [ADR-0001: Bot Architecture](0001-bot-architecture.md)
@@ -90,40 +91,7 @@ Stale data response rules  → RPC health + oracle staleness checks
 
 ### ProtocolAdapter and GmxProtocolAdapter
 
-The existing `ExchangeAdapter` interface (ADR-0010) was designed for CEX API interactions. It doesn't fit GMX (no order book, no WebSocket, async keeper-executed orders, GM token deposit/withdrawal). We introduce a shared **`ProtocolAdapter`** interface in `src/adapters/types/types.ts` for on-chain perp protocols. The GMX implementation is **`GmxProtocolAdapter`** (in `src/adapters/gmx/adapter.ts`); domain code depends on `ProtocolAdapter`, and the factory `createGmxAdapter()` returns `ProtocolAdapter`.
-
-```typescript
-// src/adapters/types/types.ts -- shared interface
-export interface ProtocolAdapter {
-  getMarketsInfo(): Promise<unknown[]>;
-  getTickers(): Promise<unknown[]>;
-  getPositionState(market: string): Promise<PositionState | null>;
-  getLiquidityBalance(pool: string): Promise<LiquidityBalance>;
-  simulateOrder(params: OpenPositionParams): Promise<{ impactBps: bigint }>;
-  submitOrder(params: OpenPositionParams): Promise<TxResult>;
-}
-
-// src/adapters/gmx/index.ts
-export { createGmxAdapter } from "./adapter";
-export type { GmxProtocolAdapter, GmxProtocolAdapterConfig } from "./adapter";
-```
-
-Domain code uses the interface:
-
-```typescript
-// src/worker/execution/enter-hedge.ts
-import type { ProtocolAdapter } from "@/adapters/types";
-
-export const executeEnterHedge = async (
-  adapter: ProtocolAdapter,
-  params: EnterHedgeParams,
-): Promise<ExecutionResult> => {
-  const simulation = await adapter.simulateOrder(params.perpOrder);
-  // ...
-};
-```
-
-If we add a second protocol (e.g. Drift) later, we add another implementation of `ProtocolAdapter`; the interface is already in place.
+The existing `ExchangeAdapter` interface (ADR-0010) was designed for CEX API interactions. It doesn't fit GMX (no order book, no WebSocket, async keeper-executed orders, GM token deposit/withdrawal). We introduce a shared **`ProtocolAdapter`** interface in `src/adapters/types/types.ts` for on-chain perp protocols (getMarketsInfo, getTickers, getPositionState, getLiquidityBalance, simulateOrder, submitOrder). The GMX implementation is **`GmxProtocolAdapter`** in `src/adapters/gmx/`; domain code depends on `ProtocolAdapter`; `createGmxAdapter()` returns it. Execution (e.g. enter-hedge) calls adapter.simulateOrder then submitOrder. See source for interface and `executeEnterHedge`. Adding a second protocol (e.g. Drift) later is a new `ProtocolAdapter` implementation.
 
 The CEX adapter code (`src/adapters/coinbase/`, `src/adapters/binance/`, `src/adapters/bybit/`) is deleted. It's in git history if ever needed.
 
@@ -171,17 +139,7 @@ The serial execution queue (ADR-0018) remains critical: it prevents nonce confli
 
 ### Simulation Before Execution
 
-GMX provides `ExchangeRouter.simulateExecuteDeposit`, `simulateExecuteWithdrawal`, and `simulateExecuteOrder` functions. These allow pre-flight checks before committing capital:
-
-```typescript
-// Before creating a real order, simulate to check for errors
-const simulateResult = await publicClient.simulateContract({
-  address: EXCHANGE_ROUTER,
-  abi: exchangeRouterAbi,
-  functionName: "simulateExecuteOrder",
-  args: [orderParams, oracleParams],
-});
-```
+GMX provides `simulateExecuteDeposit`, `simulateExecuteWithdrawal`, and `simulateExecuteOrder`. Call `publicClient.simulateContract` with ExchangeRouter address, ABI, functionName, and args before sending a real order. See source for simulation usage.
 
 This replaces the pre-trade slippage estimation from order book depth (ADR-0015) with a contract-level simulation that accounts for:
 - Price impact from pool utilization
@@ -220,22 +178,7 @@ The risk engine (ADR-0013) gains on-chain-specific risk factors:
 
 ### Environment Configuration
 
-New environment variables:
-
-```bash
-# Chain
-ARBITRUM_RPC_URL=https://arb1.arbitrum.io/rpc
-ARBITRUM_PRIVATE_KEY=0x...
-
-# GMX
-GMX_ORACLE_URL=https://arbitrum-api.gmxinfra.io
-GMX_SUBSQUID_URL=https://gmx.squids.live/gmx-synthetics-arbitrum:prod/api/graphql
-GMX_MARKET_ADDRESS=0x...  # Target market (e.g., ETH/USD)
-
-# Gas
-MAX_GAS_PRICE_GWEI=1     # Circuit breaker for gas spikes
-MIN_YIELD_AFTER_GAS_BPS=5 # Minimum yield after gas costs
-```
+New env vars: chain (ARBITRUM_RPC_URL, ARBITRUM_PRIVATE_KEY), GMX (oracle URL, Subsquid URL, market address), gas (MAX_GAS_PRICE_GWEI, MIN_YIELD_AFTER_GAS_BPS). See repo `.env.example` and config.
 
 ### File Structure
 

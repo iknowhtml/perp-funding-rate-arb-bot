@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-02-04
+- **Updated:** 2026-03-04
 - **Owners:** -
 - **Related:**
   - [ADR-0001: Bot Architecture](0001-bot-architecture.md)
@@ -40,65 +41,13 @@ We have decided to use the following development tooling stack:
 
 [fnm](https://github.com/Schniz/fnm) manages Node.js versions. It's fast (Rust-based) and automatically switches Node versions when you `cd` into a project directory.
 
-**Installation:**
-
-```bash
-# macOS
-brew install fnm
-
-# Linux/macOS (curl)
-curl -fsSL https://fnm.vercel.app/install | bash
-```
-
-**Shell Integration:**
-
-Add to your shell profile (`~/.zshrc` or `~/.bashrc`):
-
-```bash
-# fnm (Fast Node Manager)
-eval "$(fnm env --use-on-cd)"
-```
-
-**Project Configuration:**
-
-The project pins the Node.js version in `.node-version`:
-
-```
-22
-```
-
-When you `cd` into the project directory, fnm automatically switches to Node.js 22.
-
-**Usage:**
-
-```bash
-fnm install 22      # Install Node.js 22
-fnm use 22          # Use Node.js 22
-fnm current         # Show current version
-fnm list            # List installed versions
-```
+**Installation and usage:** See [fnm docs](https://github.com/Schniz/fnm) or the repo setup script. The project pins Node in `.node-version`; when you `cd` into the project, fnm auto-switches to that version.
 
 #### Corepack (pnpm Version Management)
 
 [Corepack](https://nodejs.org/api/corepack.html) is Node.js's built-in package manager version manager. It ensures everyone uses the same pnpm version.
 
-**Enable Corepack:**
-
-```bash
-corepack enable
-```
-
-**Project Configuration:**
-
-The project specifies the pnpm version in `package.json`:
-
-```json
-{
-  "packageManager": "pnpm@9.15.2"
-}
-```
-
-When you run `pnpm` commands, Corepack automatically downloads and uses the specified version.
+**Enable Corepack** once (`corepack enable`). The project specifies the pnpm version in `package.json` (`packageManager`); Corepack uses that version automatically. See repo for current value.
 
 **Why Corepack over global pnpm install:**
 
@@ -107,62 +56,13 @@ When you run `pnpm` commands, Corepack automatically downloads and uses the spec
 | `npm install -g pnpm` | Simple | Version drift between developers |
 | Corepack | Consistent versions, no manual install | Requires `corepack enable` once |
 
-**Troubleshooting:**
-
-If you see a Corepack hash mismatch error, remove the hash from `packageManager`:
-
-```json
-// Before (with hash)
-"packageManager": "pnpm@9.15.2+sha512.abc123..."
-
-// After (without hash)
-"packageManager": "pnpm@9.15.2"
-```
+**Troubleshooting:** If Corepack reports a hash mismatch, remove the hash from the `packageManager` field in `package.json` (see repo).
 
 ### Tool Configuration
 
 #### Biome
 
-Biome replaces ESLint + Prettier with a single, faster tool:
-
-```json
-// biome.json
-{
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
-  "vcs": {
-    "enabled": true,
-    "clientKind": "git",
-    "useIgnoreFile": true
-  },
-  "files": {
-    "ignoreUnknown": false,
-    "ignore": ["node_modules", "dist", "coverage", ".env", ".env.local"]
-  },
-  "formatter": {
-    "enabled": true,
-    "indentStyle": "space",
-    "indentWidth": 2,
-    "lineWidth": 100
-  },
-  "linter": {
-    "enabled": true,
-    "rules": {
-      "recommended": true,
-      "style": {
-        "noNonNullAssertion": "off",
-        "useNodejsImportProtocol": {
-          "level": "warn",
-          "fix": "safe"
-        }
-      },
-      "correctness": {
-        "noUnusedVariables": "error",
-        "noUnusedImports": "error"
-      }
-    }
-  }
-}
-```
+Biome replaces ESLint + Prettier with a single, faster tool. Configuration: see `biome.json` in the repo.
 
 **Why Biome over ESLint + Prettier:**
 
@@ -175,31 +75,7 @@ Biome replaces ESLint + Prettier with a single, faster tool:
 
 #### Lefthook
 
-[Lefthook](https://github.com/evilmartians/lefthook) runs Biome checks and secret scanning on commit:
-
-```yaml
-# lefthook.yml
-pre-commit:
-  piped: true
-  commands:
-    biome:
-      glob: '*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc}'
-      run: pnpm biome check --write {staged_files}
-      stage_fixed: true
-    gitleaks:
-      # Scans staged files for secrets/credentials before allowing commit
-      # Install: brew install gitleaks (macOS) or see https://github.com/gitleaks/gitleaks
-      run: gitleaks protect -v --staged
-
-pre-push:
-  commands:
-    biome-ci:
-      run: pnpm biome ci --error-on-warnings
-    typecheck:
-      run: pnpm typecheck
-    test:
-      run: pnpm test:run
-```
+[Lefthook](https://github.com/evilmartians/lefthook) runs Biome and Gitleaks on pre-commit, and biome CI + typecheck + tests on pre-push. Configuration: see `lefthook.yml` in the repo.
 
 **Why Lefthook over Husky:**
 - Faster (Go-based)
@@ -209,174 +85,21 @@ pre-push:
 
 #### Gitleaks
 
-[Gitleaks](https://github.com/gitleaks/gitleaks) prevents accidental secret commits:
-
-```toml
-# .gitleaks.toml
-title = "Gitleaks config for funding-rate-arb-bot"
-
-# Extend the default ruleset
-[extend]
-useDefault = true
-
-# Paths to ignore (test files may contain mock credentials)
-[allowlist]
-paths = [
-  '''\.test\.ts$''',
-  '''test-utils\.ts$''',
-]
-```
-
-**Installation:**
-```bash
-# macOS
-brew install gitleaks
-
-# Linux
-# See https://github.com/gitleaks/gitleaks#installation
-```
+[Gitleaks](https://github.com/gitleaks/gitleaks) prevents accidental secret commits. Config and allowlist: see `.gitleaks.toml` in the repo. Install via `brew install gitleaks` (macOS) or [Gitleaks installation](https://github.com/gitleaks/gitleaks#installation).
 
 #### Vitest
 
-Vitest is configured for fast, modern testing:
+Vitest is configured for node, `src/**/*.test.ts`, and v8 coverage. Configuration: see `vitest.config.ts` in the repo.
 
-```typescript
-// vitest.config.ts
-import { defineConfig } from 'vitest/config';
+### Package Scripts and Dependencies
 
-export default defineConfig({
-  test: {
-    globals: true,
-    environment: 'node',
-    include: ['src/**/*.test.ts'],
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'html'],
-    },
-  },
-});
-```
-
-### Package Scripts
-
-```json
-// package.json (scripts section)
-{
-  "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsup",
-    "start": "node dist/index.js",
-    "lint": "biome check .",
-    "lint:fix": "biome check --write .",
-    "format": "biome format --write .",
-    "format:check": "biome format .",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest",
-    "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
-  }
-}
-```
-
-**Important:** Always use `test:run` when running tests from Cursor or scripts (process exits after tests complete). Use `test` for interactive watch mode during development. The production build uses **tsup** (see [ADR-0030: Build Tool — tsup](0030-build-tool-tsup.md)).
-
-### Development Dependencies
-
-```json
-// package.json (devDependencies)
-{
-  "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
-    "@types/node": "^20.x",
-    "tsx": "^4.x",
-    "typescript": "^5.7.x",
-    "vitest": "^2.x"
-  }
-}
-```
+Scripts (e.g. `dev`, `build`, `lint`, `typecheck`, `test`, `test:run`) and devDependencies are in `package.json`. Use `test:run` for non-interactive runs (e.g. Cursor/scripts); use `test` for watch mode. Production build: **tsup** (see [ADR-0030: Build Tool — tsup](0030-build-tool-tsup.md)).
 
 ### Setup Instructions
 
-#### Automated Setup (Recommended)
+**Automated (recommended):** Run `./scripts/setup.sh` or `pnpm setup`; it installs fnm, Corepack, Lefthook, Gitleaks, dependencies, hooks, and creates `.env` from `.env.example`.
 
-Run the setup script to install all dependencies automatically:
-
-```bash
-./scripts/setup.sh
-# or
-pnpm setup
-```
-
-The setup script will:
-1. Install fnm (Fast Node Manager)
-2. Configure fnm in your shell profile
-3. Install Node.js 22
-4. Enable Corepack
-5. Install Lefthook and Gitleaks
-6. Install project dependencies
-7. Set up Git hooks
-8. Create `.env` from `.env.example`
-
-#### Manual Setup
-
-If you prefer manual setup or are on Linux:
-
-##### Prerequisites
-
-1. **Install fnm** (Fast Node Manager):
-   ```bash
-   # macOS
-   brew install fnm
-   
-   # Or via curl (Linux/macOS)
-   curl -fsSL https://fnm.vercel.app/install | bash
-   ```
-
-2. **Configure shell** (add to `~/.zshrc` or `~/.bashrc`):
-   ```bash
-   eval "$(fnm env --use-on-cd)"
-   ```
-
-3. **Restart terminal** or source your shell config:
-   ```bash
-   source ~/.zshrc  # or ~/.bashrc
-   ```
-
-##### Project Setup
-
-1. **Install Node.js** (fnm auto-switches based on `.node-version`):
-   ```bash
-   fnm install 22
-   fnm use 22
-   ```
-
-2. **Enable Corepack** (manages pnpm version):
-   ```bash
-   corepack enable
-   ```
-
-3. **Install dependencies** (Corepack auto-installs correct pnpm version):
-   ```bash
-   pnpm install
-   ```
-
-4. **Install Lefthook hooks:**
-   ```bash
-   pnpm lefthook install
-   ```
-
-5. **Install Gitleaks** (for secret scanning):
-   ```bash
-   brew install gitleaks  # macOS
-   ```
-
-#### Verification
-
-```bash
-fnm --version      # Fast Node Manager
-node --version     # Should be v22.x
-pnpm --version     # Should match packageManager in package.json
-```
+**Manual:** Install fnm, add `eval "$(fnm env --use-on-cd)"` to your shell profile, install Node per `.node-version`, run `corepack enable`, then `pnpm install` and `pnpm lefthook install`. Install Gitleaks per [docs](https://github.com/gitleaks/gitleaks#installation). Verify with `fnm --version`, `node --version`, `pnpm --version`. See repo `scripts/setup.sh` for the canonical sequence.
 
 ## Consequences
 

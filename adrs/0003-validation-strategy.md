@@ -2,19 +2,22 @@
 
 - **Status:** Accepted
 - **Date:** 2026-02-04
+- **Updated:** 2026-03-04
 - **Owners:** -
 - **Related:**
-  - [ADR-0001: Bot Architecture](0001-bot-architecture.md)
-  - [ADR-0010: Exchange Adapters](0010-exchange-adapters.md)
+  - [ADR-0031: Bot Architecture (On-Chain)](0031-bot-architecture-on-chain.md)
+  - [ADR-0019: On-Chain Perps Pivot](0019-on-chain-perps-pivot.md)
+  - [ADR-0020: Contract Interaction Patterns](0020-contract-interaction-patterns.md)
 
 ## Context
 
-A trading bot operates at system boundaries where untrusted data enters the system:
+The bot operates at system boundaries where untrusted data enters the system:
 
-1. **Environment variables** — API keys, configuration values
-2. **Exchange API responses** — Prices, balances, order states, funding rates
-3. **WebSocket messages** — Real-time market data
-4. **Configuration files** — Trading parameters, risk limits
+1. **Environment variables** — Database URL, RPC URL, private key, GMX Oracle URL, chain ID, logging
+2. **GMX REST API responses** — Markets info (funding, OI, borrow rates), price tickers
+3. **RPC / contract reads** — Addresses, position data (Reader contract), balances
+4. **Domain configuration** — Strategy and risk parameters (thresholds, limits)
+5. **Optional: WebSocket messages** — Real-time feeds when used (validation via message parser)
 
 TypeScript's type system only provides compile-time safety. At runtime, we receive `unknown` data that must be validated before use. Without runtime validation:
 
@@ -23,7 +26,7 @@ TypeScript's type system only provides compile-time safety. At runtime, we recei
 - Errors occur far from the source
 - Debugging becomes difficult
 
-For a trading bot, this is unacceptable. Invalid data can lead to incorrect trading decisions and financial loss.
+For a trading bot, invalid data can lead to incorrect decisions and financial loss.
 
 ## Decision
 
@@ -40,185 +43,33 @@ We will use **Valibot** for all runtime validation.
 | **Type Inference** | Excellent | Excellent |
 | **Ecosystem** | Larger | Growing |
 
-**Decision:** Valibot's smaller bundle size and better performance make it ideal for a long-running bot where startup time and memory matter less than Zod's larger ecosystem. The functional API also aligns with our functional programming preference (see cursor rules).
+**Decision:** Valibot's smaller bundle size and better performance make it ideal for a long-running bot where startup time and memory matter less than Zod's larger ecosystem. The functional API also aligns with our functional programming preference.
 
 ### Validation Use Cases
 
-#### Generated vs Manual Validation
-
-**REST API Schemas (Generated from OpenAPI):**
-- For exchanges with OpenAPI specs (e.g., Coinbase Advanced Trade), schemas are **auto-generated** using `@hey-api/openapi-ts` with the Valibot plugin.
-- Generated schemas live in `src/adapters/{exchange}/generated/` and are regenerated when the OpenAPI spec changes.
-- **No manual schema definitions needed** for REST API responses when OpenAPI specs are available.
-
-**Manual Schemas (Required):**
-- **WebSocket messages**: Exchange-specific, not in OpenAPI specs
-- **Environment variables**: Application-specific configuration
-- **Trading configuration**: Domain-specific validation rules
-- **Exchange adapters without OpenAPI**: Binance, Bybit (manual schemas in `src/adapters/{exchange}/schemas.ts`)
+All schemas are **manual**. The bot uses Valibot at each boundary; there are no OpenAPI-generated schemas in the current codebase (on-chain GMX REST API and RPC, no CEX adapters).
 
 #### 1. Environment Variables
 
 Validate all environment variables at startup. Fail fast if required values are missing.
 
-```typescript
-// src/lib/env.ts
-import * as v from "valibot";
+**Approach:** A single Valibot schema (e.g. `envSchema`) defines required and optional env vars; use `v.pipe` with `v.transform` for numbers and picklists, and viem's `isAddress` / `isHex` for addresses and private keys. Parse once at startup with `v.parse(envSchema, process.env)`; on `ValiError`, log issues and `process.exit(1)`. Schema and parser live in `src/lib/env/` (`schema.ts`, `env.ts`). See the source for the current field list and defaults.
 
-const EnvSchema = v.object({
-  // Exchange credentials
-  EXCHANGE_API_KEY: v.pipe(v.string(), v.minLength(1, "EXCHANGE_API_KEY is required")),
-  EXCHANGE_API_SECRET: v.pipe(v.string(), v.minLength(1, "EXCHANGE_API_SECRET is required")),
+#### 2. GMX REST API Responses
 
-  // Trading configuration
-  TRADING_PAIR: v.pipe(v.string(), v.regex(/^[A-Z]+-[A-Z]+$/, "Invalid trading pair format")),
-  
-  // Optional with defaults
-  LOG_LEVEL: v.optional(v.picklist(["debug", "info", "warn", "error"]), "info"),
-  
-  // Boolean from string
-  DRY_RUN: v.optional(
-    v.pipe(
-      v.string(),
-      v.transform((val) => val.toLowerCase() === "true"),
-    ),
-    false,
-  ),
-});
+Validate GMX Oracle API responses (markets/info, prices/tickers) at the boundary. Define Valibot schemas for the raw response shape (e.g. market rows with string amounts); the API client fetches, then `v.parse(schema, json)` and maps to domain types (string → bigint). Schemas and client live in `src/lib/chain/protocols/gmx/` (schema, api). See the source for current schema fields and `fetchGmxMarketsInfo` (or equivalent).
 
-export type Env = v.InferOutput<typeof EnvSchema>;
+#### 3. RPC / Contract Data
 
-export const getEnv = (): Env => v.parse(EnvSchema, process.env);
-```
+Validate addresses and contract return shapes at the RPC boundary. GMX schema includes `addressSchema` (viem `isAddress`) and `gmxAccountPositionRawSchema` for Reader contract position data; use `v.parse()` or `v.safeParse()` before using in domain logic.
 
-#### 2. Exchange API Responses
+#### 4. Domain Configuration
 
-**For Coinbase (OpenAPI-generated):**
-```typescript
-// src/adapters/coinbase/generated/schemas.ts
-// Auto-generated by @hey-api/openapi-ts with Valibot plugin
-// Regenerate with: pnpm generate:sdk
+Strategy and risk configuration use Valibot schemas with domain constraints (e.g. `v.minValue`, `v.maxValue` for bps, decimals, leverage). Types are inferred from schemas (`v.InferOutput`); defaults are exported alongside. See `domains/strategy/config.ts` and `domains/risk/config.ts` for current schemas.
 
-import { GetFundingRateResponseSchema } from "./generated/schemas";
+#### 5. Optional: WebSocket Messages
 
-// Usage: Validate response using generated schema
-const response = await coinbaseClient.getFundingRate({ symbol });
-const validated = v.parse(GetFundingRateResponseSchema, response);
-```
-
-**For Binance/Bybit (Manual schemas):**
-```typescript
-// src/adapters/binance/schemas.ts
-import * as v from "valibot";
-
-// Funding rate response (manual schema)
-export const FundingRateSchema = v.object({
-  symbol: v.string(),
-  fundingRate: v.pipe(v.string(), v.transform(Number)),
-  fundingTime: v.number(),
-  markPrice: v.pipe(v.string(), v.transform(Number)),
-});
-
-export type FundingRate = v.InferOutput<typeof FundingRateSchema>;
-
-// Account balance response
-export const BalanceSchema = v.object({
-  asset: v.string(),
-  free: v.pipe(v.string(), v.transform(BigInt)),
-  locked: v.pipe(v.string(), v.transform(BigInt)),
-});
-
-export type Balance = v.InferOutput<typeof BalanceSchema>;
-
-// Order response
-export const OrderSchema = v.object({
-  orderId: v.number(),
-  symbol: v.string(),
-  status: v.picklist(["NEW", "PARTIALLY_FILLED", "FILLED", "CANCELED", "REJECTED", "EXPIRED"]),
-  side: v.picklist(["BUY", "SELL"]),
-  type: v.picklist(["LIMIT", "MARKET"]),
-  price: v.pipe(v.string(), v.transform(Number)),
-  origQty: v.pipe(v.string(), v.transform(Number)),
-  executedQty: v.pipe(v.string(), v.transform(Number)),
-  time: v.number(),
-});
-
-export type Order = v.InferOutput<typeof OrderSchema>;
-```
-
-#### 3. WebSocket Messages
-
-Validate WebSocket messages before updating state.
-
-```typescript
-// src/adapters/exchange/ws-schemas.ts
-import * as v from "valibot";
-
-// Ticker update
-export const TickerMessageSchema = v.object({
-  e: v.literal("24hrTicker"),
-  s: v.string(), // symbol
-  c: v.pipe(v.string(), v.transform(Number)), // close price
-  b: v.pipe(v.string(), v.transform(Number)), // best bid
-  a: v.pipe(v.string(), v.transform(Number)), // best ask
-  E: v.number(), // event time
-});
-
-export type TickerMessage = v.InferOutput<typeof TickerMessageSchema>;
-
-// Mark price update
-export const MarkPriceMessageSchema = v.object({
-  e: v.literal("markPriceUpdate"),
-  s: v.string(),
-  p: v.pipe(v.string(), v.transform(Number)), // mark price
-  i: v.pipe(v.string(), v.transform(Number)), // index price
-  r: v.pipe(v.string(), v.transform(Number)), // funding rate
-  T: v.number(), // next funding time
-});
-
-export type MarkPriceMessage = v.InferOutput<typeof MarkPriceMessageSchema>;
-```
-
-#### 4. Configuration Validation
-
-Validate trading configuration with domain-specific constraints.
-
-```typescript
-// src/config/schemas.ts
-import * as v from "valibot";
-
-export const TradingConfigSchema = v.object({
-  // Funding rate thresholds (in basis points)
-  minFundingRateBps: v.pipe(
-    v.number(),
-    v.minValue(1, "Minimum funding rate must be positive"),
-    v.maxValue(1000, "Minimum funding rate too high"),
-  ),
-  
-  // Position limits
-  maxPositionSizeUsd: v.pipe(
-    v.number(),
-    v.minValue(100, "Position size must be at least $100"),
-    v.maxValue(1000000, "Position size exceeds maximum"),
-  ),
-  
-  // Risk parameters
-  maxLeverageBps: v.pipe(
-    v.number(),
-    v.minValue(10000, "Leverage must be at least 1x"),
-    v.maxValue(100000, "Leverage exceeds 10x maximum"),
-  ),
-  
-  // Slippage tolerance (in basis points)
-  maxSlippageBps: v.pipe(
-    v.number(),
-    v.minValue(1),
-    v.maxValue(500, "Slippage tolerance too high"),
-  ),
-});
-
-export type TradingConfig = v.InferOutput<typeof TradingConfigSchema>;
-```
+When WebSocket feeds are used, the message parser (`src/worker/websocket/message-parser/`) accepts handlers that provide a Valibot schema per message type; `safeParse` is used so unknown event types are logged and ignored without crashing.
 
 ### Validation Patterns
 
@@ -227,50 +78,32 @@ export type TradingConfig = v.InferOutput<typeof TradingConfigSchema>;
 Validate data immediately when it enters the system. After validation, trust the types.
 
 ```typescript
-// ✅ Good: Validate at boundary using generated schema (Coinbase)
-const fetchFundingRate = async (symbol: string): Promise<FundingRate> => {
-  const response = await coinbaseClient.getFundingRate({ symbol });
-  // Use generated schema from OpenAPI spec
-  return v.parse(GetFundingRateResponseSchema, response);
+// ✅ Good: Validate at boundary (e.g. API response)
+const fetchAndValidate = async (url: string): Promise<DomainType[]> => {
+  const json: unknown = await (await fetch(url)).json();
+  const data = v.parse(ResponseSchema, json);
+  return data.items.map(mapToDomain); // string → bigint etc.
 };
 
-// ✅ Good: Validate at boundary using manual schema (Binance)
-const fetchFundingRateBinance = async (symbol: string): Promise<FundingRate> => {
-  const response = await binanceClient.get(`/funding/${symbol}`);
-  return v.parse(FundingRateSchema, response.data); // Manual schema
-};
+// ✅ Good: Validate env at startup
+const env = v.parse(envSchema, process.env);
 
-// Internal code can trust the type (same for both)
-const evaluate = (rate: FundingRate): Decision => {
-  if (rate.fundingRate > threshold) { // No validation needed
-    return { action: "ENTER" };
-  }
-  return { action: "WAIT" };
-};
+// Internal code can trust the type
+const evaluate = (data: DomainType[]): Decision => { /* no validation needed */ };
 ```
 
 #### Pattern 2: Safe Parse for Recoverable Errors
 
-Use `safeParse` when validation failure is expected and recoverable.
+Use `safeParse` when validation failure is expected and recoverable (e.g. optional RPC data, WebSocket message types).
 
 ```typescript
-// ✅ Good: Safe parse for WebSocket messages (may receive unknown event types)
-const handleMessage = (data: unknown): void => {
-  const tickerResult = v.safeParse(TickerMessageSchema, data);
-  if (tickerResult.success) {
-    updateTicker(tickerResult.output);
-    return;
-  }
-  
-  const markPriceResult = v.safeParse(MarkPriceMessageSchema, data);
-  if (markPriceResult.success) {
-    updateMarkPrice(markPriceResult.output);
-    return;
-  }
-  
-  // Unknown message type - log and ignore
-  logger.debug("Unknown WebSocket message", { data });
-};
+// ✅ Good: Safe parse for optional or polymorphic data
+const result = v.safeParse(SomeSchema, rawFromRpc);
+if (result.success) {
+  useData(result.output);
+} else {
+  logger.warn("Validation failed", { issues: result.issues });
+}
 ```
 
 #### Pattern 3: Type Guards with `is()`
@@ -279,14 +112,11 @@ Use `v.is()` for type guards without throwing.
 
 ```typescript
 // ✅ Good: Type guard for conditional logic
-const isValidOrder = (data: unknown): data is Order =>
-  v.is(OrderSchema, data);
+const isValidConfig = (data: unknown): data is Config =>
+  v.is(ConfigSchema, data);
 
-// Usage
-if (isValidOrder(response)) {
-  processOrder(response); // Type narrowed to Order
-} else {
-  logger.warn("Invalid order response", { response });
+if (isValidConfig(config)) {
+  useConfig(config);
 }
 ```
 
@@ -314,50 +144,64 @@ const AmountSchema = v.pipe(
 
 #### Pattern 5: Custom Validation Messages
 
-Always provide clear error messages.
-
-```typescript
-// ✅ Good: Descriptive error messages
-const ApiKeySchema = v.pipe(
-  v.string(),
-  v.minLength(32, "API key must be at least 32 characters"),
-  v.regex(/^[a-zA-Z0-9]+$/, "API key must be alphanumeric"),
-);
-```
+Provide clear error messages for custom validators (e.g. viem `isAddress` / `isHex` with a descriptive second argument).
 
 ### File Organization
 
 ```
 src/
 ├── lib/
-│   └── env.ts                    # Environment validation (manual)
-├── config/
-│   └── schemas.ts                # Trading configuration schemas (manual)
-├── adapters/
-│   ├── coinbase/
-│   │   ├── generated/            # Auto-generated from OpenAPI spec
-│   │   │   └── schemas.ts        # Generated Valibot schemas
-│   │   └── ws-schemas.ts         # WebSocket message schemas (manual)
-│   ├── binance/
-│   │   ├── schemas.ts            # REST API response schemas (manual)
-│   │   └── ws-schemas.ts         # WebSocket message schemas (manual)
-│   └── bybit/
-│       ├── schemas.ts            # REST API response schemas (manual)
-│       └── ws-schemas.ts         # WebSocket message schemas (manual)
-└── domains/
-    └── order/
-        └── schemas.ts            # Domain-specific schemas (manual)
+│   ├── env/
+│   │   ├── schema.ts             # envSchema (DATABASE_URL, ARBITRUM_*, GMX_*, etc.)
+│   │   └── env.ts                # parseEnv, getEnv
+│   ├── logger/
+│   │   └── schema.ts             # logLevelSchema (for env and logger config)
+│   ├── chain/
+│   │   └── protocols/
+│   │       └── gmx/
+│   │           ├── schema.ts    # GMX API + RPC (markets, tickers, positions, addressSchema)
+│   │           ├── api/
+│   │           │   └── api.ts   # fetchGmxMarketsInfo, fetchGmxTickers (v.parse at boundary)
+│   │           └── types.ts     # Domain types (GmxMarket, GmxTicker, etc.)
+│   ├── protocols/
+│   │   ├── schema.ts            # order/balance/fill schemas (exchange-order shape)
+│   │   └── config.ts            # Protocol adapter config validation
+│   └── db/
+│       └── schema.ts             # Drizzle schema (tables); Valibot where needed at boundaries
+├── domains/
+│   ├── strategy/
+│   │   ├── config.ts            # StrategyConfigSchema, defaults
+│   │   └── types.ts             # Strategy input/output types (Valibot where needed)
+│   ├── risk/
+│   │   ├── config.ts            # RiskConfigSchema, defaults
+│   │   └── types.ts
+│   ├── position/
+│   │   └── types.ts
+│   └── state/
+│       ├── types.ts
+│       ├── order-state/
+│       │   └── order-state.ts   # OrderStatus schema, transition helpers
+│       └── hedge-state/
+│           └── hedge-state.ts   # HedgeState, HedgeEvent schemas
+└── worker/
+    ├── execution/
+    │   └── types.ts              # Execution params/result schemas
+    ├── reconciler/
+    │   └── types.ts              # Reconciler input/output schemas
+    ├── freshness/
+    │   └── freshness.ts          # Staleness config schemas
+    └── websocket/
+        └── message-parser/       # Optional: schema per handler, safeParse for messages
 ```
 
 ### Conventions
 
-1. **Schema suffix**: All schema variables end with `Schema` (e.g., `OrderSchema`)
-2. **Co-locate types**: Export inferred types alongside schemas
+1. **Schema suffix**: All schema variables end with `Schema` (e.g., `envSchema`, `StrategyConfigSchema`)
+2. **Co-locate types**: Export inferred types alongside schemas (`v.InferOutput<typeof XSchema>`)
 3. **Namespace import**: Always import as `import * as v from "valibot"`
-4. **Fail fast**: Use `parse` at startup, `safeParse` for runtime messages
-5. **Transform early**: Convert strings to numbers/bigints during validation
-6. **Generated schemas**: Never edit generated schema files; regenerate from OpenAPI spec
-7. **Manual schemas**: Keep manual schemas in `schemas.ts` files, separate from generated code
+4. **Fail fast**: Use `parse` at startup (env) and at API/RPC boundaries; use `safeParse` for optional or polymorphic runtime data
+5. **Transform early**: Convert strings to numbers/bigints during validation (e.g. GMX API string amounts → bigint in domain types)
+6. **Boundary-only**: Validate at boundaries (env, HTTP response, RPC return); trust internal data once validated
 
 ## Consequences
 
@@ -379,14 +223,14 @@ src/
 
 | Risk | Mitigation |
 |------|------------|
-| Schema drift from API | Regular testing against live API responses; regenerate OpenAPI schemas when spec changes |
+| Schema drift from GMX API | Test against live GMX Oracle API; update `lib/chain/protocols/gmx/schema.ts` when API changes |
+| RPC/contract return shape change | Update GMX position/address schemas when Reader contract or SDK types change |
 | Over-validation | Only validate at boundaries, trust internal data |
 | Performance overhead | Validation is fast; measure if concerned |
-| Generated schema out of sync | Run `pnpm generate:sdk` after OpenAPI spec updates; add CI check |
-| Manual schema maintenance | Document manual schemas; consider migrating to OpenAPI when available |
 
 ## References
 
 - [Valibot Documentation](https://valibot.dev/)
-- [Valibot vs Zod Comparison](https://valibot.dev/guides/introduction/#comparison-to-other-libraries)
+- [ADR-0031: Bot Architecture (On-Chain)](0031-bot-architecture-on-chain.md) — Data plane and boundaries
+- [ADR-0020: Contract Interaction Patterns](0020-contract-interaction-patterns.md) — RPC and contract data
 - [TypeScript Narrowing](https://www.typescriptlang.org/docs/handbook/2/narrowing.html)

@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-02-04
+- **Updated:** 2026-03-04
 - **Owners:** -
 - **Related:**
   - [ADR-0001: Bot Architecture](0001-bot-architecture.md)
@@ -89,136 +90,15 @@ export interface Position {
 
 ### Helper Functions
 
-SMA and standard deviation are trivial calculations — implement them as pure bigint functions
-to avoid an external dependency and the lossy `bigint → number → bigint` round-trip:
-
-```typescript
-// Parse funding rate string to basis points (bigint)
-export const parseRateToBps = (rate: string): bigint => {
-  const rateNum = Number.parseFloat(rate);
-  return BigInt(Math.round(rateNum * 10000)); // Convert to basis points
-};
-
-// Parse price string to bigint (in smallest quote unit)
-export const parsePrice = (price: string): bigint => {
-  const priceNum = Number.parseFloat(price);
-  // Convert to smallest quote unit (e.g., USD cents)
-  return BigInt(Math.round(priceNum * 100));
-};
-
-// Integer square root via Newton's method (used by calculateStdDev)
-export const bigintSqrt = (value: bigint): bigint => {
-  if (value < 0n) throw new Error("Square root of negative number");
-  if (value < 2n) return value;
-  let x = value;
-  let y = (x + 1n) / 2n;
-  while (y < x) {
-    x = y;
-    y = (x + value / x) / 2n;
-  }
-  return x;
-};
-
-// Simple moving average over bigint values (no precision loss)
-export const calculateSma = (values: readonly bigint[]): bigint => {
-  if (values.length === 0) return 0n;
-  const sum = values.reduce((acc, val) => acc + val, 0n);
-  return sum / BigInt(values.length);
-};
-
-// Population standard deviation over bigint values (in same unit as input)
-export const calculateStdDev = (values: readonly bigint[]): bigint => {
-  if (values.length < 2) return 0n;
-  const mean = calculateSma(values);
-  const squaredDiffs = values.reduce((acc, v) => acc + (v - mean) ** 2n, 0n);
-  const variance = squaredDiffs / BigInt(values.length);
-  return bigintSqrt(variance);
-};
-```
-
-**Note**: These are pure bigint implementations — no conversion to `number` and back, so no
-precision loss. The integer square root uses Newton's method which converges in O(log n) steps.
+Use **pure bigint** for SMA and standard deviation (no `number` conversion) to avoid precision loss. Implement parseRateToBps, parsePrice, bigintSqrt (e.g. Newton's method), calculateSma, and calculateStdDev in strategy/trend or equivalent. See `domains/strategy/trend-analysis/` and related in source.
 
 ### Funding Rate Prediction
 
-Most exchanges provide **predicted funding rate** via API:
-
-```typescript
-export const fetchFundingRate = async (
-  adapter: ExchangeAdapter,
-  symbol: string,
-): Promise<FundingRateSnapshot> => {
-  const response = await adapter.getFundingRate(symbol);
-
-  return {
-    symbol,
-    currentRateBps: parseRateToBps(response.lastFundingRate),
-    predictedRateBps: parseRateToBps(response.predictedFundingRate ?? response.lastFundingRate),
-    nextFundingTime: new Date(response.nextFundingTime),
-    lastFundingTime: new Date(response.lastFundingTime),
-    markPrice: parsePrice(response.markPrice),
-    indexPrice: parsePrice(response.indexPrice),
-    timestamp: new Date(),
-    source: "exchange",
-  };
-};
-```
+Fetch current and predicted funding rate from the adapter/API; map to FundingRateSnapshot (symbol, currentRateBps, predictedRateBps, nextFundingTime, markPrice, etc.). See data plane and strategy in source.
 
 ### Funding Rate Trend Analysis
 
-Calculate simple moving averages and volatility:
-
-```typescript
-export const analyzeFundingRateTrend = (
-  snapshots: FundingRateSnapshot[],
-  window: number = 24, // 24 snapshots = 8 hours * 3 (if polling every 8 hours)
-): FundingRateHistory => {
-  if (snapshots.length < window) {
-    return {
-      snapshots,
-      averageRateBps: calculateSma(snapshots.map((s) => s.currentRateBps)),
-      volatilityBps: 0n,
-      trend: "stable",
-      regime: "low_stable",
-    };
-  }
-
-  const recent = snapshots.slice(-window);
-  const rates = recent.map((s) => s.currentRateBps);
-  
-  const averageRateBps = calculateSma(rates);
-  const volatilityBps = calculateStdDev(rates);
-  
-  // Trend: compare first half vs second half
-  const firstHalf = calculateSma(rates.slice(0, Math.floor(window / 2)));
-  const secondHalf = calculateSma(rates.slice(Math.floor(window / 2)));
-  const trend = secondHalf > firstHalf + 5n
-    ? "increasing"
-    : secondHalf < firstHalf - 5n
-    ? "decreasing"
-    : "stable";
-  
-  // Regime: high/low based on average, stable/volatile based on volatility
-  const isHigh = averageRateBps > 10n; // > 0.10%
-  const isVolatile = volatilityBps > 5n; // > 0.05% std dev
-  
-  const regime = isHigh
-    ? isVolatile
-      ? "high_volatile"
-      : "high_stable"
-    : isVolatile
-    ? "low_volatile"
-    : "low_stable";
-  
-  return {
-    snapshots: recent,
-    averageRateBps,
-    volatilityBps,
-    trend,
-    regime,
-  };
-};
-```
+Compute simple moving average and volatility over a configurable window; classify trend (increasing/decreasing/stable) and regime (high_stable, high_volatile, low_stable, low_volatile). See `analyzeFundingRateTrend` in `domains/strategy/trend-analysis/` (or equivalent).
 
 ### Entry Signal Generation
 

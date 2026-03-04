@@ -101,33 +101,7 @@ Kubernetes is the **wrong default for a single trading bot**. See [ADR-0007: Inf
 
 ### Dockerfile
 
-Same as before — multi-stage Node 22 Alpine build:
-
-```dockerfile
-FROM node:22-alpine AS builder
-
-WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
-RUN corepack enable && pnpm install --frozen-lockfile
-
-COPY . .
-RUN pnpm build
-
-FROM node:22-alpine AS runner
-
-WORKDIR /app
-ENV NODE_ENV=production
-
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./
-
-EXPOSE 8080
-
-CMD ["node", "dist/index.js"]
-```
-
-Railway can build from this Dockerfile or use Nixpacks with `package.json`; specify root directory and start command in the dashboard or `railway.json` if needed.
+Multi-stage Node 22 Alpine build: builder (install, build), runner (dist + node_modules + CMD). See repo `Dockerfile`. Railway can build from it or use Nixpacks; set root and start command in dashboard or `railway.json` if needed.
 
 ### Nixpacks and devDependencies
 
@@ -175,25 +149,11 @@ Startup reconciliation and graceful shutdown (SIGTERM) are unchanged from [ADR-0
 2. Add **Postgres** from the template; note it exposes `DATABASE_URL`.
 3. Add a **Service** for the bot: connect repo or use `railway up` with the Dockerfile.
 4. Link Postgres to the bot service (so `DATABASE_URL` is set).
-5. Set other variables (API keys, alerting, bot config) in the service Variables tab or via CLI:
-
-```bash
-railway variables set BINANCE_API_KEY="..." BINANCE_API_SECRET="..."
-railway variables set DISCORD_WEBHOOK_URL="..."
-```
+5. Set other variables (API keys, alerting, bot config) in the service Variables tab or via `railway variables set ...`. See repo or Railway docs for CLI.
 
 ### Operations
 
-```bash
-# Deploy (from repo or local build)
-railway up
-
-# Logs
-railway logs
-
-# Shell (if enabled)
-railway run bash
-```
+Deploy with `railway up`; view logs with `railway logs`; shell with `railway run bash` if enabled. See repo or Railway docs.
 
 Postgres: use Railway’s Postgres connection details (host, port, user, password) or the provided proxy for `psql`/migrations.
 

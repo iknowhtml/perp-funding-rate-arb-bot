@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-02-10
-- **Updated:** 2026-03-03 (reads rationale)
+- **Updated:** 2026-03-04
 - **Owners:** -
 - **Related:**
   - [ADR-0019: On-Chain Perps Pivot](0019-on-chain-perps-pivot.md)
@@ -148,48 +148,7 @@ Using the SDK's read entrypoints (e.g. `sdk.markets.getMarketsInfo()`, SDK posit
 
 GMX reads benefit from batching. A single evaluation tick needs: positions, balances, market info, funding rates, gas price. Fetching these sequentially wastes round trips.
 
-viem's built-in multicall batching handles this. When configured with the SDK's batch config, multiple `readContract` calls issued in the same tick are automatically batched into a single RPC `eth_call`:
-
-```typescript
-import { createPublicClient, http } from "viem";
-import { arbitrum } from "viem/chains";
-import { BATCH_CONFIGS } from "@gmx-io/sdk/configs/batch";
-
-export const createArbitrumClient = (rpcUrl: string): PublicClient =>
-  createPublicClient({
-    chain: arbitrum,
-    transport: http(rpcUrl),
-    batch: {
-      multicall: BATCH_CONFIGS[42161].client.multicall,
-    },
-  });
-```
-
-With this config, concurrent reads are automatically batched:
-
-```typescript
-// These fire concurrently and get batched into one RPC call
-const [positions, balances, marketInfo] = await Promise.all([
-  publicClient.readContract({
-    address: READER,
-    abi: readerAbi,
-    functionName: "getAccountPositions",
-    args: [DATA_STORE, account, 0n, 100n],
-  }),
-  publicClient.readContract({
-    address: collateralToken,
-    abi: erc20Abi,
-    functionName: "balanceOf",
-    args: [account],
-  }),
-  publicClient.readContract({
-    address: READER,
-    abi: readerAbi,
-    functionName: "getMarketInfo",
-    args: [DATA_STORE, marketPrices, marketAddress],
-  }),
-]);
-```
+**Approach:** Create the public client with viem and enable multicall batching (e.g. `batch: { multicall: true }` or the SDK's batch config when used). Multiple `readContract` calls issued in the same tick are then batched into one or few RPC calls. Use SDK ABIs and contract addresses (`getContract(chainId, "Reader")`, etc.); call `getAccountPositions`, `balanceOf`, `getMarketInfo`, etc. as needed. See `src/lib/chain/client/` and the GMX adapter for current client creation and read usage.
 
 ### Write Pattern: Build → Simulate → Send
 
@@ -197,73 +156,7 @@ All writes follow a three-step lifecycle. This is non-negotiable for a bot manag
 
 #### Step 1: Build
 
-Construct the multicall payload. GMX writes require token transfer + router call in a single tx:
-
-```typescript
-import { encodeFunctionData } from "viem";
-import { exchangeRouterAbi } from "@gmx-io/sdk/abis/ExchangeRouter";
-
-const buildIncreaseOrderTx = (params: {
-  market: Address;
-  collateralToken: Address;
-  collateralAmount: bigint;
-  sizeDeltaUsd: bigint;
-  isLong: boolean;
-  acceptablePrice: bigint;
-  executionFee: bigint;
-}): EncodedMulticall => {
-  const sendWnt = encodeFunctionData({
-    abi: exchangeRouterAbi,
-    functionName: "sendWnt",
-    args: [ORDER_VAULT, params.executionFee],
-  });
-
-  const sendTokens = encodeFunctionData({
-    abi: exchangeRouterAbi,
-    functionName: "sendTokens",
-    args: [params.collateralToken, ORDER_VAULT, params.collateralAmount],
-  });
-
-  const createOrder = encodeFunctionData({
-    abi: exchangeRouterAbi,
-    functionName: "createOrder",
-    args: [{
-      addresses: {
-        receiver: account,
-        cancellationReceiver: account,
-        callbackContract: zeroAddress,
-        uiFeeReceiver: zeroAddress,
-        market: params.market,
-        initialCollateralToken: params.collateralToken,
-        swapPath: [],
-      },
-      numbers: {
-        sizeDeltaUsd: params.sizeDeltaUsd,
-        initialCollateralDeltaAmount: 0n,
-        triggerPrice: 0n,
-        acceptablePrice: params.acceptablePrice,
-        executionFee: params.executionFee,
-        callbackGasLimit: 0n,
-        minOutputAmount: 0n,
-      },
-      orderType: 2, // MarketIncrease
-      decreasePositionSwapType: 0, // NoSwap
-      isLong: params.isLong,
-      shouldUnwrapNativeToken: false,
-      autoCancel: false,
-      referralCode: zeroHash,
-    }],
-  });
-
-  return {
-    address: EXCHANGE_ROUTER,
-    abi: exchangeRouterAbi,
-    functionName: "multicall",
-    args: [[sendWnt, sendTokens, createOrder]],
-    value: params.executionFee,
-  };
-};
-```
+Construct the multicall payload. GMX writes require token transfer + router call in a single tx: encode `sendWnt` (execution fee to order vault), `sendTokens` (collateral to order vault), and `createOrder` (addresses, numbers, orderType, flags) via ExchangeRouter ABI; return a single multicall request (address, abi, functionName `multicall`, args array of encoded calls, value). Contract addresses come from `getContract(chainId, "ExchangeRouter" | "OrderVault")`. The exact shape of `addresses`/`numbers` and any extra fields (e.g. `validFromTime`, `dataList`) follow the current GMX contract — see `src/lib/chain/` tx-builder or GMX adapter for the implementation.
 
 #### Step 2: Simulate
 
@@ -411,30 +304,7 @@ const estimateExecutionFee = async (orderType: "increase" | "decrease" | "deposi
 
 ### Validation at Boundaries
 
-Per ADR-0003 (Valibot), we validate all contract return values at the adapter boundary. Contract calls return raw tuples -- we parse them into domain types with Valibot:
-
-```typescript
-import * as v from "valibot";
-
-const GmxPositionSchema = v.object({
-  sizeInUsd: v.bigint(),
-  sizeInTokens: v.bigint(),
-  collateralAmount: v.bigint(),
-  isLong: v.boolean(),
-  // ...
-});
-
-const normalizePosition = (raw: unknown): Position => {
-  const parsed = v.parse(GmxPositionSchema, raw);
-  return {
-    symbol: marketToSymbol(parsed.market),
-    side: parsed.isLong ? "LONG" : "SHORT",
-    sizeBase: parsed.sizeInTokens,
-    entryPriceQuote: parsed.sizeInUsd / parsed.sizeInTokens,
-    // ... normalize to domain types
-  };
-};
-```
+Per ADR-0003 (Valibot), we validate all contract return values at the adapter boundary. Contract calls return raw tuples; parse with a Valibot schema (matching the contract return shape, which may be nested e.g. `addresses` / `numbers` / `flags`) then map to domain types (symbol, side, sizeBase, entryPriceQuote, etc.). See `src/lib/chain/protocols/gmx/` schema and adapter for the current position and response schemas.
 
 ### Error Handling
 

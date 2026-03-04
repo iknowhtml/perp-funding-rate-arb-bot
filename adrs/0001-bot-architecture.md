@@ -1,12 +1,15 @@
 # ADR 0001: Funding Rate Arbitrage Bot Architecture
 
-- **Status:** Accepted
+- **Status:** Superseded
 - **Date:** 2026-02-04
-- **Updated:** 2026-02-04
+- **Updated:** 2026-03-04
 - **Owners:** -
+- **Superseded by:** [ADR-0031: Bot Architecture (On-Chain Exchange)](0031-bot-architecture-on-chain.md)
 - **Related:**
   - [ADR-0012: State Machines](0012-state-machines.md)
   - [ADR-0010: Exchange Adapters](0010-exchange-adapters.md)
+
+> **Superseded.** The bot now uses an on-chain exchange (GMX v2). For the current architecture, see [ADR-0031: Bot Architecture (On-Chain Exchange)](0031-bot-architecture-on-chain.md). This document remains for historical context (CEX model).
 
 ## Context
 
@@ -129,32 +132,7 @@ Run on intervals to ensure we don't rely on WS being perfect:
 
 ### Per-Stream Health Tracking
 
-Health is tracked **per stream**, not globally:
-
-```typescript
-const state = {
-  prices: { ... },
-  funding: { ... },
-  account: { ... },
-  position: { ... }, // derived
-  
-  // Per-stream health (not a single boolean)
-  health: {
-    spotTickerHealthy: boolean,      // spot price feed
-    perpMarkHealthy: boolean,        // perp mark/index feed
-    orderFeedHealthy: boolean,       // order updates (if used)
-    restHealthy: boolean,            // REST API responding
-    
-    // Computed from above
-    get overallHealthy(): boolean {
-      return this.requiredStreamsHealthy && this.restHealthy;
-    },
-    get requiredStreamsHealthy(): boolean {
-      return this.spotTickerHealthy && this.perpMarkHealthy;
-    },
-  },
-};
-```
+Health is tracked **per stream** (spot ticker, perp mark, order feed, REST), not a single global boolean. Overall healthy = required streams healthy and REST healthy. See ADR-0031 and worker health logic in source.
 
 **Rule of thumb:**
 - If in a position → need mark/price streams healthy
@@ -179,74 +157,11 @@ Implementation:
 
 ### Core Worker Loop
 
-```typescript
-// In-memory state (authoritative "latest known")
-const state = {
-  prices: { ... },
-  funding: { ... },
-  account: { ... },
-  health: { ... },  // per-stream, see above
-  position: { ... }, // derived
-};
-
-const executionQueue = new SerialQueue(); // 1 job at a time
-
-const start = () => {
-  connectWebSockets();              // push updates into state
-  schedule(fetchFunding, 30_000);   // 30s
-  schedule(fetchAccount, 30_000);   // 30s
-  schedule(reconcileTruth, 60_000); // 60s
-  schedule(evaluate, 2_000);        // 2s "brain tick"
-};
-```
+In-memory state holds prices, funding, account, per-stream health, and derived position. A serial execution queue runs one job at a time. On start: connect WebSockets, schedule funding/account refresh (e.g. 30s), reconcile (e.g. 60s), and evaluate tick (e.g. 2s). See ADR-0031 and worker in source.
 
 ### Evaluation Pipeline (Per Tick)
 
-```typescript
-const evaluate = () => {
-  // Never overlap decisions with execution
-  if (executionQueue.busy()) return;
-
-  // 1) Evaluate health and determine response (per-stream, position-aware)
-  const healthResponse = evaluateHealthResponse();
-  
-  switch (healthResponse.action) {
-    case "EMERGENCY_EXIT":
-    case "FORCE_EXIT":
-      if (state.position.open) {
-        enqueueExit(healthResponse.reason ?? "health_degraded");
-      }
-      return;
-    case "FULL_PAUSE":
-    case "PAUSE_ENTRIES":
-      // Don't exit, but don't enter either
-      return;
-    case "REDUCE_RISK":
-      // Continue but with tighter limits
-      break;
-    case "CONTINUE":
-      break;
-  }
-
-  // 2) Compute risk
-  const risk = riskEngine.evaluate(state);
-
-  if (risk.action === "EXIT" && state.position.open) {
-    enqueueExit(risk.reason);
-    return;
-  }
-
-  if (risk.action === "PAUSE") return;
-
-  // 3) Compute intent
-  const intent = strategy.decide(state, risk);
-
-  // 4) Act (through queue)
-  if (intent.type !== "NOOP") {
-    executionQueue.push(() => executeIntent(intent));
-  }
-};
-```
+Each tick: if queue busy, return. (1) Evaluate health (per-stream, position-aware) → EMERGENCY_EXIT, FORCE_EXIT, FULL_PAUSE, PAUSE_ENTRIES, REDUCE_RISK, or CONTINUE. (2) Evaluate risk; exit or pause if needed. (3) Strategy decides intent. (4) If intent not NOOP, push execution job to queue. See evaluator and strategy in source.
 
 ### Two-Phase Risk Check
 
@@ -258,144 +173,19 @@ Risk is checked twice:
 
 #### ENTER_HEDGE Job
 
-```typescript
-const executeEnterHedge = async (sizeQuote: bigint) => {
-  // 1. Check risk again (esp. margin/liquidation)
-  const risk = riskEngine.evaluate(state);
-  if (risk.level === "DANGER") {
-    return { aborted: true, reason: risk.reasons };
-  }
-
-  // 2. Place perp short (IOC/market)
-  const perpOrder = await adapter.placePerpOrder({ ... });
-
-  // 3. Place spot buy
-  const spotOrder = await adapter.placeSpotOrder({ ... });
-
-  // 4. Verify hedge drift (notional mismatch)
-  const drift = calculateHedgeDrift(perpOrder, spotOrder);
-  if (drift > MAX_DRIFT_BPS) {
-    // Place small corrective order
-    await correctDrift(drift);
-  }
-
-  // 5. Persist: orders/fills/position snapshot
-  await persistExecution({ perpOrder, spotOrder });
-
-  // 6. Alert if partial fills or abnormal slippage
-  if (hasAnomalies(perpOrder, spotOrder)) {
-    await alertService.send({ type: "EXECUTION_ANOMALY", ... });
-  }
-};
-```
+Re-check risk; abort if DANGER. Place perp short and spot buy (order and sizing per adapter); verify hedge drift and correct if needed; persist execution; alert on anomalies. See execution layer in source.
 
 #### EXIT_HEDGE Job
 
-```typescript
-const executeExitHedge = async (reason: string) => {
-  // 1. Check risk again (if liquidation danger, change sequence)
-  const risk = riskEngine.evaluate(state);
-
-  // 2. Place spot sell
-  const spotOrder = await adapter.placeSpotOrder({ side: "SELL", ... });
-
-  // 3. Close perp short
-  const perpOrder = await adapter.placePerpOrder({ side: "BUY", ... });
-
-  // 4. Verify flat
-  const isFlat = await verifyFlatPosition();
-  if (!isFlat) {
-    await alertService.send({ type: "NOT_FLAT_AFTER_EXIT", ... });
-  }
-
-  // 5. Persist + alert
-  await persistExecution({ spotOrder, perpOrder, reason });
-};
-```
+Re-check risk. Place spot sell then close perp short (or adjust sequence if liquidation danger). Verify flat; persist and alert. See execution layer in source.
 
 ### WebSocket Reconnect Semantics
 
-Every reconnect follows this exact sequence:
-
-```typescript
-const connectWebSocket = async (streamId: string) => {
-  // 1. Single-flight pattern: prevent reconnect races
-  if (connectPromises[streamId]) {
-    return connectPromises[streamId];
-  }
-  
-  // 2. Increment generation (stale events from old socket are ignored)
-  const generation = ++socketGenerations[streamId];
-  
-  // 3. Close existing socket if any
-  if (sockets[streamId]) {
-    sockets[streamId].close();
-  }
-  
-  connectPromises[streamId] = (async () => {
-    try {
-      // 4. Connect
-      const ws = await createWebSocket(streamId);
-      
-      // 5. Re-authenticate (if required by exchange)
-      if (requiresAuth(streamId)) {
-        await authenticate(ws);
-      }
-      
-      // 6. Re-subscribe to channels
-      await subscribe(ws, streamId);
-      
-      // 7. Immediate REST catch-up reconcile
-      await reconcileTruth();
-      
-      // 8. Store socket with generation
-      sockets[streamId] = { ws, generation };
-      state.health[`${streamId}Healthy`] = true;
-      
-    } finally {
-      delete connectPromises[streamId];
-    }
-  })();
-  
-  return connectPromises[streamId];
-};
-```
-
-**Invariant**: Stale socket events are ignored via generation check:
-
-```typescript
-ws.on("message", (data) => {
-  if (socketGenerations[streamId] !== generation) {
-    return; // Stale event from old socket
-  }
-  processMessage(data);
-});
-```
+Every reconnect: single-flight connect (no races), increment generation (ignore stale events), close existing socket, connect → re-auth (if required) → re-subscribe → immediate REST catch-up → store socket with generation. Stale events are ignored when generation does not match. See WebSocket layer in source.
 
 ### Backpressure Handling
 
-WS feeds can spike (high volatility, exchange reconnects). Explicitly handle backpressure:
-
-```typescript
-// Message processing is non-blocking
-ws.on("message", (raw) => {
-  // Parse synchronously (fast)
-  const msg = parseMessage(raw);
-  
-  // Update state synchronously (no async)
-  updateState(msg);
-});
-
-// For high-volume feeds, use bounded queue with drop policy
-const messageQueue = new BoundedQueue<Message>({
-  maxSize: 1000,
-  onOverflow: (dropped) => {
-    alertService.send({ type: "WS_BACKPRESSURE", dropped });
-    // Update health to trigger more aggressive REST polling
-    state.health.wsBackpressure = true;
-  },
-});
-```
+Parse and update state synchronously; for high-volume feeds use a bounded queue with drop policy and alert on overflow. See ADR-0031 and data plane in source.
 
 **MVP approach**: Keep message handling synchronous and fast. If overloaded, log/alert and rely on REST reconcile. Prevents "why did Node OOM" later.
 
@@ -412,40 +202,7 @@ Define explicit rules so behavior is deterministic, not ambiguous:
 | REST failing | In position | Reduce risk → exit if margin buffer low |
 | Both stale | Any | Emergency exit if in position |
 
-```typescript
-const evaluateHealthResponse = () => {
-  const { health, position } = state;
-  
-  // Both failing = emergency
-  if (!health.restHealthy && !health.requiredStreamsHealthy) {
-    if (position.open) return { action: "EMERGENCY_EXIT" };
-    return { action: "FULL_PAUSE" };
-  }
-  
-  // WS stale handling depends on position
-  if (!health.requiredStreamsHealthy) {
-    if (!position.open) {
-      return { action: "PAUSE_ENTRIES" };
-    }
-    
-    const positionAgeMs = Date.now() - position.openedAt;
-    if (positionAgeMs > 30_000) {
-      return { action: "FORCE_EXIT", reason: "ws_stale_with_position" };
-    }
-    return { action: "PAUSE_ENTRIES" }; // Wait briefly
-  }
-  
-  // REST failing with position = risky
-  if (!health.restHealthy && position.open) {
-    if (position.marginBufferBps < 500) { // < 5% buffer
-      return { action: "FORCE_EXIT", reason: "rest_failing_low_margin" };
-    }
-    return { action: "REDUCE_RISK" };
-  }
-  
-  return { action: "CONTINUE" };
-};
-```
+Implementation: both failing → emergency exit if in position else full pause; WS stale → pause entries or force exit if position age > 30s; REST failing with position → reduce risk or force exit if margin buffer low. See evaluator health in source.
 
 ### Circuit Breakers
 
@@ -529,43 +286,7 @@ Leverage libraries only for transport-level pain, not domain logic:
 
 ### Startup Sequence
 
-```typescript
-const startup = async () => {
-  // 1. Load persisted state from DB
-  const persisted = await db.getLatestState();
-  
-  // 2. Reconcile with exchange (REST) - establishes truth before any trading
-  const truth = await reconciler.fetchTruth();
-  
-  // 3. Merge and validate
-  state = mergeState(persisted, truth);
-  
-  // 4. Initialize per-stream health (all false until connected)
-  state.health = {
-    spotTickerHealthy: false,
-    perpMarkHealthy: false,
-    orderFeedHealthy: false,
-    restHealthy: true, // REST just succeeded
-  };
-  
-  // 5. If position open and state uncertain, PAUSE
-  if (state.position.open && !state.health.confident) {
-    state.mode = "PAUSED";
-    await alertService.send({ type: "STARTUP_PAUSED" });
-  }
-  
-  // 6. Connect WebSockets (follows reconnect semantics with catch-up)
-  //    Each connect will: auth → subscribe → reconcile
-  await Promise.all([
-    connectWebSocket("spotTicker"),
-    connectWebSocket("perpMark"),
-    connectWebSocket("orderFeed"),
-  ]);
-  
-  // 7. Start normal operation only after WS connected and caught up
-  start();
-};
-```
+Load persisted state; reconcile with exchange (REST) to establish truth; merge and validate; initialize per-stream health; if position open and state uncertain, PAUSE and alert; connect WebSockets (auth → subscribe → reconcile per stream); then start normal operation. See ADR-0007/0029 and worker startup in source.
 
 ## References
 - Architecture Design Document, Sections 6-9

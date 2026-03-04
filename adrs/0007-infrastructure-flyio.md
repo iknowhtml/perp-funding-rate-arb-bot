@@ -2,7 +2,7 @@
 
 - **Status:** Superseded
 - **Date:** 2026-02-04
-- **Updated:** 2026-02-22
+- **Updated:** 2026-03-04
 - **Superseded by:** [ADR-0029: Infrastructure — Railway Deployment](0029-infrastructure-railway.md)
 - **Owners:** -
 - **Related:**
@@ -315,104 +315,11 @@ Fly.io Managed Postgres provides HA, backups, and automatic failover. See [ADR-0
 
 ### Startup Reconciliation Flow
 
-```typescript
-// src/worker/startup.ts
-
-/**
- * Reconcile state on every startup.
- * Assumes container may have restarted at any time.
- *
- * @see {@link ../adrs/0007-infrastructure-flyio.md ADR-0007}
- */
-export const startup = async (deps: Dependencies): Promise<void> => {
-  const { exchange, stateRepo, alertService, logger } = deps;
-
-  logger.info("Starting bot — reconciling state");
-
-  // 1. Fetch truth from exchange (REST)
-  const [balances, positions, openOrders, recentFills] = await Promise.all([
-    exchange.getBalances(),
-    exchange.getPositions(),
-    exchange.getOpenOrders(),
-    exchange.getRecentFills({ since: hoursAgo(24) }),
-  ]);
-
-  // 2. Load last known state from DB
-  const lastSnapshot = await stateRepo.getLatestSnapshot();
-
-  // 3. Derive current position state
-  const currentPosition = derivePosition(positions, openOrders);
-
-  // 4. Check for inconsistencies
-  const inconsistencies = findInconsistencies(lastSnapshot, {
-    balances,
-    positions,
-    openOrders,
-    recentFills,
-  });
-
-  if (inconsistencies.length > 0) {
-    logger.warn("State inconsistencies detected", { inconsistencies });
-    await alertService.send({
-      type: "STARTUP_INCONSISTENCY",
-      data: inconsistencies,
-    });
-  }
-
-  // 5. If position open and state uncertain → PAUSE
-  if (currentPosition.open && inconsistencies.length > 0) {
-    logger.warn("Position open with uncertain state — pausing entries");
-    return startInPausedMode(deps, currentPosition);
-  }
-
-  // 6. Save reconciled state
-  await stateRepo.saveSnapshot({
-    balances,
-    positions,
-    openOrders,
-    reconciledAt: new Date(),
-  });
-
-  // 7. Start normal operation
-  logger.info("Reconciliation complete — starting normal operation");
-  return startNormalMode(deps, currentPosition);
-};
-```
+On every startup, the worker must assume the container may have restarted at any time. **Pattern:** (1) Fetch truth from the exchange or data plane (REST/RPC); (2) Load last known state from DB; (3) Derive current position state; (4) Detect inconsistencies and alert if any; (5) If position is open and state uncertain, start in paused mode; (6) Save reconciled snapshot; (7) Start normal operation. See worker startup and reconciler in source for the current implementation.
 
 ### Graceful Shutdown
 
-Handle SIGTERM for clean shutdown:
-
-```typescript
-// src/worker/shutdown.ts
-
-export const setupGracefulShutdown = (deps: Dependencies) => {
-  const { executionQueue, wsClient, healthServer, logger } = deps;
-
-  const shutdown = async (signal: string) => {
-    logger.info(`Received ${signal} — initiating graceful shutdown`);
-
-    // 1. Stop accepting new work
-    executionQueue.pause();
-
-    // 2. Wait for in-flight execution to complete (with timeout)
-    await executionQueue.drain(30_000);
-
-    // 3. Close WebSocket connections
-    await wsClient.close();
-
-    // 4. Close health server
-    healthServer.close();
-
-    // 5. Log final state
-    logger.info("Graceful shutdown complete");
-    process.exit(0);
-  };
-
-  process.on("SIGTERM", () => shutdown("SIGTERM"));
-  process.on("SIGINT", () => shutdown("SIGINT"));
-};
-```
+Handle SIGTERM/SIGINT for clean shutdown: (1) Stop accepting new work (pause execution queue); (2) Drain in-flight work with a timeout (e.g. 30s); (3) Close connections (e.g. WebSocket, data plane); (4) Close health server; (5) Exit. See worker shutdown logic in source.
 
 ## Deployment Commands
 

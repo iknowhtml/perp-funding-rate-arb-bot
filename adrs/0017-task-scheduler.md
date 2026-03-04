@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-02-04
+- **Updated:** 2026-03-04
 - **Owners:** -
 - **Related:**
   - [ADR-0001: Bot Architecture](0001-bot-architecture.md)
@@ -43,85 +44,21 @@ We evaluated several Node.js scheduler libraries:
 
 ### Architecture
 
-```typescript
-export interface ScheduledTask {
-  id: string;
-  fn: () => Promise<void>;
-  intervalMs: number;
-  enabled: boolean;
-}
-
-export interface TaskHandle {
-  cancel: () => void;
-  isRunning: () => boolean;
-}
-
-export interface Scheduler {
-  schedule: (task: ScheduledTask) => TaskHandle;
-  cancelAll: () => void;
-  waitForRunning: (timeoutMs?: number) => Promise<void>;
-}
-```
+ScheduledTask: id, fn, intervalMs, enabled. TaskHandle: cancel, isRunning. Scheduler: schedule(task) → handle, cancelAll, waitForRunning(timeoutMs?). See source for interfaces.
 
 ### Core Features
 
 #### 1. Concurrency Protection
 
-Prevents overlapping execution of the same task:
-
-```typescript
-const runningTasks = new Set<string>();
-
-const execute = async (): Promise<void> => {
-  if (runningTasks.has(task.id)) {
-    return; // Skip if already running
-  }
-  runningTasks.add(task.id);
-  // ... execute task
-  runningTasks.delete(task.id);
-};
-```
+Track running task IDs in a Set; skip execution if task id already in set; add before run, delete after. See source.
 
 #### 2. Retry with Exponential Backoff
 
-Handles transient failures automatically:
-
-```typescript
-const executeWithRetry = async (
-  fn: () => Promise<void>,
-  taskId: string,
-  config: RetryConfig = DEFAULT_RETRY_CONFIG,
-): Promise<void> => {
-  for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
-    try {
-      await fn();
-      return; // Success
-    } catch (error) {
-      if (attempt < config.maxRetries) {
-        const delay = config.retryDelayMs * Math.pow(config.backoffMultiplier, attempt);
-        await sleep(delay);
-      }
-    }
-  }
-  throw lastError;
-};
-```
+Loop: try fn(); on failure and attempt &lt; maxRetries, sleep with delay = retryDelayMs * backoffMultiplier^attempt, then retry. See source for `executeWithRetry` and RetryConfig.
 
 #### 3. Graceful Shutdown
 
-Allows running tasks to complete before shutdown:
-
-```typescript
-const waitForRunning = async (timeoutMs = 5000): Promise<void> => {
-  const start = Date.now();
-  while (runningTasks.size > 0 && Date.now() - start < timeoutMs) {
-    await sleep(100);
-  }
-  if (runningTasks.size > 0) {
-    logger.warn(`Some tasks did not complete within timeout`);
-  }
-};
-```
+waitForRunning: poll until running set is empty or timeout; optional alert if tasks still running. See source.
 
 ### Implementation Location
 

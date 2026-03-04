@@ -2,96 +2,112 @@
 
 - **Status:** Accepted
 - **Date:** 2026-02-04
+- **Updated:** 2026-03-04
 - **Owners:** -
 - **Related:**
-  - [ADR-0001: Bot Architecture](0001-bot-architecture.md)
+  - [ADR-0031: Bot Architecture (On-Chain)](0031-bot-architecture-on-chain.md)
   - [ADR-0012: State Machines](0012-state-machines.md)
-  - [ADR-0010: Exchange Adapters](0010-exchange-adapters.md)
+  - [ADR-0010: Exchange Adapters](0010-exchange-adapters.md) (CEX; on-chain uses [ADR-0020](0020-contract-interaction-patterns.md))
 
 ## Context
 
-The bot now encompasses multiple concerns:
-- Market data ingestion (WebSocket + REST)
-- Trading decision logic (strategy engine)
-- Risk management (risk engine)
-- Order execution and reconciliation
-- Persistence (state snapshots, audit logs)
+The bot encompasses multiple concerns:
+- **Data plane**: REST polling (GMX API) + RPC (contract reads); no WebSocket in the current on-chain architecture (ADR-0031).
+- **Trading decision logic**: Strategy engine (entry/exit signals, trend analysis).
+- **Risk management**: Risk engine (evaluate, emergency, position sizing).
+- **Execution**: Transaction-based (build → simulate → send → confirm) via chain protocols (GMX adapter).
+- **State and reconciliation**: In-memory state store, periodic reconciler with chain/REST.
+- **Persistence**: Order repository (DB), state transition logging (audit trail).
 
 As the codebase grows, we need a structure that:
 - Keeps business logic separate from infrastructure
 - Preserves testability and portability for core workflows
-- Allows swapping persistence or exchange adapters without rewriting core logic
+- Allows swapping persistence or chain adapters without rewriting core logic
 - Avoids overengineering for a focused, single-purpose bot
 
-We already use the adapter pattern for exchanges (ADR-0010). A full hexagonal architecture (ports/adapters for every dependency with heavy DI composition) adds complexity unlikely to pay off for this scope.
+We use the adapter pattern for the on-chain protocol (GMX in `lib/chain/protocols/gmx`) and for persistence (ports + Postgres adapter). A full hexagonal architecture (ports/adapters for every dependency with heavy DI composition) adds complexity unlikely to pay off for this scope.
 
 ## Decision
 
 We adopt a **pragmatic, hexagonal-inspired architecture**:
 
 1. **Domain services live in `src/domains/`**
-   - Business workflows are centralized in domain modules (strategy, risk, position).
+   - Business workflows are centralized in domain modules: **strategy** (evaluate, entry-signal, exit-signal, trend-analysis), **risk** (evaluate, emergency, position-sizing), **position** (derive, metrics, reconcile), **state** (hedge-state, order-state, persistence).
    - Worker/entry points remain thin, focusing on scheduling and orchestration.
 
 2. **Persistence keeps strict ports/adapters**
-   - `src/lib/db/ports` defines interfaces.
-   - `src/lib/db/adapters` provides implementations (SQLite/JSON today).
-   - Domain services depend on ports, not adapters.
+   - `src/lib/db/ports` defines interfaces (e.g. `OrderRepository`).
+   - `src/lib/db/adapters/postgres` provides the implementation.
+   - Domain/worker code depends on ports, not concrete adapters. State transition audit is in `domains/state/persistence` (TransitionLogger; MVP in-memory, DB optional later).
 
-3. **External services use direct adapters**
-   - Exchange adapters stay in `src/adapters/` (per ADR-0010).
-   - Alert service adapters remain in `src/lib/alerts/`.
-   - These are used directly by domain services to avoid unnecessary indirection.
+3. **On-chain and external services use adapters in `lib/`**
+   - Chain and protocol access live in `src/lib/chain/` (client, tx-builder, tx-sender, gas, health). The GMX protocol adapter is in `src/lib/chain/protocols/gmx/` (adapter, api, utils, schema). No CEX exchange adapters in the current codebase (ADR-0031).
+   - Optional alert adapters would live in `src/lib/alerts/` if added; domains depend on such adapters directly to avoid unnecessary indirection.
 
 ### Directory Structure
 
 ```
 src/
-  worker/                   # Entry point, orchestration
-    index.ts                # Main worker loop
-    scheduler.ts            # Interval scheduling
-    queue.ts                # Serial execution queue
-  
-  domains/                  # Domain services (business logic)
+  worker/                       # Orchestration and entry
+    start-worker.ts             # Composes data plane, evaluator, reconciler, queue
+    state.ts                    # In-memory state store
+    queue/index.ts              # Serial execution queue
+    scheduler/                  # Evaluation interval scheduling
+    data-plane/                # REST + RPC polling orchestration
+    data-collector/             # Data collection
+    evaluator/                 # Health, startup, evaluate tick
+    execution/                 # enter-hedge, exit-hedge, fill-confirmation, slippage, drift
+    reconciler/                # Reconcile with chain/REST
+    websocket/                 # (Optional) WS health/message handling
+    freshness.ts               # Staleness checks
+    impact-sampler/            # Execution impact sampling
+    impact-analysis/           # Impact analysis
+
+  domains/                      # Domain services (business logic)
     strategy/
-      strategy.ts           # Trading decision logic
-      strategy.test.ts
+      evaluate/                # evaluateStrategy
+      entry-signal/            # generateEntrySignal
+      exit-signal/             # generateExitSignal
+      trend-analysis/          # analyzeFundingRateTrend
       index.ts
     risk/
-      risk.ts               # Risk evaluation
-      risk.test.ts
+      evaluate/                # evaluateRisk
+      emergency/               # checkEmergencyConditions, kill switch
+      position-sizing/         # calculateMaxPositionSizeQuote
       index.ts
     position/
-      position.ts           # Position state derivation
-      position.test.ts
+      derive/                  # derivePosition
+      metrics/                 # margin, notional, PnL helpers
+      reconcile/               # reconcilePosition
       index.ts
-  
-  adapters/                 # Exchange adapters (per ADR-0010)
-    types.ts
-    binance/
-    bybit/
-    paper/
-  
+    state/
+      hedge-state/             # Hedge state machine
+      order-state/             # Order state machine
+      persistence/             # TransitionLogger (audit)
+      index.ts
+
   lib/
-    db/                     # Ports/adapters for persistence
-      ports/
-        state-repository.ts
-        audit-repository.ts
-        index.ts
-      adapters/
-        sqlite/
-        json/
-        index.ts
-      index.ts
-    alerts/                 # Alert service adapters
-      discord.ts
-      telegram.ts
-      console.ts
-      index.ts
-    shared/                 # Utilities
-      errors.ts
-      schemas.ts
-      logger.ts
+    chain/                     # On-chain client and execution
+      client/                  # viem public/wallet clients
+      protocols/gmx/           # GMX adapter, API, utils, schema
+      tx-builder/              # Transaction construction
+      tx-sender/               # Send and confirm
+      gas/                     # Gas estimation
+      health/                  # RPC/chain health
+      errors/
+    db/
+      ports/                   # OrderRepository interface
+      adapters/postgres/       # OrderRepository implementation
+      schema.ts
+    env/                       # Env validation
+    logger/                    # Structured logger
+    rate-limiter/              # Backoff, circuit-breaker, request-policy
+    protocols/                 # Shared protocol guards/config
+    config.ts
+  server/                      # HTTP server (health, metrics routes)
+    index/
+    routes/health/
+    routes/metrics/
 ```
 
 ### Dependency Direction
@@ -99,13 +115,13 @@ src/
 Strict dependency flow (no upward imports):
 
 ```
-worker (entry point, orchestration)
+worker (start-worker, data-plane, evaluator, execution, reconciler, queue)
   ↓
-domains (business logic)
+domains (strategy, risk, position, state)
   ↓
-lib/db/ports (persistence interfaces)
+lib/db/ports (OrderRepository), lib/chain (protocols/gmx), lib/logger, lib/env
   ↓
-adapters (exchange, db, alerts)
+lib/db/adapters/postgres, lib/chain/protocols/gmx implementation
 ```
 
 ### Architecture Diagram
@@ -113,239 +129,104 @@ adapters (exchange, db, alerts)
 ```mermaid
 flowchart TB
     subgraph worker [Worker / Entry Point]
-        W1[scheduler]
-        W2[executionQueue]
-        W3[reconciler]
+        W1[data-plane]
+        W2[evaluator]
+        W3[execution queue]
+        W4[reconciler]
+        W5[state store]
     end
 
     subgraph domains [Domain Services]
         D1[strategy]
         D2[risk]
         D3[position]
+        D4[state]
     end
 
-    subgraph persistence [Persistence Ports/Adapters]
-        P1[StateRepository]
-        P2[AuditRepository]
-        A1[SQLite/JSON Adapters]
+    subgraph persistence [Persistence]
+        P1[OrderRepository port]
+        A1[Postgres adapter]
+        D4P[state/persistence TransitionLogger]
     end
 
-    subgraph external [External Adapters]
-        E1[Exchange Adapters]
-        E2[Alert Adapters]
+    subgraph external [External / Chain]
+        E1[chain/protocols/gmx]
+        E2[viem clients]
     end
 
-    W1 --> D1
-    W1 --> D2
-    W1 --> D3
+    W1 --> W5
     W2 --> D1
+    W2 --> D2
     W3 --> D3
+    W4 --> D3
+    W2 --> D4
 
-    D1 --> P1
-    D2 --> P1
-    D3 --> P1
-    D1 --> P2
+    D1 --> D2
+    D1 --> D3
+    D2 --> D4
+    D4 --> D4P
 
     P1 -.->|implements| A1
-    P2 -.->|implements| A1
-
-    D1 --> E1
-    D1 --> E2
-    D2 --> E2
+    W3 --> P1
+    W4 --> E1
+    W2 --> E1
+    W3 --> E1
+    E1 --> E2
 ```
 
 ## Implementation Details
 
 ### Domain Services (Pure Business Logic)
 
-Domain services are framework-agnostic and contain pure business logic:
+Domain services are framework-agnostic and contain pure business logic.
 
-```typescript
-// src/domains/strategy/strategy.ts
-
-/**
- * Evaluates market state and produces trading intent.
- * Pure business logic - no IO, no side effects.
- *
- * @see {@link ../../adrs/0002-hexagonal-inspired-architecture.md ADR-0002}
- */
-export const evaluateStrategy = (
-  state: MarketState,
-  risk: RiskAssessment,
-  config: StrategyConfig,
-): TradingIntent => {
-  // No position? Check for entry opportunity
-  if (!state.position.open) {
-    const opportunity = findOpportunity(state, config);
-    if (opportunity && risk.level === "SAFE") {
-      return { type: "ENTER_HEDGE", params: opportunity };
-    }
-    return { type: "NOOP" };
-  }
-
-  // Position open? Check exit conditions
-  if (shouldExit(state, config)) {
-    return { type: "EXIT_HEDGE", reason: "target_reached" };
-  }
-
-  return { type: "NOOP" };
-};
-
-// Pure helper - no IO
-const findOpportunity = (
-  state: MarketState,
-  config: StrategyConfig,
-): EntryOpportunity | null => {
-  const spreadBps = calculateSpreadBps(state.funding, state.prices);
-  if (spreadBps >= config.minSpreadBps) {
-    return { spreadBps, size: calculateSize(state.account, config) };
-  }
-  return null;
-};
-```
+**Strategy evaluation** (`domains/strategy/evaluate/`) is a pure function: it takes market state (e.g. `StrategyInput`), risk assessment, and config; returns a discriminated union `TradingIntent` (`ENTER_HEDGE` | `EXIT_HEDGE` | `NOOP`); and delegates to `evaluateRisk`, `analyzeFundingRateTrend`, `generateEntrySignal`, `generateExitSignal`, and `calculateMaxPositionSizeQuote`. No I/O, no side effects — all dependencies passed as arguments. See the source for the current implementation.
 
 ### Persistence Ports (Interfaces)
 
+Persistence is defined by ports; the current codebase uses `OrderRepository` for order/tx records. State transition audit is handled by `domains/state/persistence` (TransitionLogger):
+
 ```typescript
-// src/lib/db/ports/state-repository.ts
+// src/lib/db/ports/order-repository.ts
 
-export interface StateRepository {
-  getLatestState(): Promise<PersistedState | null>;
-  saveState(state: PersistedState): Promise<void>;
-  getStateHistory(limit: number): Promise<PersistedState[]>;
-}
-
-export interface AuditRepository {
-  logExecution(entry: ExecutionLog): Promise<void>;
-  logDecision(entry: DecisionLog): Promise<void>;
-  getExecutionHistory(since: Date): Promise<ExecutionLog[]>;
+export interface OrderRepository {
+  create(order: CreateOrderInput): Promise<Order>;
+  findById(id: string): Promise<Order | null>;
+  findByExchangeOrderId(exchange: string, exchangeOrderId: string): Promise<Order | null>;
+  findByTxHash(txHash: string): Promise<Order | null>;
+  update(id: string, updates: Partial<Order>): Promise<Order>;
+  list(filters: OrderFilters): Promise<Order[]>;
 }
 ```
 
 ### Persistence Adapters (Implementations)
 
-```typescript
-// src/lib/db/adapters/sqlite/state-repository.ts
-
-import type { StateRepository } from "../../ports";
-
-export const createSqliteStateRepository = (
-  db: Database,
-): StateRepository => ({
-  getLatestState: async () => {
-    const row = await db.get("SELECT * FROM states ORDER BY timestamp DESC LIMIT 1");
-    return row ? deserializeState(row) : null;
-  },
-  
-  saveState: async (state) => {
-    await db.run(
-      "INSERT INTO states (timestamp, data) VALUES (?, ?)",
-      [state.timestamp.toISOString(), JSON.stringify(state)],
-    );
-  },
-  
-  getStateHistory: async (limit) => {
-    const rows = await db.all(
-      "SELECT * FROM states ORDER BY timestamp DESC LIMIT ?",
-      [limit],
-    );
-    return rows.map(deserializeState);
-  },
-});
-```
+Implementations live under `lib/db/adapters/postgres`. The current adapter implements `OrderRepository` with Drizzle (create, findById, findByExchangeOrderId, findByTxHash, update, list). Domain and worker code depend only on the port; see `createPostgresOrderRepository` in source for the current implementation.
 
 ### Worker Composition (Entry Point)
 
-The worker composes adapters and domain services:
-
-```typescript
-// src/worker/index.ts
-
-import { createBinanceAdapter } from "@/adapters/binance";
-import { createSqliteStateRepository, createSqliteAuditRepository } from "@/lib/db/adapters/sqlite";
-import { evaluateStrategy } from "@/domains/strategy";
-import { evaluateRisk } from "@/domains/risk";
-import { derivePosition } from "@/domains/position";
-
-const start = async () => {
-  // 1. Compose adapters
-  const exchange = createBinanceAdapter(config.exchange);
-  const stateRepo = createSqliteStateRepository(db);
-  const auditRepo = createSqliteAuditRepository(db);
-  
-  // 2. Initialize state
-  const persisted = await stateRepo.getLatestState();
-  const truth = await exchange.getPositions();
-  let state = mergeState(persisted, truth);
-  
-  // 3. Define evaluation tick (calls pure domain logic)
-  const evaluate = () => {
-    if (executionQueue.busy()) return;
-    
-    const risk = evaluateRisk(state, config.risk);
-    const intent = evaluateStrategy(state, risk, config.strategy);
-    
-    if (intent.type !== "NOOP") {
-      executionQueue.push(() => executeIntent(intent, exchange, auditRepo));
-    }
-  };
-  
-  // 4. Start loops
-  schedule(evaluate, 2_000);
-  schedule(() => reconcile(exchange, stateRepo), 60_000);
-};
-```
+The worker is composed in `start-worker.ts`: it creates chain clients (public + wallet), the GMX adapter, in-memory state store, and serial execution queue; runs a startup sequence (e.g. reconcile with chain); starts the data plane for REST + RPC polling; and schedules an evaluation tick that reads a snapshot, runs `evaluateRisk` and `evaluateStrategy`, and enqueues `executeEnterHedge` or `executeExitHedge` when intent is not `NOOP`. A separate schedule runs the reconciler periodically. See the source for current orchestration (evaluator, data collector, impact sampler, health monitor).
 
 ## When to Add Ports
 
 Add a port/interface when:
-- **Multiple implementations exist**: SQLite vs Postgres, Binance vs Bybit
-- **Testing requires mocking**: Complex external dependencies
-- **Swappability is expected**: Likely to change providers
+- **Multiple implementations exist or are planned**: e.g. OrderRepository (Postgres); chain protocol adapter (GMX today, potential other protocols later).
+- **Testing requires mocking**: Complex external dependencies (DB, RPC, REST).
+- **Swappability is expected**: Likely to change providers (DB, chain RPC).
 
 Keep direct adapters when:
-- **Single implementation forever**: Console logger, specific exchange
-- **Simple enough to mock inline**: Alert services in tests
-- **Indirection adds no value**: CLI output formatting
+- **Single implementation and no swap planned**: e.g. logger, env loader.
+- **Simple enough to mock inline**: Small utilities in tests.
+- **Indirection adds no value**: Pure helpers with no I/O.
 
 ## Testing Strategy
 
 | Layer | Testing Approach |
 |-------|------------------|
-| Domain services | Pure unit tests, no mocks needed |
-| Persistence ports | Contract tests against adapters |
-| Exchange adapters | Integration tests + paper adapter |
-| Worker | End-to-end with paper adapter |
-
-### Domain Testing (Pure)
-
-```typescript
-// src/domains/strategy/strategy.test.ts
-
-describe("evaluateStrategy", () => {
-  it("should return ENTER_HEDGE when spread exceeds threshold", () => {
-    const state = createTestState({
-      funding: { rateBps: 50n },
-      position: { open: false },
-    });
-    const risk = { level: "SAFE" };
-    const config = { minSpreadBps: 30n };
-
-    const intent = evaluateStrategy(state, risk, config);
-
-    expect(intent.type).toBe("ENTER_HEDGE");
-  });
-
-  it("should return NOOP when risk level is DANGER", () => {
-    const state = createTestState({ funding: { rateBps: 50n } });
-    const risk = { level: "DANGER" };
-
-    const intent = evaluateStrategy(state, risk, defaultConfig);
-
-    expect(intent.type).toBe("NOOP");
-  });
-});
-```
+| Domain services | Pure unit tests, no mocks (e.g. `strategy/evaluate/evaluate.test.ts`, `risk/evaluate/evaluate.test.ts`) |
+| Persistence ports | Contract tests against Postgres adapter |
+| Chain/protocol adapter | Unit tests with mocked viem clients; integration tests on testnet where needed |
+| Worker | Integration tests with mocked adapter and queue |
 
 ## Consequences
 
@@ -358,7 +239,7 @@ describe("evaluateStrategy", () => {
 
 ### Negative
 
-1. **Partial isolation**: Domain services still call some adapters directly (alerts, exchange).
+1. **Partial isolation**: Domain services and worker still use some adapters directly (e.g. chain/protocol, logger).
 2. **More files**: More folders and files than a flat structure.
 3. **Convention-based**: Boundaries enforced by convention, not tooling.
 
@@ -370,8 +251,9 @@ describe("evaluateStrategy", () => {
 
 ## References
 
-- [ADR-0001: Bot Architecture](0001-bot-architecture.md) - Worker loop and execution model
-- [ADR-0012: State Machines](0012-state-machines.md) - Order and hedge lifecycle states
-- [ADR-0010: Exchange Adapters](0010-exchange-adapters.md) - Exchange adapter pattern
+- [ADR-0031: Bot Architecture (On-Chain)](0031-bot-architecture-on-chain.md) — Worker loop, data plane, execution model
+- [ADR-0012: State Machines](0012-state-machines.md) — Order and hedge lifecycle states
+- [ADR-0020: Contract Interaction Patterns](0020-contract-interaction-patterns.md) — Build/simulate/send/confirm
+- [ADR-0010: Exchange Adapters](0010-exchange-adapters.md) — CEX adapter pattern (historical)
 - [Alistair Cockburn - Hexagonal Architecture](https://alistair.cockburn.us/hexagonal-architecture/)
 - [Clean Architecture by Robert C. Martin](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)

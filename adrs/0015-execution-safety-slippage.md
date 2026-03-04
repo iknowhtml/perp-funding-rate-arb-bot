@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-02-04
+- **Updated:** 2026-03-04
 - **Owners:** -
 - **Related:**
   - [ADR-0001: Bot Architecture](0001-bot-architecture.md)
@@ -34,615 +35,60 @@ Without proper slippage management:
 
 ### Slippage Estimation (Pre-Trade)
 
-Estimate expected slippage by analyzing order book depth:
-
-```typescript
-export interface OrderBookSnapshot {
-  bids: Array<{ price: bigint; quantity: bigint }>; // Sorted descending
-  asks: Array<{ price: bigint; quantity: bigint }>; // Sorted ascending
-  timestamp: Date;
-}
-
-export interface SlippageEstimate {
-  expectedPrice: bigint;        // Weighted average execution price
-  slippageBps: bigint;          // Slippage in basis points
-  canExecute: boolean;           // Can execute within slippage limit
-  requiredDepth: bigint;         // Order book depth needed
-  availableDepth: bigint;        // Available order book depth
-}
-```
-
-### Type Definitions
-
-```typescript
-// Order types (defined in ADR-0010: Exchange Adapters)
-export interface OrderParams {
-  symbol: string;
-  side: "BUY" | "SELL";
-  quantity: bigint;
-  type?: "MARKET" | "LIMIT";
-  price?: bigint;
-  timeInForce?: "IOC" | "FOK" | "GTC";
-}
-
-export interface OrderResult {
-  orderId: string;
-  status: "PENDING" | "FILLED" | "PARTIALLY_FILLED" | "CANCELLED" | "REJECTED";
-  filledQuantity: bigint;
-  averagePrice: bigint;
-}
-
-export interface Order {
-  id: string;
-  symbol: string;
-  side: "BUY" | "SELL";
-  quantity: bigint;
-  status: string;
-}
-
-export interface Fill {
-  id: string;
-  orderId: string;
-  quantity: bigint;
-  price: bigint;
-  timestamp: Date;
-}
-```
-
-### Helper Functions
-
-```typescript
-// Calculate mid price from order book
-export const calculateMidPrice = (orderBook: OrderBookSnapshot): bigint => {
-  if (orderBook.bids.length === 0 || orderBook.asks.length === 0) {
-    throw new Error("Order book has no bids or asks");
-  }
-
-  const bestBid = orderBook.bids[0].price;
-  const bestAsk = orderBook.asks[0].price;
-  return (bestBid + bestAsk) / 2n;
-};
-
-// Utility function for delays
-export const sleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
-```
-
-### Error Types
-
-```typescript
-// Error for slippage limit violations
-export class SlippageLimitExceededError extends Error {
-  constructor(
-    message: string,
-    public readonly slippageBps: bigint,
-    public readonly maxSlippageBps: bigint,
-  ) {
-    super(message);
-    this.name = "SlippageLimitExceededError";
-  }
-}
-```
+Estimate expected slippage by analyzing order book depth. Types: `OrderBookSnapshot` (bids/asks with price and quantity, timestamp), `SlippageEstimate` (expectedPrice, slippageBps, canExecute, requiredDepth, availableDepth). Order types (OrderParams, OrderResult, Order, Fill) align with ADR-0010. Helpers: mid price from order book, sleep utility. Errors: `SlippageLimitExceededError` for limit violations. See source for current types and helpers.
 
 ### Order Book Depth Analysis
 
-```typescript
-export const estimateSlippage = (
-  orderBook: OrderBookSnapshot,
-  side: "BUY" | "SELL",
-  quantity: bigint,
-  maxSlippageBps: bigint, // Pass from config
-): SlippageEstimate => {
-  const levels = side === "BUY" ? orderBook.asks : orderBook.bids;
-  const midPrice = calculateMidPrice(orderBook);
-
-  let cumulativeQuantity = 0n;
-  let cumulativeValue = 0n;
-
-  for (const level of levels) {
-    const levelQuantity = level.quantity < quantity - cumulativeQuantity
-      ? level.quantity
-      : quantity - cumulativeQuantity;
-
-    cumulativeQuantity += levelQuantity;
-    cumulativeValue += levelQuantity * level.price;
-
-    if (cumulativeQuantity >= quantity) {
-      break;
-    }
-  }
-
-  if (cumulativeQuantity < quantity) {
-    // Insufficient liquidity
-    return {
-      expectedPrice: 0n,
-      slippageBps: 10000n, // 100% slippage (cannot execute)
-      canExecute: false,
-      requiredDepth: quantity,
-      availableDepth: cumulativeQuantity,
-    };
-  }
-
-  const weightedAvgPrice = cumulativeValue / cumulativeQuantity;
-  const slippageBps = side === "BUY"
-    ? ((weightedAvgPrice - midPrice) * 10000n) / midPrice
-    : ((midPrice - weightedAvgPrice) * 10000n) / midPrice;
-
-  return {
-    expectedPrice: weightedAvgPrice,
-    slippageBps,
-    canExecute: slippageBps <= maxSlippageBps,
-    requiredDepth: quantity,
-    availableDepth: cumulativeQuantity,
-  };
-};
-```
+Walk order book levels (asks for BUY, bids for SELL), compute cumulative quantity and value until quantity is filled; if insufficient depth return canExecute false. Otherwise compute weighted average price and slippage in bps vs mid; return estimate with canExecute = (slippageBps <= maxSlippageBps). See source for `estimateSlippage`.
 
 ### Slippage Limits Configuration
 
-```typescript
-export interface SlippageConfig {
-  maxSlippageBps: bigint;           // Hard limit (default: 50 bps = 0.5%)
-  warningSlippageBps: bigint;        // Warning threshold (default: 30 bps)
-  maxOrderSizeBps: bigint;           // Max order size as % of 24h volume (default: 1%)
-  minLiquidityMultiplier: bigint;   // Min order book depth multiplier (default: 2x)
-}
-```
+Config: maxSlippageBps (hard limit), warningSlippageBps, maxOrderSizeBps (vs 24h volume), minLiquidityMultiplier. See source for `SlippageConfig`.
 
 ### Execution Strategies
 
 #### Strategy 1: Market Order (Fast, Higher Slippage)
 
-Use market orders when:
-- **Slippage estimate** < warning threshold
-- **Time-sensitive** (funding rate changing soon)
-- **Small size** (< 1% of 24h volume)
-
-```typescript
-const executeMarketOrder = async (
-  adapter: ExchangeAdapter,
-  params: OrderParams,
-  slippageEstimate: SlippageEstimate,
-  maxSlippageBps: bigint,
-): Promise<OrderResult> => {
-  if (!slippageEstimate.canExecute) {
-    throw new SlippageLimitExceededError(
-      `Slippage ${slippageEstimate.slippageBps}bps exceeds limit ${maxSlippageBps}bps`,
-      slippageEstimate.slippageBps,
-      maxSlippageBps,
-    );
-  }
-
-  return adapter.placeOrder({
-    ...params,
-    type: "MARKET",
-  });
-};
-```
+Use when slippage estimate &lt; warning threshold, time-sensitive, or small size. Validate canExecute then call adapter with type MARKET. See source.
 
 #### Strategy 2: Limit Order (Slower, Lower Slippage)
 
-Use limit orders when:
-- **Slippage estimate** > warning threshold
-- **Not time-sensitive** (can wait for better price)
-- **Large size** (> 1% of 24h volume)
-
-```typescript
-const executeLimitOrder = async (
-  adapter: ExchangeAdapter,
-  params: OrderParams,
-  slippageEstimate: SlippageEstimate,
-  orderBook: OrderBookSnapshot,
-): Promise<OrderResult> => {
-  // Place limit order at estimated execution price
-  const limitPrice = slippageEstimate.expectedPrice;
-  
-  return adapter.placeOrder({
-    ...params,
-    type: "LIMIT",
-    price: limitPrice,
-    timeInForce: "IOC", // Immediate or Cancel
-  });
-};
-```
+Use when slippage &gt; warning or large size. Place limit at expectedPrice, timeInForce IOC. See source.
 
 #### Strategy 3: TWAP (Time-Weighted Average Price)
 
-For very large orders, split into smaller chunks:
-
-```typescript
-const executeTWAP = async (
-  adapter: ExchangeAdapter,
-  params: OrderParams,
-  chunks: number = 5,
-  intervalMs: number = 1000,
-): Promise<OrderResult[]> => {
-  const chunkSize = params.quantity / BigInt(chunks);
-  const results: OrderResult[] = [];
-
-  for (let i = 0; i < chunks; i++) {
-    const orderBook = await adapter.getOrderBook(params.symbol);
-    const slippageEstimate = estimateSlippage(orderBook, params.side, chunkSize, config.maxSlippageBps);
-
-    if (!slippageEstimate.canExecute) {
-      throw new SlippageLimitExceededError(
-        `Chunk ${i + 1} exceeds slippage limit`,
-        slippageEstimate.slippageBps,
-        config.maxSlippageBps,
-      );
-    }
-
-    const result = await executeMarketOrder(adapter, {
-      ...params,
-      quantity: chunkSize,
-    }, slippageEstimate, config.maxSlippageBps);
-
-    results.push(result);
-
-    if (i < chunks - 1) {
-      await sleep(intervalMs);
-    }
-  }
-
-  return results;
-};
-```
+Split quantity into chunks; for each chunk fetch order book, estimate slippage, execute market (or limit) with chunk size; sleep between chunks. See source for `executeTWAP`.
 
 ### Realized Slippage Tracking (Post-Trade)
 
-Track actual slippage vs estimated:
-
-```typescript
-export interface ExecutionAnalysis {
-  orderId: string;
-  expectedPrice: bigint;
-  actualPrice: bigint;
-  expectedSlippageBps: bigint;
-  realizedSlippageBps: bigint;
-  slippageDifferenceBps: bigint; // actual - expected
-  orderBookSnapshot: OrderBookSnapshot;
-  executionTime: Date;
-}
-
-export const analyzeExecution = (
-  order: Order,
-  fills: Fill[],
-  orderBookSnapshot: OrderBookSnapshot,
-  expectedPrice: bigint,
-): ExecutionAnalysis => {
-  const totalQuantity = fills.reduce((sum, f) => sum + f.quantity, 0n);
-  const totalValue = fills.reduce((sum, f) => sum + f.quantity * f.price, 0n);
-  const actualPrice = totalValue / totalQuantity;
-
-  const midPrice = calculateMidPrice(orderBookSnapshot);
-  const realizedSlippageBps = order.side === "BUY"
-    ? ((actualPrice - midPrice) * 10000n) / midPrice
-    : ((midPrice - actualPrice) * 10000n) / midPrice;
-
-  const expectedSlippageBps = order.side === "BUY"
-    ? ((expectedPrice - midPrice) * 10000n) / midPrice
-    : ((midPrice - expectedPrice) * 10000n) / midPrice;
-
-  return {
-    orderId: order.id,
-    expectedPrice,
-    actualPrice,
-    expectedSlippageBps,
-    realizedSlippageBps,
-    slippageDifferenceBps: realizedSlippageBps - expectedSlippageBps,
-    orderBookSnapshot,
-    executionTime: new Date(),
-  };
-};
-```
+Track actual vs expected: from order, fills, and order book snapshot compute actual price (volume-weighted), realized slippage bps vs mid, expected slippage bps; return ExecutionAnalysis (orderId, expected/actual price, slippage fields, snapshot, executionTime). See source for `analyzeExecution` and `ExecutionAnalysis`.
 
 ### Position Sizing Based on Liquidity
 
-Adjust position size based on available order book depth:
-
-```typescript
-export const calculateOptimalPositionSize = (
-  desiredSize: bigint,
-  orderBook: OrderBookSnapshot,
-  config: SlippageConfig,
-): bigint => {
-  // Get available depth for both sides (entry + exit)
-  const entryDepth = estimateSlippage(orderBook, "BUY", desiredSize, config.maxSlippageBps).availableDepth;
-  const exitDepth = estimateSlippage(orderBook, "SELL", desiredSize, config.maxSlippageBps).availableDepth;
-
-  // Use minimum of entry/exit depth
-  const minDepth = entryDepth < exitDepth ? entryDepth : exitDepth;
-
-  // Ensure we have at least minLiquidityMultiplier x depth
-  const maxSizeByLiquidity = minDepth / config.minLiquidityMultiplier;
-
-  // Use minimum of desired size and liquidity-constrained size
-  return desiredSize < maxSizeByLiquidity ? desiredSize : maxSizeByLiquidity;
-};
-```
+Compute entry and exit depth via estimateSlippage for both sides; cap size by min depth / minLiquidityMultiplier; return min(desiredSize, maxSizeByLiquidity). See source for `calculateOptimalPositionSize`.
 
 ### Execution Safety Checks
 
 Before executing any order:
 
-1. **Check slippage estimate** (must be < max slippage)
+1. **Check slippage estimate** (must be &lt; max slippage)
 2. **Check order book depth** (must have sufficient liquidity)
-3. **Check order size** (must be < max order size % of volume)
+3. **Check order size** (must be &lt; max order size % of volume)
 4. **Re-check risk** (ADR-0013: two-phase risk check)
 
-```typescript
-export const validateExecution = async (
-  adapter: ExchangeAdapter,
-  params: OrderParams,
-  config: SlippageConfig,
-): Promise<{ valid: boolean; reason?: string; slippageEstimate?: SlippageEstimate }> => {
-  // 1. Get order book
-  const orderBook = await adapter.getOrderBook(params.symbol);
-
-  // 2. Estimate slippage
-  const slippageEstimate = estimateSlippage(orderBook, params.side, params.quantity, config.maxSlippageBps);
-
-  // 3. Check slippage limit
-  if (!slippageEstimate.canExecute) {
-    return {
-      valid: false,
-      reason: `Slippage ${slippageEstimate.slippageBps}bps exceeds limit ${config.maxSlippageBps}bps`,
-      slippageEstimate,
-    };
-  }
-  
-  // 4. Check liquidity
-  if (slippageEstimate.availableDepth < slippageEstimate.requiredDepth * config.minLiquidityMultiplier) {
-    return {
-      valid: false,
-      reason: `Insufficient liquidity: need ${slippageEstimate.requiredDepth}, have ${slippageEstimate.availableDepth}`,
-      slippageEstimate,
-    };
-  }
-  
-  // 5. Check order size vs volume (if available)
-  const volume24h = await adapter.get24hVolume(params.symbol);
-  if (volume24h > 0n) {
-    const orderSizeBps = (params.quantity * 10000n) / volume24h;
-    if (orderSizeBps > config.maxOrderSizeBps) {
-      return {
-        valid: false,
-        reason: `Order size ${orderSizeBps}bps exceeds max ${config.maxOrderSizeBps}bps of 24h volume`,
-        slippageEstimate,
-      };
-    }
-  }
-  
-  return { valid: true, slippageEstimate };
-};
-```
+Implementation: get order book, run estimateSlippage, validate canExecute and depth, optionally check order size vs 24h volume; return valid + slippageEstimate or reason. See source for `validateExecution`.
 
 ### Hedge Drift Detection and Correction
 
-Hedge drift occurs when perp and spot notional values don't match after execution:
-
-```typescript
-export const MAX_DRIFT_BPS = 50n; // 0.5% maximum acceptable drift
-
-export interface HedgeDrift {
-  perpNotionalQuote: bigint;
-  spotNotionalQuote: bigint;
-  driftBps: bigint;
-  needsCorrection: boolean;
-}
-
-export const calculateHedgeDrift = (
-  perpOrder: OrderResult,
-  spotOrder: OrderResult,
-): HedgeDrift => {
-  const perpNotional = perpOrder.filledQuantity * perpOrder.averagePrice;
-  const spotNotional = spotOrder.filledQuantity * spotOrder.averagePrice;
-  
-  const diff = perpNotional > spotNotional 
-    ? perpNotional - spotNotional 
-    : spotNotional - perpNotional;
-  
-  const driftBps = perpNotional > 0n 
-    ? (diff * 10000n) / perpNotional 
-    : 0n;
-
-  return {
-    perpNotionalQuote: perpNotional,
-    spotNotionalQuote: spotNotional,
-    driftBps,
-    needsCorrection: driftBps > MAX_DRIFT_BPS,
-  };
-};
-
-export const correctDrift = async (
-  drift: HedgeDrift,
-  adapter: ExchangeAdapter,
-  symbol: string,
-  logger: Logger,
-): Promise<void> => {
-  const diff = drift.perpNotionalQuote - drift.spotNotionalQuote;
-  
-  logger.warn("Correcting hedge drift", { drift, diff });
-  
-  if (diff > 0n) {
-    // Need more spot to match perp
-    await adapter.placeOrder({
-      symbol,
-      side: "BUY",
-      type: "MARKET",
-      quantity: diff,
-    });
-  } else {
-    // Need more perp to match spot
-    await adapter.placeOrder({
-      symbol: `${symbol}-PERP`,
-      side: "SELL",
-      type: "MARKET",
-      quantity: -diff,
-    });
-  }
-};
-```
+When perp and spot notional diverge after execution: define max drift (e.g. 50 bps). Compute HedgeDrift from filled quantities and average prices; set needsCorrection if driftBps &gt; threshold. correctDrift: place market order(s) to bring spot/perp notional in line. See source for `calculateHedgeDrift`, `correctDrift`, and `HedgeDrift`.
 
 ### Execution Circuit Breaker
 
-Prevent cascading failures during execution:
-
-```typescript
-import { CircuitBreaker, ConsecutiveBreaker, handleAll } from "cockatiel";
-
-export const createExecutionCircuitBreaker = () => {
-  return new CircuitBreaker(handleAll, {
-    halfOpenAfter: 30_000, // Try again after 30 seconds
-    breaker: new ConsecutiveBreaker(2), // Open after 2 consecutive failures
-  });
-};
-
-// Usage
-const executionCircuitBreaker = createExecutionCircuitBreaker();
-
-executionCircuitBreaker.onStateChange((state) => {
-  if (state === "open") {
-    alertService.send({
-      type: "EXECUTION_CIRCUIT_BREAKER_OPEN",
-      message: "Execution circuit breaker opened after consecutive failures",
-    });
-  }
-});
-```
+Use cockatiel CircuitBreaker (ConsecutiveBreaker, halfOpenAfter). On state change to open, send alert. See source for `createExecutionCircuitBreaker` and usage.
 
 ### Integration with Execution Queue
 
-```typescript
-// src/worker/execution.ts
-import pRetry from "p-retry";
-import pTimeout from "p-timeout";
-
-const executeEnterHedge = async (sizeQuote: bigint) => {
-  // 0. Check circuit breaker
-  if (executionCircuitBreaker.state === "open") {
-    return { aborted: true, reason: "execution_circuit_breaker_open" };
-  }
-
-  // 1. Get order book
-  const orderBook = await exchange.getOrderBook(symbol);
-  
-  // 2. Calculate optimal size based on liquidity
-  const optimalSize = calculateOptimalPositionSize(sizeQuote, orderBook, slippageConfig);
-  
-  // 3. Validate execution
-  const validation = await validateExecution(
-    exchange,
-    { symbol, side: "BUY", quantity: optimalSize },
-    slippageConfig,
-  );
-  
-  if (!validation.valid) {
-    await alertService.send({
-      type: "EXECUTION_BLOCKED",
-      reason: validation.reason,
-    });
-    return { aborted: true, reason: validation.reason };
-  }
-  
-  // 4. Execute with slippage estimate (through circuit breaker)
-  const perpOrder = await executionCircuitBreaker.execute(async () => {
-    const order = await executeMarketOrder(
-      exchange,
-      { symbol, side: "SELL", quantity: optimalSize },
-      validation.slippageEstimate!,
-      slippageConfig.maxSlippageBps,
-    );
-    // 4a. Confirm fill with polling
-    return confirmOrderFill(exchange, order.orderId, ORDER_FILL_TIMEOUT_MS);
-  });
-
-  const spotOrder = await executionCircuitBreaker.execute(async () => {
-    const order = await executeMarketOrder(
-      exchange,
-      { symbol, side: "BUY", quantity: optimalSize },
-      validation.slippageEstimate!,
-      slippageConfig.maxSlippageBps,
-    );
-    // 4b. Confirm fill with polling
-    return confirmOrderFill(exchange, order.orderId, ORDER_FILL_TIMEOUT_MS);
-  });
-  
-  // 5. Handle partial fills
-  if (perpOrder.status === "PARTIALLY_FILLED" || spotOrder.status === "PARTIALLY_FILLED") {
-    await handlePartialFills(perpOrder, spotOrder, exchange, slippageConfig);
-  }
-  
-  // 6. Calculate and correct hedge drift
-  const drift = calculateHedgeDrift(perpOrder, spotOrder);
-  if (drift.needsCorrection) {
-    logger.warn("Hedge drift detected", { drift });
-    await correctDrift(drift, exchange, symbol, logger);
-  }
-  
-  // 7. Analyze execution
-  const perpAnalysis = await analyzeExecution(perpOrder, perpFills, orderBook, validation.slippageEstimate!.expectedPrice);
-  const spotAnalysis = await analyzeExecution(spotOrder, spotFills, orderBook, validation.slippageEstimate!.expectedPrice);
-  
-  // 8. Log slippage metrics
-  metrics.executionSlippageBps.observe(Number(perpAnalysis.realizedSlippageBps));
-  metrics.executionSlippageBps.observe(Number(spotAnalysis.realizedSlippageBps));
-  
-  // 9. Alert if slippage exceeded estimate significantly
-  if (perpAnalysis.slippageDifferenceBps > 20n || spotAnalysis.slippageDifferenceBps > 20n) {
-    await alertService.send({
-      type: "SLIPPAGE_ANOMALY",
-      data: { perpAnalysis, spotAnalysis },
-    });
-  }
-  
-  return { success: true, perpOrder, spotOrder, drift };
-};
-
-// Handle partial fills by completing the remaining quantity
-const handlePartialFills = async (
-  perpOrder: OrderResult,
-  spotOrder: OrderResult,
-  adapter: ExchangeAdapter,
-  config: SlippageConfig,
-): Promise<void> => {
-  const MAX_RETRY_ATTEMPTS = 3;
-  
-  // Complete perp fill if partial
-  if (perpOrder.status === "PARTIALLY_FILLED") {
-    const remaining = perpOrder.quantity - perpOrder.filledQuantity;
-    await pRetry(
-      async () => {
-        const order = await adapter.placeOrder({
-          symbol: perpOrder.symbol,
-          side: perpOrder.side,
-          type: "MARKET",
-          quantity: remaining,
-        });
-        return confirmOrderFill(adapter, order.orderId);
-      },
-      { retries: MAX_RETRY_ATTEMPTS },
-    );
-  }
-  
-  // Complete spot fill if partial
-  if (spotOrder.status === "PARTIALLY_FILLED") {
-    const remaining = spotOrder.quantity - spotOrder.filledQuantity;
-    await pRetry(
-      async () => {
-        const order = await adapter.placeOrder({
-          symbol: spotOrder.symbol,
-          side: spotOrder.side,
-          type: "MARKET",
-          quantity: remaining,
-        });
-        return confirmOrderFill(adapter, order.orderId);
-      },
-      { retries: MAX_RETRY_ATTEMPTS },
-    );
-  }
-};
-```
+Enter-hedge flow: check circuit breaker; get order book; compute optimal size; validate execution; execute perp then spot through circuit breaker with fill confirmation; handle partial fills (retry remaining quantity); compute and correct hedge drift; analyze execution and log metrics; alert on slippage anomaly. Partial fills completed via p-retry. See `src/worker/` and execution/slippage modules for current implementation.
 
 ## Consequences
 
@@ -678,13 +124,7 @@ const handlePartialFills = async (
 
 ## Dependencies
 
-```bash
-# Required for fill confirmation and retry handling
-pnpm add p-retry p-timeout
-
-# Already installed
-# cockatiel (circuit breaker)
-```
+p-retry and p-timeout for fill confirmation and retries; cockatiel for circuit breaker. See repo `package.json`.
 
 ## Future Considerations
 

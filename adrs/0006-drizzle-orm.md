@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-02-04
+- **Updated:** 2026-03-04
 - **Owners:** -
 - **Related:**
   - [ADR-0005: Database Strategy](0005-database-strategy.md)
@@ -38,31 +39,7 @@ We considered:
 
 ### Schema Definition
 
-We will define schemas in `src/lib/db/schema.ts`.
-
-```typescript
-import { pgTable, text, bigint, timestamp, uuid, jsonb, index } from "drizzle-orm/pg-core";
-
-export const orders = pgTable("orders", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  exchange: text("exchange").notNull(),
-  symbol: text("symbol").notNull(),
-  side: text("side").notNull(), // 'BUY' | 'SELL'
-  type: text("type").notNull(), // 'MARKET' | 'LIMIT'
-  quantityBase: bigint("quantity_base", { mode: "bigint" }).notNull(),
-  priceQuote: bigint("price_quote", { mode: "bigint" }),
-  status: text("status").notNull(),
-  exchangeOrderId: text("exchange_order_id"),
-  idempotencyKey: text("idempotency_key"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
-}, (table) => {
-  return {
-    exchangeOrderIdIdx: index("idx_orders_exchange_order_id").on(table.exchangeOrderId),
-    idempotencyKeyIdx: index("idx_orders_idempotency_key").on(table.idempotencyKey),
-  };
-});
-```
+Define tables in TypeScript using Drizzle's `pgTable` (columns, indexes). Schema lives in `src/lib/db/schema.ts`. See that file for the current orders table and any others.
 
 ### Integration with Hexagonal Architecture
 
@@ -75,27 +52,7 @@ Drizzle fits seamlessly into our hexagonal-inspired architecture (ADR-0002):
 
 ### Repository Implementation
 
-We use Drizzle within our repository adapters (ADR-0002), keeping domain services decoupled from database implementation:
-
-```typescript
-// src/lib/db/adapters/postgres/order-repository.ts
-import { eq } from "drizzle-orm";
-import { db } from "../client";
-import { orders } from "../../schema";
-import type { OrderRepository } from "../../ports";
-
-export const createPostgresOrderRepository = (client: typeof db): OrderRepository => ({
-  create: async (order) => {
-    const [inserted] = await client.insert(orders).values(order).returning();
-    return mapToDomain(inserted);
-  },
-  
-  findById: async (id) => {
-    const result = await client.select().from(orders).where(eq(orders.id, id));
-    return result[0] ? mapToDomain(result[0]) : null;
-  },
-});
-```
+Repository adapters in `src/lib/db/adapters/postgres/` use the Drizzle client to implement the ports (insert, select, update). Map DB rows to domain types. See `order-repository.ts` and ports in source.
 
 **Key Points**:
 - Repository adapters implement ports defined in `src/lib/db/ports/`
@@ -133,7 +90,7 @@ We use `drizzle-kit` for managing migrations. The standard workflow is:
 | Command | Purpose | When to Use |
 |---------|---------|-------------|
 | `pnpm db:generate` | Generate SQL migration files from schema changes | After modifying `src/lib/db/schema.ts` |
-| `pnpm db:migrate` | Apply pending migrations to database | Local development, production deployments |
+| `pnpm db:migrate` | Apply pending migrations to database (requires `db:generate` first) | Local development, production deployments |
 | `pnpm db:push` | Push schema changes directly without migration files | Prototyping, local development only |
 | `pnpm db:studio` | Open Drizzle Studio (database GUI) | Inspecting data, debugging queries |
 

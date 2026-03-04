@@ -1,220 +1,124 @@
 # ADR 0012: State Machines for Order and Position Lifecycle
 
-- **Status:** Accepted
+- **Status:** Superseded
 - **Date:** 2026-02-04
+- **Updated:** 2026-03-04
 - **Owners:** -
+- **Superseded by:** [ADR-0032: State Machines (On-Chain)](0032-state-machines-on-chain.md)
 - **Related:**
   - [ADR-0001: Bot Architecture](0001-bot-architecture.md)
   - [ADR-0010: Exchange Adapters](0010-exchange-adapters.md)
 
+> **Superseded.** The bot now uses an on-chain exchange. For state machines in the current system (transaction lifecycle; position derived from chain), see [ADR-0032: State Machines (On-Chain)](0032-state-machines-on-chain.md). This document retains **CEX order and hedge state definitions** and diagrams for historical reference.
+
 ## Context
 
-The bot manages complex multi-step flows:
-- Order lifecycle: CREATED → SUBMITTED → ACKED → PARTIAL/FILLED/CANCELED/REJECTED
-- Hedge lifecycle: IDLE → ENTERING → ACTIVE → EXITING → CLOSED
-- Position states with entry/exit phases
-
-These flows need:
+The bot manages multi-step flows that need:
 - Clear valid state transitions
-- Invalid transitions caught at compile time (where possible) or runtime
+- Invalid transitions caught at compile time or runtime
 - State history for debugging and audit
 - Idempotency for retries
 
+On CEX, order lifecycle (CREATED → SUBMITTED → ACKED → FILLED etc.) and hedge lifecycle (IDLE → ENTERING → ACTIVE → EXITING → CLOSED) were explicit state machines. On-chain (ADR-0032), the primitive is **transaction lifecycle**; position is derived from chain.
+
 ## Decision
 
-Use explicit state machines with:
+Use explicit state machines with discriminated union types, explicit transition tables, and validation. **For the current (on-chain) system, see ADR-0032.** Below are the CEX state definitions and diagrams for reference.
 
-### 1. Discriminated Union Types for States
+## CEX Order Lifecycle (Historical)
 
-```typescript
-export type OrderStatus =
-  | "CREATED"
-  | "SUBMITTED"
-  | "ACKED"
-  | "PARTIAL"
-  | "FILLED"
-  | "CANCELED"
-  | "REJECTED";
+### States
 
-export type HedgeState =
-  | { phase: "IDLE" }
-  | { phase: "ENTERING_PERP"; intentId: string; symbol: string }
-  | { phase: "ENTERING_SPOT"; perpFilled: boolean; symbol: string }
-  | { phase: "ACTIVE"; symbol: string; notionalQuote: bigint; spotQtyBase: bigint; perpQtyBase: bigint }
-  | { phase: "EXITING_SPOT"; symbol: string }
-  | { phase: "EXITING_PERP"; symbol: string }
-  | { phase: "CLOSED"; symbol: string; pnlQuote: bigint };
+| State     | Meaning                    | Terminal |
+|----------|----------------------------|----------|
+| CREATED  | Order built, not yet sent   | No       |
+| SUBMITTED| Sent to exchange, no ACK   | No       |
+| ACKED    | Exchange acknowledged      | No       |
+| PARTIAL  | Partially filled           | No       |
+| FILLED   | Fully filled               | Yes      |
+| CANCELED | Canceled                   | Yes      |
+| REJECTED | Rejected by exchange       | Yes      |
+
+### Valid Transitions
+
+- CREATED → SUBMITTED
+- SUBMITTED → ACKED | REJECTED
+- ACKED → PARTIAL | FILLED | CANCELED | REJECTED
+- PARTIAL → PARTIAL | FILLED | CANCELED
+- FILLED, CANCELED, REJECTED → (none)
+
+### Order Lifecycle Diagram
+
+```mermaid
+stateDiagram-v2
+  [*] --> CREATED
+  CREATED --> SUBMITTED : SUBMIT
+  SUBMITTED --> ACKED : ACK
+  SUBMITTED --> REJECTED : REJECT
+  ACKED --> PARTIAL : PARTIAL_FILL
+  ACKED --> FILLED : FILL
+  ACKED --> CANCELED : CANCEL
+  ACKED --> REJECTED : REJECT
+  PARTIAL --> PARTIAL : PARTIAL_FILL
+  PARTIAL --> FILLED : FILL
+  PARTIAL --> CANCELED : CANCEL
+  FILLED --> [*]
+  CANCELED --> [*]
+  REJECTED --> [*]
 ```
 
-### 2. Explicit Transition Tables
+## CEX Hedge Lifecycle (Historical)
 
-```typescript
-export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  CREATED: ["SUBMITTED"],
-  SUBMITTED: ["ACKED", "REJECTED"],
-  ACKED: ["PARTIAL", "FILLED", "CANCELED", "REJECTED"],
-  PARTIAL: ["PARTIAL", "FILLED", "CANCELED"],
-  FILLED: [], // Terminal state
-  CANCELED: [], // Terminal state
-  REJECTED: [], // Terminal state
-};
+### States
+
+| Phase          | Meaning                                      |
+|----------------|----------------------------------------------|
+| IDLE           | No position, not entering or exiting         |
+| ENTERING_PERP  | Perp order in flight (intentId, symbol)      |
+| ENTERING_SPOT  | Spot leg in flight (perpFilled, symbol)      |
+| ACTIVE         | Position open (symbol, notional, quantities) |
+| EXITING_SPOT   | Closing spot leg (symbol)                    |
+| EXITING_PERP   | Closing perp leg (symbol)                    |
+| CLOSED         | Flat (symbol, pnlQuote)                      |
+
+### Hedge Lifecycle Diagram
+
+```mermaid
+stateDiagram-v2
+  [*] --> IDLE
+  IDLE --> ENTERING_PERP : start enter
+  ENTERING_PERP --> ENTERING_SPOT : perp filled
+  ENTERING_SPOT --> ACTIVE : spot filled
+  ACTIVE --> EXITING_SPOT : start exit
+  EXITING_SPOT --> EXITING_PERP : spot closed
+  EXITING_PERP --> CLOSED : perp closed
+  CLOSED --> [*]
 ```
 
-### 3. Transition Functions with Validation
+## Patterns (Still Relevant)
 
-```typescript
-export const transitionOrder = (
-  order: Order,
-  event: OrderEvent,
-): Order | { error: string } => {
-  const validNextStates = ORDER_TRANSITIONS[order.status];
-  const nextStatus = eventToStatus(event);
-  
-  if (!validNextStates.includes(nextStatus)) {
-    return { error: `Invalid transition: ${order.status} -> ${nextStatus}` };
-  }
-  
-  return { ...order, status: nextStatus, ...applyEvent(order, event) };
-};
-```
+- **Discriminated union types** for states (compile-time exhaustiveness).
+- **Explicit transition table**: only listed transitions are valid; validation at runtime.
+- **Intent IDs** for idempotency (same intent ID on retry avoids double execution).
+- **State persistence** for audit: entityType, entityId, fromState, toState, event, correlationId, timestamp.
+- **Timeout handling**: SUBMITTED can timeout to REJECTED/TIMEOUT; ACKED/PARTIAL can timeout for fill. See ADR-0032 for on-chain timeout (e.g. TX PENDING → TIMED_OUT).
 
-### 4. Event Types for State Transitions
-
-```typescript
-export type OrderEvent =
-  | { type: "SUBMIT"; orderId: string }
-  | { type: "ACK"; exchangeOrderId: string }
-  | { type: "PARTIAL_FILL"; filledQtyBase: bigint; avgPriceQuote: bigint }
-  | { type: "FILL"; filledQtyBase: bigint; avgPriceQuote: bigint }
-  | { type: "CANCEL"; reason: string }
-  | { type: "REJECT"; error: string }
-  | { type: "TIMEOUT"; reason: string }; // ACK timeout or fill timeout
-```
-
-### 4a. Order ACK Timeout Handling
-
-Orders can get stuck in SUBMITTED state if the exchange never acknowledges. Implement timeout handling:
-
-```typescript
-export const ORDER_ACK_TIMEOUT_MS = 30_000; // 30 seconds
-export const ORDER_FILL_TIMEOUT_MS = 60_000; // 60 seconds
-
-export interface OrderWithTimeout extends Order {
-  submittedAt: Date;
-  ackedAt?: Date;
-  timeoutAt?: Date;
-}
-
-export const checkOrderTimeout = (order: OrderWithTimeout): OrderEvent | null => {
-  const now = Date.now();
-  
-  // Check ACK timeout (SUBMITTED state)
-  if (order.status === "SUBMITTED" && order.submittedAt) {
-    const elapsed = now - order.submittedAt.getTime();
-    if (elapsed > ORDER_ACK_TIMEOUT_MS) {
-      return { type: "TIMEOUT", reason: "ack_timeout" };
-    }
-  }
-  
-  // Check fill timeout (ACKED or PARTIAL state)
-  if ((order.status === "ACKED" || order.status === "PARTIAL") && order.ackedAt) {
-    const elapsed = now - order.ackedAt.getTime();
-    if (elapsed > ORDER_FILL_TIMEOUT_MS) {
-      return { type: "TIMEOUT", reason: "fill_timeout" };
-    }
-  }
-  
-  return null;
-};
-```
-
-### 4b. Fill Confirmation Polling
-
-Never assume an order is filled without explicit confirmation from the exchange:
-
-```typescript
-import pRetry from "p-retry";
-import pTimeout from "p-timeout";
-
-export const confirmOrderFill = async (
-  adapter: ExchangeAdapter,
-  orderId: string,
-  timeoutMs: number = ORDER_FILL_TIMEOUT_MS,
-): Promise<OrderResult> => {
-  const poll = async (): Promise<OrderResult> => {
-    const order = await adapter.getOrder(orderId);
-    
-    if (order.status === "FILLED" || order.status === "CANCELED" || order.status === "REJECTED") {
-      return order;
-    }
-    
-    throw new Error(`Order ${orderId} still pending: ${order.status}`);
-  };
-
-  return pTimeout(
-    pRetry(poll, {
-      retries: 10,
-      minTimeout: 500,
-      maxTimeout: 5000,
-      factor: 1.5,
-    }),
-    { milliseconds: timeoutMs },
-  );
-};
-```
-
-### 5. Idempotency via Intent IDs
-
-```typescript
-export interface ExecutionContext {
-  intentId: string; // UUID for this specific intent
-  ordersSubmitted: string[]; // Exchange order IDs already submitted
-  retryCount: number;
-}
-```
-
-### 6. State Persistence for Audit Trail
-
-```typescript
-export interface StateTransition {
-  id: string;
-  timestamp: Date;
-  entityType: "order" | "position" | "hedge";
-  entityId: string;
-  fromState: string;
-  toState: string;
-  event: unknown; // JSON serialized event
-  correlationId: string;
-}
-```
+Implementation details (transition functions, event types, fill confirmation polling) are in source; on-chain equivalents in ADR-0032.
 
 ## Consequences
 
 ### Positive
-- All valid transitions are documented and enforced
-- Invalid transitions are caught early
-- State history is trackable for debugging
-- Idempotency prevents duplicate actions on retry
-- Timeout handling prevents stuck orders
+- Valid transitions documented and enforced
+- Invalid transitions caught early
+- State history trackable for debugging
+- Idempotency prevents duplicate actions
 
 ### Negative
 - More boilerplate than ad-hoc state management
-- Need to update transition tables when adding states
-- Timeout handling adds complexity
-
-### Risks
-- **Incomplete transition table**: Mitigated by TypeScript exhaustiveness checking
-- **Stale state in DB**: Mitigated by reconciliation with exchange REST API
-- **Timeout during execution**: Mitigated by fill confirmation polling with retries
-- **Network partition**: Mitigated by idempotency keys and reconciler
-
-## Dependencies
-
-```bash
-# Recommended for timeout and retry handling
-pnpm add p-retry p-timeout
-```
+- Transition tables must be updated when adding states
 
 ## References
-- [XState concepts](https://xstate.js.org/docs/concepts/)
-- [ADR-0001: Bot Architecture](0001-bot-architecture.md) for execution context
+
+- [ADR-0032: State Machines (On-Chain)](0032-state-machines-on-chain.md) — Current transaction lifecycle and position model
+- [ADR-0001: Bot Architecture](0001-bot-architecture.md)
+- [ADR-0010: Exchange Adapters](0010-exchange-adapters.md)

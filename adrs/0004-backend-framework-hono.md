@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-02-04
+- **Updated:** 2026-03-04
 - **Owners:** -
 - **Related:**
   - [ADR-0029: Infrastructure — Railway Deployment](0029-infrastructure-railway.md)
@@ -53,152 +54,25 @@ While Node.js `http` module is sufficient for simple endpoints, Hono provides:
 
 ### HTTP Server Integration
 
-The Hono app runs alongside the worker process:
-
-```typescript
-// src/server/index.ts
-import { Hono } from "hono";
-import { serve } from "@hono/node-server";
-import { healthRouter } from "./routes/health";
-import { metricsRouter } from "./routes/metrics";
-
-const app = new Hono();
-
-// Mount routes
-app.route("/health", healthRouter);
-app.route("/metrics", metricsRouter);
-
-// Start server
-const port = Number(process.env.PORT ?? 8080);
-serve({ fetch: app.fetch, port }, (info) => {
-  console.log(`HTTP server listening on port ${info.port}`);
-});
-```
+The Hono app runs alongside the worker: create a Hono instance, mount routes (e.g. `/health`, `/metrics`), and serve with `@hono/node-server` (or equivalent) on the configured port. See `server/` in source.
 
 ### Worker + HTTP Server Pattern
 
-```typescript
-// src/index.ts
-import { startWorker } from "./worker";
-import { startHttpServer } from "./server";
-
-const main = async () => {
-  // Start worker (trading logic)
-  const worker = await startWorker();
-  
-  // Start HTTP server (health/metrics)
-  const server = startHttpServer();
-  
-  // Graceful shutdown
-  process.on("SIGTERM", async () => {
-    await worker.shutdown();
-    await server.close();
-    process.exit(0);
-  });
-};
-
-main().catch((error) => {
-  console.error("Fatal error:", error);
-  process.exit(1);
-});
-```
+Start the worker and HTTP server together; on SIGTERM, shut down the worker and close the server. See entry point in source.
 
 ## Implementation
 
 ### Health Check Routes
 
-```typescript
-// src/server/routes/health.ts
-import { Hono } from "hono";
-import { z } from "zod";
-
-const router = new Hono();
-
-const HealthResponseSchema = z.object({
-  healthy: z.boolean(),
-  uptime: z.number(),
-  lastEvaluation: z.string().nullable(),
-  wsConnected: z.boolean(),
-  dbConnected: z.boolean(),
-  positionOpen: z.boolean(),
-  lastReconciliation: z.string().nullable(),
-});
-
-type HealthResponse = z.infer<typeof HealthResponseSchema>;
-
-router.get("/", async (c) => {
-  const health = getHealthStatus(); // From worker state
-  
-  const response: HealthResponse = {
-    healthy: health.healthy,
-    uptime: process.uptime(),
-    lastEvaluation: health.lastEvaluation?.toISOString() ?? null,
-    wsConnected: health.wsConnected,
-    dbConnected: health.dbConnected,
-    positionOpen: health.positionOpen,
-    lastReconciliation: health.lastReconciliation?.toISOString() ?? null,
-  };
-  
-  const status = health.healthy ? 200 : 503;
-  return c.json(response, status);
-});
-
-export { router as healthRouter };
-```
+Expose a `/health` route that returns 200 or 503 based on worker/health state. Response shape is implementation-defined. See [ADR-0008](0008-monitoring-observability.md) and `server/routes/health/` in source.
 
 ### Metrics Route (Prometheus)
 
-```typescript
-// src/server/routes/metrics.ts
-import { Hono } from "hono";
-import { register } from "prom-client";
-
-const router = new Hono();
-
-router.get("/", async (c) => {
-  const metrics = await register.metrics();
-  return c.text(metrics, 200, {
-    "Content-Type": register.contentType,
-  });
-});
-
-export { router as metricsRouter };
-```
+Expose a `/metrics` route that returns Prometheus text format. See ADR-0008 and `server/routes/metrics/` in source.
 
 ### Future: OpenAPI Routes
 
-For future external APIs (dashboard, control plane), use OpenAPIHono:
-
-```typescript
-// src/server/routes/api/v1/-app.ts
-import { OpenAPIHono } from "@hono/zod-openapi";
-import { Scalar } from "@scalar/hono-api-reference";
-import { healthRouter } from "../health";
-
-const app = new OpenAPIHono().basePath("/api/v1");
-
-app.route("/health", healthRouter);
-
-// OpenAPI documentation
-app.doc("/openapi.json", {
-  info: {
-    title: "Funding Rate Arb Bot API",
-    version: "1.0.0",
-  },
-  openapi: "3.1.0",
-});
-
-app.get(
-  "/docs",
-  Scalar({
-    url: "/api/v1/openapi.json",
-    theme: "kepler",
-  }),
-);
-
-export type AppType = typeof app;
-export { app };
-```
+For future external APIs (dashboard, control plane), use OpenAPIHono with `@hono/zod-openapi` and optional API reference (e.g. Scalar). See Hono OpenAPI docs and source when implemented.
 
 ## File Structure
 
@@ -224,18 +98,7 @@ src/
 
 ## Dependencies
 
-```json
-{
-  "dependencies": {
-    "hono": "^4.11.4",
-    "@hono/node-server": "^1.12.0",
-    "@hono/zod-openapi": "^0.19.10",
-    "@scalar/hono-api-reference": "^0.9.34",
-    "prom-client": "^15.1.0",
-    "zod": "^3.24.1"
-  }
-}
-```
+Hono and `@hono/node-server` are required; OpenAPI and metrics libraries are optional. See `package.json` for current versions.
 
 ## Consequences
 

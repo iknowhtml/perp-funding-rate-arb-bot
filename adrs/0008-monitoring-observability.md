@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-02-04
+- **Updated:** 2026-03-04
 - **Owners:** -
 - **Related:**
   - [ADR-0001: Bot Architecture](0001-bot-architecture.md)
@@ -21,7 +22,7 @@ Without proper monitoring, failures go unnoticed until positions are at risk or 
 ## Decision
 
 **Implement a multi-layered monitoring strategy:**
-1. **Health checks** for infrastructure-level monitoring (Railway; restart on failure)
+1. **Health checks** for infrastructure-level monitoring
 2. **Application metrics** for trading activity and performance
 3. **Alerting** for critical events (Discord/Telegram)
 
@@ -29,96 +30,11 @@ Without proper monitoring, failures go unnoticed until positions are at risk or 
 
 ### Health Server Implementation
 
-The bot exposes an HTTP health endpoint via Hono (see [ADR-0004: Backend Framework — Hono](0004-backend-framework-hono.md)):
-
-```typescript
-// src/server/routes/health.ts
-import { Hono } from "hono";
-import { z } from "zod";
-
-const router = new Hono();
-
-const HealthResponseSchema = z.object({
-  healthy: z.boolean(),
-  uptime: z.number(),
-  lastEvaluation: z.string().nullable(),
-  wsConnected: z.boolean(),
-  dbConnected: z.boolean(),
-  positionOpen: z.boolean(),
-  lastReconciliation: z.string().nullable(),
-});
-
-type HealthResponse = z.infer<typeof HealthResponseSchema>;
-
-router.get("/", async (c) => {
-  const health = getHealthStatus(); // From worker state
-  
-  const response: HealthResponse = {
-    healthy: health.healthy,
-    uptime: process.uptime(),
-    lastEvaluation: health.lastEvaluation?.toISOString() ?? null,
-    wsConnected: health.wsConnected,
-    dbConnected: health.dbConnected,
-    positionOpen: health.positionOpen,
-    lastReconciliation: health.lastReconciliation?.toISOString() ?? null,
-  };
-  
-  const status = health.healthy ? 200 : 503;
-  return c.json(response, status);
-});
-
-export { router as healthRouter };
-```
-
-### Health Status Calculation
-
-```typescript
-// src/worker/health-status.ts
-
-export const calculateHealth = (state: BotState): HealthStatus => {
-  const now = Date.now();
-  const evaluationStale = state.lastEvaluation
-    ? now - state.lastEvaluation.getTime() > 10_000 // 10s threshold
-    : true;
-
-  const reconciliationStale = state.lastReconciliation
-    ? now - state.lastReconciliation.getTime() > 120_000 // 2min threshold
-    : true;
-
-  const healthy =
-    state.wsConnected &&
-    state.dbConnected &&
-    !evaluationStale &&
-    !reconciliationStale;
-
-  return {
-    healthy,
-    uptime: process.uptime(),
-    lastEvaluation: state.lastEvaluation?.toISOString() ?? null,
-    wsConnected: state.wsConnected,
-    dbConnected: state.dbConnected,
-    positionOpen: state.position?.open ?? false,
-    lastReconciliation: state.lastReconciliation?.toISOString() ?? null,
-  };
-};
-```
+The bot exposes an HTTP health endpoint (e.g. via Hono; see [ADR-0004](0004-backend-framework-hono.md)). Return **200** when critical dependencies are healthy, **503** when unhealthy. Response shape and which checks run (e.g. database, data plane freshness) are implementation-defined. Health is derived from worker/evaluator state; unhealthy when dependencies are down or data is stale beyond thresholds. See `server/routes/health/` and worker health logic in source.
 
 ### Infrastructure Health Checks
 
-Railway can use the health endpoint to restart unhealthy containers if health checks are configured:
-
-```toml
-# Platform config (e.g. Railway health check or fly.toml if using Fly.io)
-[checks]
-  [checks.health]
-    port = 8080
-    type = "http"
-    interval = "30s"
-    timeout = "5s"
-    grace_period = "10s"
-    method = "GET"
-    path = "/health"
-```
+Platforms (e.g. Railway, Fly.io) can call the health endpoint to restart unhealthy containers. Configure HTTP check: port (e.g. 8080), path `/health`, interval/timeout/grace period as needed.
 
 **Health check behavior:**
 - Returns `200 OK` when healthy (all systems operational)
@@ -129,98 +45,11 @@ Railway can use the health endpoint to restart unhealthy containers if health ch
 
 ### Key Metrics to Track
 
-```typescript
-// src/lib/metrics/types.ts
-
-export interface Metrics {
-  // Trading activity
-  evaluationTicks: Counter;        // Total evaluation cycles
-  executionJobs: Counter;           // Jobs executed (enter/exit)
-  executionJobsSuccess: Counter;    // Successful executions
-  executionJobsFailed: Counter;     // Failed executions
-  
-  // Connectivity
-  wsReconnects: Counter;           // WebSocket reconnection count
-  wsMessagesReceived: Counter;     // WebSocket messages processed
-  restApiCalls: Counter;           // REST API calls made
-  restApiErrors: Counter;          // REST API errors
-  
-  // Reconciliation
-  reconciliationRuns: Counter;     // Reconciliation cycles
-  reconciliationInconsistencies: Counter; // Inconsistencies detected
-  
-  // Position tracking
-  positionValue: Gauge;            // Current position notional (USD)
-  positionPnL: Gauge;              // Current PnL (USD)
-  fundingRateBps: Gauge;           // Current funding rate (basis points)
-  
-  // Performance
-  evaluationLatency: Histogram;   // Evaluation cycle time (ms)
-  executionLatency: Histogram;     // Execution job time (ms)
-  exchangeApiLatency: Histogram;  // Exchange API call time (ms)
-}
-```
-
-### Metrics Implementation
-
-```typescript
-// src/lib/metrics/metrics.ts
-
-import type { Counter, Gauge, Histogram } from "prom-client";
-
-export const createMetrics = () => {
-  const evaluationTicks = new Counter({
-    name: "bot_evaluation_ticks_total",
-    help: "Total number of evaluation cycles",
-  });
-
-  const executionJobs = new Counter({
-    name: "bot_execution_jobs_total",
-    help: "Total number of execution jobs",
-    labelNames: ["type", "status"], // type: 'ENTER' | 'EXIT', status: 'success' | 'failed'
-  });
-
-  const positionValue = new Gauge({
-    name: "bot_position_value_usd",
-    help: "Current position notional value in USD",
-  });
-
-  const evaluationLatency = new Histogram({
-    name: "bot_evaluation_latency_ms",
-    help: "Evaluation cycle latency in milliseconds",
-    buckets: [10, 50, 100, 500, 1000, 5000],
-  });
-
-  return {
-    evaluationTicks,
-    executionJobs,
-    positionValue,
-    evaluationLatency,
-    // ... other metrics
-  };
-};
-```
+Track **trading activity** (evaluation cycles, execution jobs, success/failure), **connectivity** (data plane health, API/RPC calls and errors), **reconciliation** (runs, inconsistencies), **position** (notional, PnL, funding rate), and **performance** (evaluation latency, execution latency, API latency). Implementations may use a metrics library (e.g. prom-client) or a minimal Prometheus-format endpoint. See `server/routes/metrics/` and `package.json` for the current approach.
 
 ### Metrics Endpoint
 
-Expose metrics for Prometheus scraping via Hono:
-
-```typescript
-// src/server/routes/metrics.ts
-import { Hono } from "hono";
-import { register } from "prom-client";
-
-const router = new Hono();
-
-router.get("/", async (c) => {
-  const metrics = await register.metrics();
-  return c.text(metrics, 200, {
-    "Content-Type": register.contentType,
-  });
-});
-
-export { router as metricsRouter };
-```
+Expose a `/metrics` endpoint that returns Prometheus text format. See server routes in source.
 
 ## Alerting Strategy
 
@@ -234,160 +63,17 @@ export { router as metricsRouter };
 
 ### Critical Alerts
 
-```typescript
-// src/lib/alerts/types.ts
-
-export type AlertLevel = "critical" | "warning" | "info";
-
-export interface Alert {
-  level: AlertLevel;
-  title: string;
-  message: string;
-  data?: Record<string, unknown>;
-  timestamp: Date;
-}
-
-// Critical alert examples
-export const createCriticalAlerts = {
-  executionFailure: (error: Error, context: ExecutionContext): Alert => ({
-    level: "critical",
-    title: "Execution Failure",
-    message: `Failed to execute ${context.type}: ${error.message}`,
-    data: { error: error.message, context },
-    timestamp: new Date(),
-  }),
-
-  reconciliationFailure: (inconsistencies: Inconsistency[]): Alert => ({
-    level: "critical",
-    title: "Reconciliation Inconsistencies",
-    message: `Found ${inconsistencies.length} inconsistencies`,
-    data: { inconsistencies },
-    timestamp: new Date(),
-  }),
-
-  positionAtRisk: (position: Position, risk: RiskAssessment): Alert => ({
-    level: "critical",
-    title: "Position at Risk",
-    message: `Position ${position.notionalUsd} USD at risk: ${risk.reasons.join(", ")}`,
-    data: { position, risk },
-    timestamp: new Date(),
-  }),
-
-  staleData: (component: string, lastUpdate: Date): Alert => ({
-    level: "critical",
-    title: "Stale Data Detected",
-    message: `${component} data is stale (last update: ${lastUpdate.toISOString()})`,
-    data: { component, lastUpdate },
-    timestamp: new Date(),
-  }),
-};
-```
+Critical events (e.g. execution failure, reconciliation inconsistencies, position at risk, stale data) should trigger alerts. Use levels (critical / warning / info) and route accordingly (e.g. Discord for all, Telegram for critical only). Payload shape and channel integration are implementation-defined. See source when alerting is implemented.
 
 ### Alert Channels
 
-```typescript
-// src/lib/alerts/discord.ts
-
-export const sendDiscordAlert = async (alert: Alert, webhookUrl: string) => {
-  const color = {
-    critical: 0xff0000, // Red
-    warning: 0xffaa00, // Orange
-    info: 0x00aaff,    // Blue
-  }[alert.level];
-
-  await fetch(webhookUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      embeds: [
-        {
-          title: alert.title,
-          description: alert.message,
-          color,
-          fields: alert.data
-            ? Object.entries(alert.data).map(([key, value]) => ({
-                name: key,
-                value: String(value),
-                inline: true,
-              }))
-            : [],
-          timestamp: alert.timestamp.toISOString(),
-        },
-      ],
-    }),
-  });
-};
-```
-
-### Alert Integration
-
-```typescript
-// src/lib/alerts/alert-service.ts
-
-export const createAlertService = (config: AlertConfig) => {
-  const send = async (alert: Alert) => {
-    // Always log
-    console.error(`[${alert.level.toUpperCase()}] ${alert.title}: ${alert.message}`);
-
-    // Send to Discord for all levels
-    if (config.discordWebhookUrl) {
-      await sendDiscordAlert(alert, config.discordWebhookUrl);
-    }
-
-    // Send to Telegram for critical only
-    if (alert.level === "critical" && config.telegram) {
-      await sendTelegramAlert(alert, config.telegram);
-    }
-  };
-
-  return { send };
-};
-```
+Deliver alerts via Discord webhooks and/or Telegram. Format (title, message, optional data, timestamp) and routing logic are implementation-defined.
 
 ## Logging Strategy
 
 ### Structured Logging
 
-Use structured logs for better observability:
-
-```typescript
-// src/lib/logger/logger.ts
-
-export interface LogEntry {
-  level: "debug" | "info" | "warn" | "error";
-  message: string;
-  timestamp: string;
-  data?: Record<string, unknown>;
-}
-
-export const createLogger = (config: LoggerConfig) => {
-  const log = (level: LogEntry["level"], message: string, data?: Record<string, unknown>) => {
-    const entry: LogEntry = {
-      level,
-      message,
-      timestamp: new Date().toISOString(),
-      data,
-    };
-
-    const output = JSON.stringify(entry);
-    
-    if (level === "error") {
-      console.error(output);
-    } else if (level === "warn") {
-      console.warn(output);
-    } else {
-      console.log(output);
-    }
-  };
-
-  return {
-    debug: (message: string, data?: Record<string, unknown>) => log("debug", message, data),
-    info: (message: string, data?: Record<string, unknown>) => log("info", message, data),
-    warn: (message: string, data?: Record<string, unknown>) => log("warn", message, data),
-    error: (message: string, data?: Record<string, unknown>) => log("error", message, data),
-  };
-};
-```
+Use structured logging (level, message, timestamp, optional data) for observability. See `lib/logger/` for the current logger API.
 
 ### Log Levels
 
@@ -430,12 +116,7 @@ export const createLogger = (config: LoggerConfig) => {
 
 ## Dependencies
 
-```bash
-# Required for metrics
-pnpm add prom-client
-```
-
-**Note**: `prom-client` is the de facto standard for Prometheus metrics in Node.js with 3.5M+ weekly downloads.
+Metrics may use a library (e.g. prom-client) or a minimal custom Prometheus-format exporter. See `package.json` for current dependencies.
 
 ## References
 
