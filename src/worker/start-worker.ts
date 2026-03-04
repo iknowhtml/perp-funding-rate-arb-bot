@@ -2,7 +2,7 @@
  * Worker orchestrator — creates and starts the data plane, evaluation loop,
  * and reconciler with proper startup sequence.
  *
- * @see {@link ../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
+ * @see {@link ../../docs/adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
 import { derivePosition } from "@/domains/position";

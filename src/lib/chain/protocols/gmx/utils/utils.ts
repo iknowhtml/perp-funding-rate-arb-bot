@@ -1,8 +1,8 @@
 /**
  * GMX adapter read operations: positions, token balances, market data.
  *
- * @see {@link ../../../../../../adrs/0020-contract-interaction-patterns.md ADR-0020}
- * @see {@link ../../../../../../adrs/0022-regime-based-gmx-arb.md ADR-0022}
+ * @see {@link ../../../../../../docs/adrs/0020-contract-interaction-patterns.md ADR-0020}
+ * @see {@link ../../../../../../docs/adrs/0022-regime-based-gmx-arb.md ADR-0022}
  */
 
 import syntheticsReaderAbi from "@gmx-io/sdk/abis/SyntheticsReader";

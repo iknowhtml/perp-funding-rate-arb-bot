@@ -1,7 +1,7 @@
 /**
  * Protocol and adapter exports: types, schemas, guards, config, errors, GMX.
  *
- * @see {@link ../../adrs/0010-exchange-adapters.md ADR-0010: Exchange Adapters}
+ * @see {@link ../../docs/adrs/0010-exchange-adapters.md ADR-0010: Exchange Adapters}
  */
 
 export type {

@@ -9,7 +9,7 @@
 ### Correct Response
 
 1. **Gather context** (code patterns, types, file locations from ADRs and `src/`)
-2. **Create the plan file** with structured frontmatter and Execution Preview; place under roadmap/phase if applicable (e.g. `.cursor/plans/active/0002-on-chain-pivot/01-mvp-execution/0003-gmx-adapter-reads.md`)
+2. **Create the plan file** with structured frontmatter and Execution Preview; place under roadmap/phase if applicable (e.g. `docs/plans/active/0002-on-chain-pivot/01-mvp-execution/0003-gmx-adapter-reads.md`)
 3. **STOP** — inform the user the plan is ready for review and approval. Do NOT implement.
 
 See the main SKILL.md for the Structured Todo Format and Execution Preview template.

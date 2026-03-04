@@ -1,6 +1,6 @@
 ---
 name: execute-plan
-description: Execute an approved plan sequentially (task-by-task on main). Use Composer. Input: a plan in `.cursor/plans/active/` that has been approved by a human. Run code-reviewer after each task. Complete with lifecycle-management (move plan to implemented/).
+description: Execute an approved plan sequentially (task-by-task on main). Use Composer. Input: a plan in `docs/plans/active/` that has been approved by a human. Run code-reviewer after each task. Complete with lifecycle-management (move plan to implemented/).
 ---
 
 # Execute Plan (Stage 5a)
@@ -17,7 +17,7 @@ Use **Composer** for implementation (faster code generation when context is prov
 
 ## Workflow
 
-1. Locate the plan in `.cursor/plans/active/` (or under `.cursor/plans/active/<ROADMAP>/<PHASE>/` for roadmap plans). User may @-mention it.
+1. Locate the plan in `docs/plans/active/` (or under `docs/plans/active/<ROADMAP>/<PHASE>/` for roadmap plans). User may @-mention it.
 2. Extract todos from **frontmatter** (not prose `## Tasks` section)
 3. Work through each todo:
    - Mark `in_progress` → Complete work → Run code-reviewer → Mark `completed`
@@ -52,8 +52,8 @@ When all todos are complete:
 Simple plan:
 
 ```bash
-ACTIVE=".cursor/plans/active/<PLAN>.plan.md" && \
-IMPL=".cursor/plans/implemented/<PLAN>.plan.md" && \
+ACTIVE="docs/plans/active/<PLAN>.plan.md" && \
+IMPL="docs/plans/implemented/<PLAN>.plan.md" && \
 cp "$ACTIVE" "$IMPL" && \
 git rm -f "$ACTIVE" && \
 test -f "$IMPL" && ! test -f "$ACTIVE" && \
@@ -64,9 +64,9 @@ Sub-plan inside a directory:
 
 ```bash
 PARENT="<PARENT-DIR>" && \
-ACTIVE=".cursor/plans/active/$PARENT/<PLAN>.plan.md" && \
-IMPL=".cursor/plans/implemented/$PARENT/<PLAN>.plan.md" && \
-mkdir -p ".cursor/plans/implemented/$PARENT" && \
+ACTIVE="docs/plans/active/$PARENT/<PLAN>.plan.md" && \
+IMPL="docs/plans/implemented/$PARENT/<PLAN>.plan.md" && \
+mkdir -p "docs/plans/implemented/$PARENT" && \
 cp "$ACTIVE" "$IMPL" && \
 git rm -f "$ACTIVE" && \
 test -f "$IMPL" && ! test -f "$ACTIVE" && \
@@ -79,9 +79,9 @@ Roadmap/phase plan (e.g. `active/0002-on-chain-pivot/01-mvp-execution/0001-trans
 ROADMAP="0002-on-chain-pivot" && \
 PHASE="01-mvp-execution" && \
 PLAN="0001-transaction-lifecycle.md" && \
-ACTIVE=".cursor/plans/active/$ROADMAP/$PHASE/$PLAN" && \
-IMPL=".cursor/plans/implemented/$ROADMAP/$PHASE/$PLAN" && \
-mkdir -p ".cursor/plans/implemented/$ROADMAP/$PHASE" && \
+ACTIVE="docs/plans/active/$ROADMAP/$PHASE/$PLAN" && \
+IMPL="docs/plans/implemented/$ROADMAP/$PHASE/$PLAN" && \
+mkdir -p "docs/plans/implemented/$ROADMAP/$PHASE" && \
 cp "$ACTIVE" "$IMPL" && \
 git rm -f "$ACTIVE" && \
 test -f "$IMPL" && ! test -f "$ACTIVE" && \

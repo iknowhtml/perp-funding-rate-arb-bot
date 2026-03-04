@@ -3,7 +3,7 @@
  *
  * Generates entry signals when funding rate conditions are favorable.
  *
- * @see {@link ../../../../adrs/0014-funding-rate-strategy.md ADR-0014: Funding Rate Prediction & Strategy}
+ * @see {@link ../../../../docs/adrs/0014-funding-rate-strategy.md ADR-0014: Funding Rate Prediction & Strategy}
  */
 
 import type { StrategyConfig } from "../config";

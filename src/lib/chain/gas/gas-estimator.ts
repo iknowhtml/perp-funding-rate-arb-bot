@@ -1,7 +1,7 @@
 /**
  * Execution fee estimation and gas price circuit breaker.
  *
- * @see {@link ../../../../adrs/0020-contract-interaction-patterns.md ADR-0020: Contract Interaction Patterns}
+ * @see {@link ../../../../docs/adrs/0020-contract-interaction-patterns.md ADR-0020: Contract Interaction Patterns}
  */
 
 import dataStoreAbi from "@gmx-io/sdk/abis/DataStore";

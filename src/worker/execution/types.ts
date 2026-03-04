@@ -1,8 +1,8 @@
 /**
  * Execution engine types, schemas, config, and errors.
  *
- * @see {@link ../../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
- * @see {@link ../../../../adrs/0013-execution-safety-slippage.md ADR-0013: Execution Safety & Slippage}
+ * @see {@link ../../../../docs/adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
+ * @see {@link ../../../../docs/adrs/0013-execution-safety-slippage.md ADR-0013: Execution Safety & Slippage}
  */
 
 import * as v from "valibot";

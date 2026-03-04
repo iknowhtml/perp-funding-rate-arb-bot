@@ -2,7 +2,7 @@
  * Exchange rate limit presets for testing and default configs.
  * Presets are defined here so the rate-limiter does not depend on adapter implementations.
  *
- * @see {@link ../../../../adrs/0011-exchange-rate-limiting.md ADR-0011: Exchange Rate Limiting}
+ * @see {@link ../../../../docs/adrs/0011-exchange-rate-limiting.md ADR-0011: Exchange Rate Limiting}
  */
 
 import type { EndpointCategory, ExchangeRateLimitConfig } from "./exchanges";

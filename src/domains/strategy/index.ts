@@ -1,7 +1,7 @@
 /**
  * Strategy engine module exports.
  *
- * @see {@link ../../../adrs/0014-funding-rate-strategy.md ADR-0014: Funding Rate Prediction & Strategy}
+ * @see {@link ../../../docs/adrs/0014-funding-rate-strategy.md ADR-0014: Funding Rate Prediction & Strategy}
  */
 
 // Types

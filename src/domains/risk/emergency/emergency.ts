@@ -4,7 +4,7 @@
  * Provides kill switch, reduce-only mode, and emergency condition detection.
  * Uses AlertCallback (simple function type) rather than a full AlertService.
  *
- * @see {@link ../../../../adrs/0013-risk-management.md ADR-0013: Risk Management Engine}
+ * @see {@link ../../../../docs/adrs/0013-risk-management.md ADR-0013: Risk Management Engine}
  */
 
 import type { AlertCallback, EmergencyAction, EmergencyActionType, RiskAssessment } from "../types";

@@ -1,6 +1,6 @@
 ---
 description: Architecture Decision Records (ADRs) - always check before implementing
-globs: "adrs/**/*.md"
+globs: "docs/adrs/**/*.md"
 alwaysApply: true
 ---
 
@@ -8,13 +8,13 @@ alwaysApply: true
 
 ## ALWAYS Reference ADRs
 
-**Before implementing any feature or pattern, check the `adrs/` directory for relevant decisions.**
+**Before implementing any feature or pattern, check the `docs/adrs/` directory for relevant decisions.**
 
 ADRs document the architectural patterns, design decisions, and implementation approaches for this project. They are the source of truth for "how we do things here."
 
 ## ADR Location
 
-All ADRs are stored in the `adrs/` directory at the project root.
+All ADRs are stored in the `docs/adrs/` directory.
 
 ## When to Check ADRs
 
@@ -77,7 +77,7 @@ Use JSDoc to reference ADRs:
 /**
  * Order state machine for tracking order lifecycle.
  *
- * @see {@link ../../adrs/0001-state-machines.md ADR-0001: State Machines}
+ * @see {@link ../../docs/adrs/0001-state-machines.md ADR-0001: State Machines}
  */
 export const transitionOrder = (order: Order, event: OrderEvent): Order => {
   // Implementation follows ADR-0001 patterns

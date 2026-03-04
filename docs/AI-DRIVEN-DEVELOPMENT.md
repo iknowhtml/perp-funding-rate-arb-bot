@@ -54,7 +54,7 @@ Stage 7: Human Review + Feedback Loop       [Human]
 
 **Owner**: Human authors, AI assists with research.
 
-**Artifact**: `adrs/NNNN-title.md`
+**Artifact**: `docs/adrs/NNNN-title.md`
 
 The ADR remains human-owned. Strategic decisions — what to build, which trade-offs to accept, how this fits the architecture — require human judgment. AI assists by:
 
@@ -71,7 +71,7 @@ The ADR remains human-owned. Strategic decisions — what to build, which trade-
 
 **Owner**: AI generates, human reviews and approves.
 
-**Artifact**: `.cursor/plans/active/<plan>.plan.md` (simple), `.cursor/plans/active/<plan-dir>/<plan>.plan.md` (complex with sub-plans), or `.cursor/plans/active/<ROADMAP>/<PHASE>/<plan>.md` (roadmap/phase in this project)
+**Artifact**: `docs/plans/active/<plan>.plan.md` (simple), `docs/plans/active/<plan-dir>/<plan>.plan.md` (complex with sub-plans), or `docs/plans/active/<ROADMAP>/<PHASE>/<plan>.md` (roadmap/phase in this project)
 
 Given the ADR, codebase context, [CODE_GUIDELINES.md](../CODE_GUIDELINES.md), and existing plans, the AI produces structured plans. Plan files use the `.plan.md` suffix (or `.md` under roadmap/phase). The critical requirement: **plan todos must carry machine-readable metadata** that enables automated derivation of execution graphs.
 
@@ -95,10 +95,10 @@ todos:
     effort: medium
     context-refs:
       - CODE_GUIDELINES.md
-      - adrs/0020-contract-interaction-patterns.md
+      - docs/adrs/0020-contract-interaction-patterns.md
 ```
 
-See the create-plan skill (`.cursor/skills/create-plan/SKILL.md`) and `.cursor/plans/PLAN_TEMPLATE.md` for the full field reference and examples.
+See the create-plan skill (`.cursor/skills/create-plan/SKILL.md`) and `docs/plans/PLAN_TEMPLATE.md` for the full field reference and examples.
 
 ### Execution Preview
 
@@ -125,7 +125,7 @@ When a plan grows too large (8+ todos, mixed domains, or multiple `large` effort
 **Directory layout:**
 
 ```
-.cursor/plans/active/
+docs/plans/active/
 ├── 0001-setup.plan.md
 ├── 0010-gmx-integration/
 │   ├── 0010-gmx-integration.plan.md
@@ -134,7 +134,7 @@ When a plan grows too large (8+ todos, mixed domains, or multiple `large` effort
 │   └── 03-adapter-writes.plan.md
 ```
 
-In this project, plans may also live under a **roadmap and phase**: `.cursor/plans/active/<ROADMAP>/<PHASE>/<plan>.md` (e.g. `0002-on-chain-pivot/01-mvp-execution/0001-transaction-lifecycle.md`). When moving to implemented, use the same structure under `.cursor/plans/implemented/<ROADMAP>/<PHASE>/`.
+In this project, plans may also live under a **roadmap and phase**: `docs/plans/active/<ROADMAP>/<PHASE>/<plan>.md` (e.g. `0002-on-chain-pivot/01-mvp-execution/0001-transaction-lifecycle.md`). When moving to implemented, use the same structure under `docs/plans/implemented/<ROADMAP>/<PHASE>/`.
 
 ---
 
@@ -292,4 +292,4 @@ See **Break Glass: Manual Takeover** in Stage 5.
 - Worktree execution rule: `.cursor/rules/worktree-execution.mdc`
 - Plan lifecycle rule: `.cursor/rules/plan-lifecycle.mdc`
 - Coding conventions: [CODE_GUIDELINES.md](../CODE_GUIDELINES.md)
-- ADRs: `adrs/`
+- ADRs: `docs/adrs/`

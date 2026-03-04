@@ -1,7 +1,7 @@
 /**
  * Risk management module exports.
  *
- * @see {@link ../../../adrs/0013-risk-management.md ADR-0013: Risk Management Engine}
+ * @see {@link ../../../docs/adrs/0013-risk-management.md ADR-0013: Risk Management Engine}
  */
 
 // Types

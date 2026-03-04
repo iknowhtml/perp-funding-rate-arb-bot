@@ -24,7 +24,7 @@ Use **Opus 4.6** for plan creation (superior reasoning, better at synthesizing p
 2. Draft the plan with Structured Todo Format (see below)
 3. Append the Execution Preview section
 4. Validate plan metadata and code examples
-5. **STOP** — output the plan to `.cursor/plans/active/<plan>.plan.md` (or `.cursor/plans/active/<ROADMAP>/<PHASE>/<plan>.plan.md` when under a roadmap) and inform the user that approval is required before implementation
+5. **STOP** — output the plan to `docs/plans/active/<plan>.plan.md` (or `docs/plans/active/<ROADMAP>/<PHASE>/<plan>.plan.md` when under a roadmap) and inform the user that approval is required before implementation
 
 ## Context Checklist
 
@@ -81,7 +81,7 @@ todos:
     effort: medium
     context-refs:
       - CODE_GUIDELINES.md
-      - adrs/0020-contract-interaction-patterns.md
+      - docs/adrs/0020-contract-interaction-patterns.md
 
   - id: gmx-adapter-reads
     content: Create GMX adapter read layer for positions and market data
@@ -108,7 +108,7 @@ todos:
 ---
 ```
 
-See [.cursor/plans/PLAN_TEMPLATE.md](../../plans/PLAN_TEMPLATE.md) for the template.
+See [docs/plans/PLAN_TEMPLATE.md](../../../docs/plans/PLAN_TEMPLATE.md) for the template.
 
 Every plan MUST include `lifecycle-management` as the final todo.
 
@@ -207,7 +207,7 @@ When a plan grows too large, decompose it into sub-plans inside a directory. The
 4. The parent plan's todos reference the sub-plans (each sub-plan becomes a todo in the parent)
 
 ```
-.cursor/plans/active/
+docs/plans/active/
 └── 0010-gmx-integration/
     ├── 0010-gmx-integration.plan.md
     ├── 01-chain-layer.plan.md
@@ -219,7 +219,7 @@ When a plan grows too large, decompose it into sub-plans inside a directory. The
 
 ## Roadmap / Phase Structure
 
-In this project, plans may also live under a roadmap and phase: `.cursor/plans/active/<ROADMAP>/<PHASE>/<plan>.md` (e.g. `0002-on-chain-pivot/01-mvp-execution/0001-transaction-lifecycle.md`). When moving to implemented, use the same structure under `.cursor/plans/implemented/<ROADMAP>/<PHASE>/`.
+In this project, plans may also live under a roadmap and phase: `docs/plans/active/<ROADMAP>/<PHASE>/<plan>.md` (e.g. `0002-on-chain-pivot/01-mvp-execution/0001-transaction-lifecycle.md`). When moving to implemented, use the same structure under `docs/plans/implemented/<ROADMAP>/<PHASE>/`.
 
 ---
 

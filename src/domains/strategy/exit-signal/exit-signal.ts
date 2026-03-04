@@ -3,7 +3,7 @@
  *
  * Generates exit signals when funding rate conditions deteriorate or target yield is reached.
  *
- * @see {@link ../../../../adrs/0014-funding-rate-strategy.md ADR-0014: Funding Rate Prediction & Strategy}
+ * @see {@link ../../../../docs/adrs/0014-funding-rate-strategy.md ADR-0014: Funding Rate Prediction & Strategy}
  */
 
 import type { StrategyConfig } from "../config";

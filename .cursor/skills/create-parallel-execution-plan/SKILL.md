@@ -16,12 +16,12 @@ When creating or updating plans (and their parallel-execution artifacts), use th
 **Required paths:**
 
 ```
-.cursor/plans/active/<ROADMAP>/<PHASE>/<NNNN>-<kebab-slug>/plan.md
-.cursor/plans/active/<ROADMAP>/<PHASE>/<NNNN>-<kebab-slug>/PARALLEL-EXECUTION.md
-.cursor/plans/active/<ROADMAP>/<PHASE>/<NNNN>-<kebab-slug>/worktree-config.sh
+docs/plans/active/<ROADMAP>/<PHASE>/<NNNN>-<kebab-slug>/plan.md
+docs/plans/active/<ROADMAP>/<PHASE>/<NNNN>-<kebab-slug>/PARALLEL-EXECUTION.md
+docs/plans/active/<ROADMAP>/<PHASE>/<NNNN>-<kebab-slug>/worktree-config.sh
 ```
 
-- **ROADMAP**: e.g. `0002-on-chain-pivot`. See `.cursor/plans/active/<ROADMAP>/README.md` for the roadmap.
+- **ROADMAP**: e.g. `0002-on-chain-pivot`. See `docs/plans/active/<ROADMAP>/README.md` for the roadmap.
 - **PHASE**: e.g. `01-mvp-execution`, `02-optimization/simulation`, `02-optimization/deployment`, `02-optimization/production`.
 - **Directory name**: `NNNN-kebab-slug` (e.g. `0001-transaction-lifecycle`, `0002-gmx-adapter-types`).
 - **Plan file**: Always `plan.md` inside that directory (not `<NNNN>-<slug>.md` at phase root).
@@ -44,7 +44,7 @@ When creating or updating plans (and their parallel-execution artifacts), use th
 
 1. Identify the plan directory from the input plan path: if the plan is at `.../01-mvp-execution/0001-transaction-lifecycle/plan.md`, output PARALLEL-EXECUTION.md and worktree-config.sh into `.../01-mvp-execution/0001-transaction-lifecycle/`.
 2. If the plan is still a single file at phase root (e.g. `.../01-mvp-execution/0001-transaction-lifecycle.md`), first create the directory `0001-transaction-lifecycle/`, move the plan to `0001-transaction-lifecycle/plan.md`, then place PARALLEL-EXECUTION.md and worktree-config.sh in that same directory.
-3. In worktree-config.sh, set paths so they point to this directory (e.g. `source .cursor/plans/active/0002-on-chain-pivot/01-mvp-execution/0001-transaction-lifecycle/worktree-config.sh`).
+3. In worktree-config.sh, set paths so they point to this directory (e.g. `source docs/plans/active/0002-on-chain-pivot/01-mvp-execution/0001-transaction-lifecycle/worktree-config.sh`).
 4. Roadmap README links to a plan must point to `./<PHASE>/<NNNN>-<slug>/plan.md`. When moving to implemented, move the **entire** plan directory to `implemented/<ROADMAP>/<PHASE>/<NNNN>-<kebab-slug>/`.
 
 ## Input
@@ -134,7 +134,7 @@ Use the config template. Replace placeholders:
 - `BATCH_1`, `BATCH_2`, ... — arrays with entry format `"<name>|<agent-type>|<merge-commit-message>"`
 - `VERIFY_1`, `VERIFY_2`, ... — shell commands to run after each merge
 
-The config MUST set REPO from the script directory so it works when the script lives in the plan directory (e.g. `.cursor/plans/active/<roadmap>/<phase>/<NNNN>-<slug>/worktree-config.sh`):
+The config MUST set REPO from the script directory so it works when the script lives in the plan directory (e.g. `docs/plans/active/<roadmap>/<phase>/<NNNN>-<slug>/worktree-config.sh`):
 
 ```bash
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -164,7 +164,7 @@ Use the execution-plan-template.md. Fill in:
 
 ## Output Files
 
-1. **worktree-config.sh** — In the plan directory: `.cursor/plans/active/<ROADMAP>/<PHASE>/<NNNN>-<kebab-slug>/worktree-config.sh` (same directory as that plan's `plan.md`).
+1. **worktree-config.sh** — In the plan directory: `docs/plans/active/<ROADMAP>/<PHASE>/<NNNN>-<kebab-slug>/worktree-config.sh` (same directory as that plan's `plan.md`).
 2. **PARALLEL-EXECUTION.md** — In the same plan directory as worktree-config.sh and plan.md.
 
 See [Plan Directory Structure](#plan-directory-structure) above. Do not place PARALLEL-EXECUTION.md or worktree-config.sh at phase root; they belong in the plan's directory.
@@ -179,5 +179,5 @@ See [Plan Directory Structure](#plan-directory-structure) above. Do not place PA
 ## Reference
 
 - Library: `.cursor/scripts/worktree-lib.sh`
-- Example: `.cursor/plans/implemented/0002-on-chain-pivot/00-feasibility/`
+- Example: `docs/plans/implemented/0002-on-chain-pivot/00-feasibility/`
 - Templates: `execution-plan-template.md`, `config-template.sh`

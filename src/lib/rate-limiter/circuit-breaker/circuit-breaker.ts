@@ -6,7 +6,7 @@
  * - OPEN: After threshold failures, all requests fail fast
  * - HALF_OPEN: After reset timeout, allows test requests
  *
- * @see {@link ../../../../../adrs/0011-exchange-rate-limiting.md ADR-0011: Exchange Rate Limiting}
+ * @see {@link ../../../../../docs/adrs/0011-exchange-rate-limiting.md ADR-0011: Exchange Rate Limiting}
  */
 
 import {

@@ -1,7 +1,7 @@
 /**
  * Simulate → send → waitForReceipt pipeline for multicall payloads.
  *
- * @see {@link ../../../../adrs/0020-contract-interaction-patterns.md ADR-0020: Contract Interaction Patterns}
+ * @see {@link ../../../../docs/adrs/0020-contract-interaction-patterns.md ADR-0020: Contract Interaction Patterns}
  */
 
 import exchangeRouterAbi from "@gmx-io/sdk/abis/ExchangeRouter";

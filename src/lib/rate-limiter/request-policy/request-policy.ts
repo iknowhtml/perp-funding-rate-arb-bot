@@ -9,7 +9,7 @@
  * 4. Apply retry/backoff for retryable errors (429/5xx/timeouts/network)
  * 5. Persist metrics/events (wait time, retries, breaker state)
  *
- * @see {@link ../../../../../adrs/0011-exchange-rate-limiting.md ADR-0011: Exchange Rate Limiting}
+ * @see {@link ../../../../../docs/adrs/0011-exchange-rate-limiting.md ADR-0011: Exchange Rate Limiting}
  */
 
 import {

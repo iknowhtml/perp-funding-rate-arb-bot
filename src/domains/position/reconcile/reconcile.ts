@@ -3,7 +3,7 @@
  *
  * Compares derived position against authoritative exchange position to detect inconsistencies.
  *
- * @see {@link ../../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
+ * @see {@link ../../../../docs/adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
 import type { Balance, Position } from "@/lib/protocols";

@@ -1,8 +1,8 @@
 /**
  * GMX protocol adapter: concrete implementation of ProtocolAdapter for GMX v2 on Arbitrum.
  *
- * @see {@link ../../../../../../adrs/0019-on-chain-perps-pivot.md ADR-0019}
- * @see {@link ../../../../../../adrs/0022-regime-based-gmx-arb.md ADR-0022}
+ * @see {@link ../../../../../../docs/adrs/0019-on-chain-perps-pivot.md ADR-0019}
+ * @see {@link ../../../../../../docs/adrs/0022-regime-based-gmx-arb.md ADR-0022}
  */
 
 import { type Address, isAddress } from "viem";

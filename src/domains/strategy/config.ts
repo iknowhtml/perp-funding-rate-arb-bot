@@ -4,7 +4,7 @@
  * Thresholds are in display units (numbers) and converted to bigint at usage sites.
  * Rates are in basis points (e.g., 10 = 0.10%).
  *
- * @see {@link ../../../adrs/0014-funding-rate-strategy.md ADR-0014: Funding Rate Prediction & Strategy}
+ * @see {@link ../../../docs/adrs/0014-funding-rate-strategy.md ADR-0014: Funding Rate Prediction & Strategy}
  */
 
 import * as v from "valibot";

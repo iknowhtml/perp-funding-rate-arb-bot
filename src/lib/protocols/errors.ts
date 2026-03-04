@@ -1,8 +1,8 @@
 /**
  * Adapter error types (CEX and on-chain).
  *
- * @see {@link ../../../adrs/0010-exchange-adapters.md ADR-0010: Exchange Adapters}
- * @see {@link ../../../adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
+ * @see {@link ../../../docs/adrs/0010-exchange-adapters.md ADR-0010: Exchange Adapters}
+ * @see {@link ../../../docs/adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
  */
 
 /** CEX and on-chain adapter error codes. */

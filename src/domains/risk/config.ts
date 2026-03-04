@@ -5,7 +5,7 @@
  * Use `quoteDecimals` to convert to quote currency smallest units:
  *   BigInt(usdAmount) * 10n ** BigInt(quoteDecimals)
  *
- * @see {@link ../../../adrs/0013-risk-management.md ADR-0013: Risk Management Engine}
+ * @see {@link ../../../docs/adrs/0013-risk-management.md ADR-0013: Risk Management Engine}
  */
 
 import * as v from "valibot";

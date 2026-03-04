@@ -1,7 +1,7 @@
 /**
  * Rate limiter module exports.
  *
- * @see {@link ../../../../adrs/0011-exchange-rate-limiting.md ADR-0011: Exchange Rate Limiting}
+ * @see {@link ../../../../docs/adrs/0011-exchange-rate-limiting.md ADR-0011: Exchange Rate Limiting}
  */
 
 export type { TokenBucket, TokenBucketConfig } from "./token-bucket";

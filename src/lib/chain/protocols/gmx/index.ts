@@ -1,7 +1,7 @@
 /**
  * GMX adapter: Oracle API client, reads, adapter type, and factory.
  *
- * @see {@link ../../../../../adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
+ * @see {@link ../../../../../docs/adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
  */
 
 export type { GmxProtocolAdapterConfig } from "./adapter";

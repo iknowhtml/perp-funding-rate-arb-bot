@@ -1,7 +1,7 @@
 /**
  * Type guards for adapter types using Valibot schemas.
  *
- * @see {@link ../../../../adrs/0010-exchange-adapters.md ADR-0010}
+ * @see {@link ../../../../docs/adrs/0010-exchange-adapters.md ADR-0010}
  */
 
 import * as v from "valibot";

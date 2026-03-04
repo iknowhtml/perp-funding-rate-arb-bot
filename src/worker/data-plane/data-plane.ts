@@ -1,8 +1,8 @@
 /**
  * Data plane for GMX: REST polling (no WebSocket).
  *
- * @see {@link ../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
- * @see {@link ../../../adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
+ * @see {@link ../../../docs/adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
+ * @see {@link ../../../docs/adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
  */
 
 import { isAddress } from "viem";

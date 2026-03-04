@@ -1,9 +1,9 @@
 /**
  * Exchange adapter interface and shared domain types.
  *
- * @see {@link ../../../adrs/0010-exchange-adapters.md ADR-0010: Exchange Adapters}
- * @see {@link ../../../adrs/0022-regime-based-gmx-arb.md ADR-0022: Regime-Based GMX Arb}
- * @see {@link ../../../adrs/0021-on-chain-pnl-accounting.md ADR-0021: On-Chain P&L Accounting}
+ * @see {@link ../../../docs/adrs/0010-exchange-adapters.md ADR-0010: Exchange Adapters}
+ * @see {@link ../../../docs/adrs/0022-regime-based-gmx-arb.md ADR-0022: Regime-Based GMX Arb}
+ * @see {@link ../../../docs/adrs/0021-on-chain-pnl-accounting.md ADR-0021: On-Chain P&L Accounting}
  */
 
 import type { Address } from "viem";
@@ -172,7 +172,7 @@ export type TickerCallback = (ticker: Ticker) => void;
 /**
  * On-chain perpetual protocol adapter interface (ADR-0019).
  *
- * @see {@link ../../../adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
+ * @see {@link ../../../docs/adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
  */
 export interface ProtocolAdapter {
   getMarketsInfo(): Promise<unknown[]>;

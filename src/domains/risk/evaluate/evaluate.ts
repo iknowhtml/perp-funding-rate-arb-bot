@@ -4,7 +4,7 @@
  * Computes risk metrics from a RiskSnapshot and evaluates risk level/action.
  * Reuses existing calculation functions from src/domains/position/metrics.ts.
  *
- * @see {@link ../../../../adrs/0013-risk-management.md ADR-0013: Risk Management Engine}
+ * @see {@link ../../../../docs/adrs/0013-risk-management.md ADR-0013: Risk Management Engine}
  */
 
 import { calculateLiquidationDistanceBps, calculateMarginUtilizationBps } from "@/domains/position";

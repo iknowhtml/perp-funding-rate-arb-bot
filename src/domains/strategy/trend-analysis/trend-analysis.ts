@@ -4,7 +4,7 @@
  * Implements SMA and standard deviation as pure bigint functions to avoid
  * precision loss from bigint → number → bigint conversion.
  *
- * @see {@link ../../../../adrs/0014-funding-rate-strategy.md ADR-0014: Funding Rate Prediction & Strategy}
+ * @see {@link ../../../../docs/adrs/0014-funding-rate-strategy.md ADR-0014: Funding Rate Prediction & Strategy}
  */
 
 import type { StrategyConfig } from "../config";

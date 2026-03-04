@@ -1,7 +1,7 @@
 /**
  * Adapter configuration validation schemas.
  *
- * @see {@link ../../../adrs/0010-exchange-adapters.md ADR-0010: Exchange Adapters}
+ * @see {@link ../../../docs/adrs/0010-exchange-adapters.md ADR-0010: Exchange Adapters}
  */
 
 import * as v from "valibot";

@@ -1,7 +1,7 @@
 /**
  * State machine exports.
  *
- * @see {@link ../../adrs/0012-state-machines.md ADR-0012: State Machines}
+ * @see {@link ../../docs/adrs/0012-state-machines.md ADR-0012: State Machines}
  */
 
 // Shared types

@@ -3,7 +3,7 @@
  *
  * Calculates maximum allowed position size based on available capital and risk limits.
  *
- * @see {@link ../../../../adrs/0013-risk-management.md ADR-0013: Risk Management Engine}
+ * @see {@link ../../../../docs/adrs/0013-risk-management.md ADR-0013: Risk Management Engine}
  */
 
 import type { RiskConfig } from "../config";

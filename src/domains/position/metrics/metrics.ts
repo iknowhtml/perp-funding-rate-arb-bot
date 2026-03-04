@@ -4,7 +4,7 @@
  * All functions operate on bigint values and return bigint results.
  * Uses unit suffixes: *Quote (quote currency), *Base (base units), *Bps (basis points).
  *
- * @see {@link ../../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
+ * @see {@link ../../../../docs/adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
 import type { PositionSide } from "@/lib/protocols";

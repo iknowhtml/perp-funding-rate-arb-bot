@@ -4,8 +4,8 @@
  * Combines risk assessment, funding rate trend analysis, and entry/exit signals
  * to generate trading intents.
  *
- * @see {@link ../../../../adrs/0014-funding-rate-strategy.md ADR-0014: Funding Rate Prediction & Strategy}
- * @see {@link ../../../../adrs/0013-risk-management.md ADR-0013: Risk Management Engine}
+ * @see {@link ../../../../docs/adrs/0014-funding-rate-strategy.md ADR-0014: Funding Rate Prediction & Strategy}
+ * @see {@link ../../../../docs/adrs/0013-risk-management.md ADR-0013: Risk Management Engine}
  */
 
 import { calculateMaxPositionSizeQuote } from "@/domains/risk";

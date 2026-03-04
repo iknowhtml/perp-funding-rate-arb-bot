@@ -8,7 +8,7 @@ alwaysApply: true
 
 **Always follow [`CODE_GUIDELINES.md`](../../CODE_GUIDELINES.md)** — it is the source of truth for coding standards.
 
-**Always reference ADRs** — check `adrs/` for architectural decisions before implementing features.
+**Always reference ADRs** — check `docs/adrs/` for architectural decisions before implementing features.
 
 ## Key Principles
 
@@ -192,7 +192,7 @@ export { ExchangeError } from "./errors.js";
 ### ADR References in JSDoc
 
 ```typescript
-/** @see {@link ../../adrs/0001-state-machines.md ADR-0001: State Machines} */
+/** @see {@link ../../docs/adrs/0001-state-machines.md ADR-0001: State Machines} */
 export const transitionOrder = (order: Order, event: OrderEvent): Order => {
   // ...
 };
@@ -320,7 +320,7 @@ Run checks after:
 
 🚨 **ABSOLUTELY MANDATORY - NO EXCEPTIONS** 🚨
 
-**CRITICAL RULE**: When ANY plan from `.cursor/plans/active/` is implemented, completed, or finished, you **MUST IMMEDIATELY** move it to `implemented/`.
+**CRITICAL RULE**: When ANY plan from `docs/plans/active/` is implemented, completed, or finished, you **MUST IMMEDIATELY** move it to `implemented/`.
 
 **THIS APPLIES WHENEVER:**
 - User asks to "implement" a plan
@@ -334,24 +334,24 @@ Run checks after:
 1. Update plan todos to `status: completed`
 2. Check all validation boxes `[x]`
 3. Update roadmap link to point to `../../active/<roadmap-id>/README.md`
-4. Create directory: `mkdir -p .cursor/plans/implemented/<roadmap-id>/<phase-id>`
-5. Move file: `mv .cursor/plans/active/<path> .cursor/plans/implemented/<path>`
+4. Create directory: `mkdir -p docs/plans/implemented/<roadmap-id>/<phase-id>`
+5. Move file: `mv docs/plans/active/<path> docs/plans/implemented/<path>`
 6. **CRITICAL STEP**: **ALWAYS delete from `active/` immediately after moving**:
    ```bash
    # After mv, ALWAYS run:
-   test -f .cursor/plans/active/<path> && rm .cursor/plans/active/<path> || echo "OK"
+   test -f docs/plans/active/<path> && rm docs/plans/active/<path> || echo "OK"
    ```
 7. **MANDATORY verification**: File must ONLY exist in `implemented/`, NOT in `active/`
    ```bash
-   test -f .cursor/plans/implemented/<path> && \
-     ! test -f .cursor/plans/active/<path> && \
-     echo "SUCCESS" || \
-     (test -f .cursor/plans/active/<path> && rm .cursor/plans/active/<path> && echo "DELETED duplicate")
+   test -f docs/plans/implemented/<path> && \
+    ! test -f docs/plans/active/<path> && \
+    echo "SUCCESS" || \
+    (test -f docs/plans/active/<path> && rm docs/plans/active/<path> && echo "DELETED duplicate")
    ```
 8. **If file still exists in `active/` after move, DELETE IT IMMEDIATELY** - this is a critical error:
    ```bash
    # Force deletion if it still exists:
-   test -f .cursor/plans/active/<path> && rm -f .cursor/plans/active/<path> && echo "FORCE DELETED"
+   test -f docs/plans/active/<path> && rm -f docs/plans/active/<path> && echo "FORCE DELETED"
    ```
 
 **🚨 CRITICAL REMINDER: File MUST be removed from `active/` - NO EXCEPTIONS 🚨**

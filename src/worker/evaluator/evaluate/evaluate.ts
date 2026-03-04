@@ -1,7 +1,7 @@
 /**
  * Main evaluation pipeline: health → risk → strategy → execution queue.
  *
- * @see {@link ../../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
+ * @see {@link ../../../../docs/adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
 import { calculateBaseUnitScale } from "@/domains/position";

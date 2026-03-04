@@ -1,7 +1,7 @@
 /**
  * GMX protocol types: market, ticker, reads deps, adapter config.
  *
- * @see {@link ../../../../../adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
+ * @see {@link ../../../../../docs/adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
  */
 
 import type { ContractsChainId } from "@gmx-io/sdk/configs/chains";

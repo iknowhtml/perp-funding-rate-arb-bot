@@ -1,7 +1,7 @@
 /**
  * GMX Oracle API client for market info and price tickers.
  *
- * @see {@link ../../../../../../adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
+ * @see {@link ../../../../../../docs/adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
  */
 
 import * as v from "valibot";

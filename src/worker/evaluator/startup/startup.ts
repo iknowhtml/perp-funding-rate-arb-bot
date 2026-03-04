@@ -3,7 +3,7 @@
  *
  * Runs before the evaluation loop to establish truth from the exchange.
  *
- * @see {@link ../../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
+ * @see {@link ../../../../docs/adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
 import type { Logger } from "@/lib/logger";

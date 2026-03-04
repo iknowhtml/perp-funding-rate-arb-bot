@@ -1,9 +1,9 @@
 /**
  * Exchange adapter Valibot schemas for validation.
  *
- * @see {@link ../../../adrs/0010-exchange-adapters.md ADR-0010}
- * @see {@link ../../../adrs/0022-regime-based-gmx-arb.md ADR-0022}
- * @see {@link ../../../adrs/0021-on-chain-pnl-accounting.md ADR-0021}
+ * @see {@link ../../../docs/adrs/0010-exchange-adapters.md ADR-0010}
+ * @see {@link ../../../docs/adrs/0022-regime-based-gmx-arb.md ADR-0022}
+ * @see {@link ../../../docs/adrs/0021-on-chain-pnl-accounting.md ADR-0021}
  */
 
 import * as v from "valibot";

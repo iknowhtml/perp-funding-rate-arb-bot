@@ -1,7 +1,7 @@
 /**
  * Tx-sender dependencies and types.
  *
- * @see {@link ../../../../adrs/0020-contract-interaction-patterns.md ADR-0020: Contract Interaction Patterns}
+ * @see {@link ../../../../docs/adrs/0020-contract-interaction-patterns.md ADR-0020: Contract Interaction Patterns}
  */
 
 import type { ContractsChainId } from "@gmx-io/sdk/configs/chains";

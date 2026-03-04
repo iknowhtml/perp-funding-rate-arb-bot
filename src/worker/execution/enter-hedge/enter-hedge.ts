@@ -1,8 +1,8 @@
 /**
  * Enter hedge execution: GMX path — simulate then submit perp short.
  *
- * @see {@link ../../../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
- * @see {@link ../../../../../adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
+ * @see {@link ../../../../../docs/adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
+ * @see {@link ../../../../../docs/adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
  */
 
 import { type RiskConfig, type RiskSnapshot, evaluateRisk } from "@/domains/risk";

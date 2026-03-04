@@ -68,7 +68,7 @@ The bot uses a single-process, event-driven architecture with in-memory state:
 
 **GMX data pipeline:** `lib/chain/` (Arbitrum RPC via viem), `adapters/gmx/` (market data reader), `worker/data-collector.ts` (market snapshots → DB), `worker/impact-sampler.ts` (execution estimates). Execution estimates use real gas (DataStore + gas price → USD via ETH price) and protocol-based impact (GMX SyntheticsReader `getExecutionPrice`). Tables: `market_snapshot`, `execution_estimate`.
 
-See [`adrs/`](adrs/) for detailed architecture decisions.
+See [`docs/adrs/`](docs/adrs/) for detailed architecture decisions.
 
 ## Tech Stack
 
@@ -198,7 +198,7 @@ The bot runs an HTTP server alongside the worker process for monitoring:
 - **`GET /health`** — Health check endpoint (returns 200 when healthy, 503 when unhealthy)
 - **`GET /metrics`** — Prometheus-formatted metrics endpoint
 
-See [ADR-0004: Backend Framework — Hono](adrs/0004-backend-framework-hono.md) and [ADR-0008: Monitoring & Observability](adrs/0008-monitoring-observability.md) for details.
+See [ADR-0004: Backend Framework — Hono](docs/adrs/0004-backend-framework-hono.md) and [ADR-0008: Monitoring & Observability](docs/adrs/0008-monitoring-observability.md) for details.
 
 ## Project Structure
 
@@ -214,7 +214,7 @@ src/
 
 ## Architecture Decisions
 
-See [`adrs/`](adrs/) for all 27 Architecture Decision Records. Key decisions include bot architecture, exchange adapters, state machines, risk management, and the on-chain GMX v2 pivot (ADRs 0019–0022).
+See [`docs/adrs/`](docs/adrs/) for all 27 Architecture Decision Records. Key decisions include bot architecture, exchange adapters, state machines, risk management, and the on-chain GMX v2 pivot (ADRs 0019–0022).
 
 ## License
 

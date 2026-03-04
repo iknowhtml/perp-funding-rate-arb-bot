@@ -4,7 +4,7 @@
  * Prevents OOM if parser is slower than inbound messages.
  * Drops oldest messages when queue is full (FIFO drop policy).
  *
- * @see {@link ../../../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
+ * @see {@link ../../../../../docs/adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
 import PQueue from "p-queue";

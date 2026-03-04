@@ -1,7 +1,7 @@
 /**
  * GMX protocol adapter configuration.
  *
- * @see {@link ../../../../../adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
+ * @see {@link ../../../../../docs/adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
  */
 
 import type { Address } from "viem";
