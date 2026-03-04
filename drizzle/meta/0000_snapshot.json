@@ -1,5 +1,5 @@
 {
-  "id": "e4d0348a-2928-4983-8049-39f161c607e0",
+  "id": "9284beda-b4df-44c3-9775-5befb9cf65f3",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -27,8 +27,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "size_usd": {
-          "name": "size_usd",
+        "position_size_usd": {
+          "name": "position_size_usd",
           "type": "numeric(78, 0)",
           "primaryKey": false,
           "notNull": true
@@ -45,8 +45,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "acceptable_price": {
-          "name": "acceptable_price",
+        "acceptable_price_usd": {
+          "name": "acceptable_price_usd",
           "type": "numeric(78, 0)",
           "primaryKey": false,
           "notNull": false

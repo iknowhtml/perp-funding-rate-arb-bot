@@ -2,10 +2,10 @@ CREATE TABLE "execution_estimate" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"timestamp" timestamp with time zone NOT NULL,
 	"market" text NOT NULL,
-	"size_usd" numeric(78, 0) NOT NULL,
+	"position_size_usd" numeric(78, 0) NOT NULL,
 	"simulated_impact_bps" numeric(78, 0) NOT NULL,
 	"estimated_gas_usd" numeric(78, 0),
-	"acceptable_price" numeric(78, 0),
+	"acceptable_price_usd" numeric(78, 0),
 	"created_at" timestamp with time zone DEFAULT now()
 );
 --> statement-breakpoint
