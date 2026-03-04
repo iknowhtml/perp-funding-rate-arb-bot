@@ -6,8 +6,8 @@
  * @see {@link ../../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
-import type { ProtocolAdapter } from "@/adapters/types";
 import type { Logger } from "@/lib/logger";
+import type { ProtocolAdapter } from "@/lib/protocols";
 import type { StateStore } from "@/worker/state";
 
 import { runReconcile } from "@/worker/reconciler";

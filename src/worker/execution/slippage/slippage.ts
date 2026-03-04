@@ -8,7 +8,7 @@
  * @see {@link ../../../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
-import type { ExchangeAdapter, OrderBook, OrderBookLevel, OrderSide } from "@/adapters/types";
+import type { ExchangeAdapter, OrderBook, OrderBookLevel, OrderSide } from "@/lib/protocols";
 
 import { BPS_PER_UNIT } from "../types";
 import type { ExecutionConfig, SlippageEstimate } from "../types";

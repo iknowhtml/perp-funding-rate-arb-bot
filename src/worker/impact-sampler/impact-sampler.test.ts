@@ -36,8 +36,8 @@ vi.mock("@/lib/chain/gas", () => ({
   estimateExecutionFeeWei: vi.fn().mockResolvedValue(50_000_000_000_000_000n), // 0.05 ETH
 }));
 
-import type { ProtocolAdapter } from "@/adapters/types";
 import { fetchGmxTickers } from "@/lib/chain/protocols/gmx";
+import type { ProtocolAdapter } from "@/lib/protocols";
 
 const mockSimulateOrder = vi.fn().mockResolvedValue({ impactBps: 0n });
 const mockAdapter = { simulateOrder: mockSimulateOrder } as unknown as ProtocolAdapter;

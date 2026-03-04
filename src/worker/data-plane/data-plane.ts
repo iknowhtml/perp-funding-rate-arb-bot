@@ -7,6 +7,8 @@
 
 import { isAddress } from "viem";
 
+import type { GmxMarket, GmxTicker } from "@/lib/chain/protocols/gmx";
+import type { Logger } from "@/lib/logger";
 import type {
   Balance,
   FundingRate,
@@ -14,9 +16,7 @@ import type {
   Position,
   ProtocolAdapter,
   Ticker,
-} from "@/adapters/types";
-import type { GmxMarket, GmxTicker } from "@/lib/chain/protocols/gmx";
-import type { Logger } from "@/lib/logger";
+} from "@/lib/protocols";
 
 import type { StateStore } from "../state";
 

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ProtocolAdapter } from "@/adapters/types";
 import type { Logger } from "@/lib/logger";
+import type { ProtocolAdapter } from "@/lib/protocols";
 import type { StateStore } from "@/worker/state";
 
 import { runStartupSequence } from "./startup";

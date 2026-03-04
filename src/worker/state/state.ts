@@ -11,7 +11,7 @@ import type {
   OrderBook,
   Position,
   Ticker,
-} from "@/adapters/types";
+} from "@/lib/protocols";
 
 /**
  * Bot state interface containing all market data, account data, and health tracking.

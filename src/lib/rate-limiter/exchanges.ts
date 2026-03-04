@@ -9,7 +9,7 @@
 import type { TokenBucketConfig } from "./token-bucket";
 
 // Re-export Exchange type from canonical location
-export type { Exchange } from "@/adapters/types";
+export type { Exchange } from "@/lib/protocols";
 
 export type EndpointCategory = "public" | "private" | "orders";
 

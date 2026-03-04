@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Balance, Fill, Position } from "@/adapters/types";
+import type { Balance, Fill, Position } from "@/lib/protocols";
 
 import type { PositionConfig } from "../types";
 import { derivePosition } from "./derive";

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ProtocolAdapter } from "@/adapters/types";
+import type { ProtocolAdapter } from "@/lib/protocols";
 
 vi.mock("@/lib/logger", () => ({
   createLogger: () => ({
@@ -28,9 +28,9 @@ vi.mock("@gmx-io/sdk/configs/chainIds", () => ({
   SOURCE_OPTIMISM_SEPOLIA: 11155420,
   SOURCE_SEPOLIA: 11155111,
 }));
-import type { ExchangeOrder } from "@/adapters/types";
 import { DEFAULT_RISK_CONFIG, type RiskSnapshot } from "@/domains/risk";
 import type { Logger } from "@/lib/logger";
+import type { ExchangeOrder } from "@/lib/protocols";
 import type { CircuitBreaker } from "@/lib/rate-limiter";
 
 import { DEFAULT_EXECUTION_CONFIG, ExecutionError } from "../types";

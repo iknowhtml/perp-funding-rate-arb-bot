@@ -7,7 +7,7 @@
  * @see {@link ../../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
-import type { PositionSide } from "@/adapters/types";
+import type { PositionSide } from "@/lib/protocols";
 
 /**
  * Basis points per unit (1 = 10000 bps).

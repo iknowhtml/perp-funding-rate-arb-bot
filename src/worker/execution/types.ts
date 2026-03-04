@@ -7,8 +7,8 @@
 
 import * as v from "valibot";
 
-import { exchangeOrderSchema } from "@/adapters/types";
-import type { ExchangeOrder, TxResult } from "@/adapters/types";
+import { exchangeOrderSchema } from "@/lib/protocols";
+import type { ExchangeOrder, TxResult } from "@/lib/protocols";
 
 // --- Execution Result ---
 

@@ -16,10 +16,11 @@ import type {
   PositionState,
   ProtocolAdapter,
   TxResult,
-} from "@/adapters/types";
+} from "@/lib/protocols";
 import { BTC_USD_MARKET, ETH_USD_MARKET } from "../api";
 import type { GmxProtocolAdapterConfig } from "../config";
 import { ChainError } from "../errors";
+import type { GmxMarket, GmxReadsDeps, GmxTicker } from "../types";
 import {
   compute4hMaFundingRateBps,
   getExecutionPriceFromReader,
@@ -29,8 +30,7 @@ import {
   getOiSkewForMarket,
   getPositionState as getPositionStateRead,
   getTickers as getTickersRead,
-} from "../reads";
-import type { GmxMarket, GmxReadsDeps, GmxTicker } from "../types";
+} from "../utils";
 
 /**
  * GMX implementation of ProtocolAdapter: read/write operations for GMX v2 on Arbitrum.

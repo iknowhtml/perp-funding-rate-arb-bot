@@ -9,8 +9,8 @@
  * @see {@link ../../../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
-import type { ExchangeAdapter, ExchangeOrder } from "@/adapters/types";
 import type { Logger } from "@/lib/logger";
+import type { ExchangeAdapter, ExchangeOrder } from "@/lib/protocols";
 
 import { confirmOrderFill } from "../fill-confirmation";
 import { BPS_PER_UNIT, ExecutionError } from "../types";

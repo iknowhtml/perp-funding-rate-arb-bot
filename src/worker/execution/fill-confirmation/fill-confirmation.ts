@@ -8,8 +8,8 @@
  * @see {@link ../../../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
-import type { ExchangeAdapter, ExchangeOrder, ExchangeOrderStatus } from "@/adapters/types";
 import type { Logger } from "@/lib/logger";
+import type { ExchangeAdapter, ExchangeOrder, ExchangeOrderStatus } from "@/lib/protocols";
 
 import { OrderFillTimeoutError } from "../types";
 import type { ExecutionConfig } from "../types";

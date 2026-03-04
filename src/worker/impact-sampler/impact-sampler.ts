@@ -1,4 +1,3 @@
-import type { ProtocolAdapter } from "@/adapters/types";
 import { estimateExecutionFeeWei } from "@/lib/chain/gas";
 import {
   BTC_USD_MARKET,
@@ -8,6 +7,7 @@ import {
 } from "@/lib/chain/protocols/gmx";
 import { type Database, executionEstimate } from "@/lib/db";
 import { createLogger } from "@/lib/logger";
+import type { ProtocolAdapter } from "@/lib/protocols";
 import { createScheduler } from "@/worker/scheduler";
 import { ARBITRUM } from "@gmx-io/sdk/configs/chainIds";
 import type { ContractsChainId } from "@gmx-io/sdk/configs/chains";

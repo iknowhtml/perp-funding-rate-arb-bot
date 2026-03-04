@@ -6,7 +6,7 @@
  * @see {@link ../../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
-import type { Balance, Fill, Position, PositionSide } from "@/adapters/types";
+import type { Balance, Fill, Position, PositionSide } from "@/lib/protocols";
 
 import {
   calculateLiquidationDistanceBps,

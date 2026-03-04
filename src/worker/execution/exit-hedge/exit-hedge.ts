@@ -14,8 +14,8 @@
  * @see {@link ../../../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
-import type { ProtocolAdapter } from "@/adapters/types";
 import type { Logger } from "@/lib/logger";
+import type { ProtocolAdapter } from "@/lib/protocols";
 
 import { ExecutionError } from "../types";
 import type { ExecutionConfig, ExecutionResult } from "../types";

@@ -6,7 +6,7 @@
 
 import * as v from "valibot";
 
-import type { OrderSide } from "@/adapters/types";
+import type { OrderSide } from "@/lib/protocols";
 
 import type { TransitionResult } from "../types";
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Balance, ExchangeOrder, FundingRate, Position, Ticker } from "@/adapters/types";
+import type { Balance, ExchangeOrder, FundingRate, Position, Ticker } from "@/lib/protocols";
 
 import { createStateStore } from "./state";
 

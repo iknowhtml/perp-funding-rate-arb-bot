@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ExchangeAdapter, OrderBook, OrderBookLevel } from "@/adapters/types";
+import type { ExchangeAdapter, OrderBook, OrderBookLevel } from "@/lib/protocols";
 
 import { BPS_PER_UNIT, DEFAULT_EXECUTION_CONFIG } from "../types";
 import type { ExecutionConfig } from "../types";

@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ProtocolAdapter } from "@/adapters/types";
 import type { DerivedPosition } from "@/domains/position";
 import { DEFAULT_RISK_CONFIG, type RiskAssessment, type RiskSnapshot } from "@/domains/risk";
 import {
@@ -9,6 +8,7 @@ import {
   type TradingIntent,
 } from "@/domains/strategy";
 import type { Logger } from "@/lib/logger";
+import type { ProtocolAdapter } from "@/lib/protocols";
 import type { CircuitBreaker } from "@/lib/rate-limiter";
 import { DEFAULT_EXECUTION_CONFIG } from "@/worker/execution";
 import { DEFAULT_FRESHNESS_CONFIG } from "@/worker/freshness";

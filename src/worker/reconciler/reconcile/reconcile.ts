@@ -1,8 +1,8 @@
-import type { ProtocolAdapter } from "@/adapters/types";
-import type { Balance, LiquidityBalance, Position } from "@/adapters/types";
 import { derivePosition, reconcilePosition } from "@/domains/position";
 import type { PositionConfig } from "@/domains/position";
 import type { Logger } from "@/lib/logger";
+import type { ProtocolAdapter } from "@/lib/protocols";
+import type { Balance, LiquidityBalance, Position } from "@/lib/protocols";
 import type { StateStore } from "@/worker/state";
 
 import type { BalanceInconsistency, ReconcilerConfig, ReconcilerResult } from "../types";

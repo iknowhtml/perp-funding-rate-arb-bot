@@ -5,10 +5,10 @@
  * @see {@link ../../../../../adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
  */
 
-import type { OpenPositionParams, ProtocolAdapter } from "@/adapters/types";
 import { type RiskConfig, type RiskSnapshot, evaluateRisk } from "@/domains/risk";
 import { BTC_USD_MARKET, ETH_USD_MARKET } from "@/lib/chain/protocols/gmx";
 import type { Logger } from "@/lib/logger";
+import type { OpenPositionParams, ProtocolAdapter } from "@/lib/protocols";
 import type { CircuitBreaker } from "@/lib/rate-limiter";
 
 import { ExecutionError } from "../types";

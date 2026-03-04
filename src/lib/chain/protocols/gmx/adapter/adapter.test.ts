@@ -24,9 +24,9 @@ import {
   getOiSkewForMarket,
   getPositionState,
   getTickers,
-} from "../reads";
+} from "../utils";
 
-vi.mock("../reads", () => ({
+vi.mock("../utils", () => ({
   compute4hMaFundingRateBps: vi.fn(),
   getExecutionPriceFromReader: vi.fn(),
   getFundingRateForMarket: vi.fn(),

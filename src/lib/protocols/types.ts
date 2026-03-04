@@ -187,7 +187,7 @@ export interface ProtocolAdapter {
 
 /**
  * CEX exchange adapter interface (deprecated).
- * @deprecated Removed in GMX pivot (ADR-0019). Worker uses ProtocolAdapter from @/adapters/types.
+ * @deprecated Removed in GMX pivot (ADR-0019). Worker uses ProtocolAdapter from @/lib/protocols.
  */
 export interface ExchangeAdapter {
   connect(): Promise<void>;

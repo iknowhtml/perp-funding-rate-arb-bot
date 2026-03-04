@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ProtocolAdapter } from "@/adapters/types";
-import type { Balance, ExchangeOrder, Position } from "@/adapters/types";
 import type { Logger } from "@/lib/logger";
+import type { ProtocolAdapter } from "@/lib/protocols";
+import type { Balance, ExchangeOrder, Position } from "@/lib/protocols";
 import { createStateStore } from "@/worker/state";
 
 import type { ReconcilerConfig } from "../types";

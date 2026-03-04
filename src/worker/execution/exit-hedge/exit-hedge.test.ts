@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ProtocolAdapter } from "@/adapters/types";
-import type { ExchangeOrder } from "@/adapters/types";
 import type { Logger } from "@/lib/logger";
+import type { ProtocolAdapter } from "@/lib/protocols";
+import type { ExchangeOrder } from "@/lib/protocols";
 
 import { DEFAULT_EXECUTION_CONFIG, ExecutionError } from "../types";
 import type { ExecutionConfig } from "../types";

@@ -6,7 +6,7 @@
 
 import * as v from "valibot";
 
-import { positionSideSchema } from "@/adapters/types";
+import { positionSideSchema } from "@/lib/protocols";
 
 /**
  * Source of position data.

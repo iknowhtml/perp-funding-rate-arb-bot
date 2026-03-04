@@ -6,7 +6,7 @@
  * @see {@link ../../../../adrs/0001-bot-architecture.md ADR-0001: Bot Architecture}
  */
 
-import type { Balance, Position } from "@/adapters/types";
+import type { Balance, Position } from "@/lib/protocols";
 
 import { derivePosition } from "../derive";
 import type {

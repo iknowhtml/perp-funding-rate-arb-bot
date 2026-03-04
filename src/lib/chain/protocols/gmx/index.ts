@@ -4,9 +4,9 @@
  * @see {@link ../../../../../adrs/0019-on-chain-perps-pivot.md ADR-0019: On-Chain Perps Pivot}
  */
 
-export type { GmxProtocolAdapterConfig } from "./config";
-export { ChainError } from "./errors";
-export type { ChainErrorCode } from "./errors";
+export type { GmxProtocolAdapterConfig } from "./adapter";
+export { ChainError } from "./adapter";
+export type { ChainErrorCode } from "./adapter";
 
 export {
   BTC_USD_MARKET,
@@ -26,7 +26,7 @@ export {
   getPositionState,
   getTickers,
   getTokenBalance,
-} from "./reads";
+} from "./utils";
 export type {
   GmxAccountPositionRaw,
   GmxFundingRateRaw,
@@ -34,7 +34,7 @@ export type {
   GmxReadsDeps,
   GetExecutionPriceResult,
   GetExecutionPriceFromReaderParams,
-} from "./reads";
+} from "./utils";
 
 export { createGmxProtocolAdapter as createGmxAdapter } from "./adapter";
 export type { GmxProtocolAdapter } from "./adapter";

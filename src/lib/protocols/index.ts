@@ -1,5 +1,5 @@
 /**
- * Exchange adapter exports.
+ * Protocol and adapter exports: types, schemas, guards, config, errors, GMX.
  *
  * @see {@link ../../adrs/0010-exchange-adapters.md ADR-0010: Exchange Adapters}
  */
@@ -41,6 +41,23 @@ export {
   exchangeOrderStatusSchema,
   fillSchema,
   fundingRateSchema,
+  liquidityBalanceSchema,
+  oiSkewSchema,
+  openPositionParamsSchema,
+  orderBookLevelSchema,
+  orderBookSchema,
+  orderSideSchema,
+  orderTypeSchema,
+  pnlSnapshotSchema,
+  perpPositionStateSchema,
+  positionSchema,
+  positionStateSchema,
+  positionSideSchema,
+  tickerSchema,
+  txResultSchema,
+} from "./schema";
+
+export {
   isBalance,
   isCreateOrderParams,
   isExchangeOrder,
@@ -57,26 +74,10 @@ export {
   isPositionState,
   isTicker,
   isTxResult,
-  liquidityBalanceSchema,
-  oiSkewSchema,
-  openPositionParamsSchema,
-  orderBookLevelSchema,
-  orderBookSchema,
-  orderSideSchema,
-  orderTypeSchema,
-  pnlSnapshotSchema,
-  perpPositionStateSchema,
-  positionSchema,
-  positionStateSchema,
-  positionSideSchema,
-  tickerSchema,
-  txResultSchema,
-} from "./types";
+} from "./guards";
 
-// GMX protocol adapter (ADR-0019) — lives under lib/chain/protocols/gmx
-export { createGmxAdapter } from "@/lib/chain/protocols/gmx";
-export type { GmxProtocolAdapter, GmxProtocolAdapterConfig } from "@/lib/chain/protocols/gmx";
-
-// Config validation (legacy AdapterConfig kept for env parsing if needed)
 export type { AdapterConfig } from "./config";
 export { AdapterConfigSchema, isAdapterConfig, parseAdapterConfig } from "./config";
+
+export { createGmxAdapter } from "@/lib/chain/protocols/gmx";
+export type { GmxProtocolAdapter, GmxProtocolAdapterConfig } from "@/lib/chain/protocols/gmx";

@@ -185,7 +185,7 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
  *
  * @example
  * ```typescript
- * import { BINANCE_RATE_LIMITS, getBinanceEndpointWeight } from "@/adapters/binance";
+ * import { BINANCE_RATE_LIMITS, getBinanceEndpointWeight } from "@/lib/protocols";
  *
  * const policy = createRequestPolicy({
  *   exchange: "binance",
