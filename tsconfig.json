@@ -37,6 +37,6 @@
     /* Skip type checking of declaration files */
     "skipLibCheck": true
   },
-  "include": ["src/**/*.ts", "scripts/**/*.ts"],
+  "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }
