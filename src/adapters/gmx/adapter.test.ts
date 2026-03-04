@@ -5,6 +5,15 @@
 import type { Address } from "viem";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type GmxProtocolAdapterConfig, createGmxProtocolAdapter } from "./adapter";
+
+vi.mock("@/lib/logger", () => ({
+  createLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  }),
+}));
 import {
   compute4hMaFundingRateBps,
   getExecutionPriceFromReader,
@@ -30,6 +39,20 @@ vi.mock("./reads", () => ({
 const baseUrl = "https://arbitrum-api.gmxinfra.io";
 const account: Address = "0x1234567890123456789012345678901234567890";
 const market: Address = "0x70d95587d40A2caf56bd97485aB3Eec10Bee6336";
+
+const mockPublicClient = { readContract: vi.fn() };
+
+const minimalConfig = (
+  overrides?: Partial<GmxProtocolAdapterConfig>,
+): GmxProtocolAdapterConfig => ({
+  baseUrl,
+  publicClient: mockPublicClient as unknown as NonNullable<
+    GmxProtocolAdapterConfig["publicClient"]
+  >,
+  account,
+  chainId: 42161,
+  ...overrides,
+});
 
 describe("createGmxProtocolAdapter", () => {
   beforeEach(() => {
@@ -60,7 +83,7 @@ describe("createGmxProtocolAdapter", () => {
       { tokenSymbol: "ETH", minPrice: 3_000_000_000n, maxPrice: 3_100_000_000n },
     ]);
 
-    const config: GmxProtocolAdapterConfig = { baseUrl };
+    const config = minimalConfig();
     const adapter = createGmxProtocolAdapter(config);
 
     const markets = await adapter.getMarketsInfo();
@@ -72,26 +95,25 @@ describe("createGmxProtocolAdapter", () => {
     expect(getTickers).toHaveBeenCalledWith(baseUrl);
   });
 
-  it("returns null for getPositionState when account not configured", async () => {
-    const config: GmxProtocolAdapterConfig = { baseUrl };
-    const adapter = createGmxProtocolAdapter(config);
-
-    const result = await adapter.getPositionState(market);
-
-    expect(result).toBeNull();
+  it("throws when account is not provided", () => {
+    expect(() =>
+      createGmxProtocolAdapter({
+        ...minimalConfig(),
+        account: undefined as unknown as Address,
+      }),
+    ).toThrow("account is required");
   });
 
-  it("returns zero balance for getLiquidityBalance when account not configured", async () => {
-    const config: GmxProtocolAdapterConfig = { baseUrl };
-    const adapter = createGmxProtocolAdapter(config);
-
-    const result = await adapter.getLiquidityBalance("0xpool");
-
-    expect(result).toEqual({ pool: "0xpool", balance: 0n });
+  it("throws when publicClient is not provided", () => {
+    expect(() =>
+      createGmxProtocolAdapter({
+        ...minimalConfig(),
+        publicClient: undefined as unknown as NonNullable<GmxProtocolAdapterConfig["publicClient"]>,
+      }),
+    ).toThrow("publicClient is required");
   });
 
   it("calls getPositionStateRead when publicClient and account configured", async () => {
-    const mockPublicClient = { readContract: vi.fn() };
     vi.mocked(getPositionState).mockResolvedValue({
       ts: new Date(),
       market,
@@ -106,13 +128,7 @@ describe("createGmxProtocolAdapter", () => {
       gmMtmValueUsd: 0n,
     });
 
-    const config: GmxProtocolAdapterConfig = {
-      baseUrl,
-      publicClient: mockPublicClient as unknown as NonNullable<
-        GmxProtocolAdapterConfig["publicClient"]
-      >,
-      account,
-    };
+    const config = minimalConfig();
     const adapter = createGmxProtocolAdapter(config);
 
     const result = await adapter.getPositionState(market);
@@ -143,7 +159,7 @@ describe("createGmxProtocolAdapter", () => {
       fundingRateShort: 25n,
     });
 
-    const config: GmxProtocolAdapterConfig = { baseUrl };
+    const config = minimalConfig();
     const adapter = createGmxProtocolAdapter(config);
 
     const rate = await adapter.getMaFundingRate(market);
@@ -155,7 +171,7 @@ describe("createGmxProtocolAdapter", () => {
     vi.mocked(getMarketsInfo).mockResolvedValue([]);
     vi.mocked(compute4hMaFundingRateBps).mockReturnValue(12n);
 
-    const config: GmxProtocolAdapterConfig = { baseUrl };
+    const config = minimalConfig();
     const adapter = createGmxProtocolAdapter(config);
 
     const rate = await adapter.getMaFundingRate(market, [10n, 12n, 14n]);
@@ -171,7 +187,7 @@ describe("createGmxProtocolAdapter", () => {
       shortOi: 50_000n,
     });
 
-    const config: GmxProtocolAdapterConfig = { baseUrl };
+    const config = minimalConfig();
     const adapter = createGmxProtocolAdapter(config);
 
     const skew = await adapter.getOiSkew(market);
@@ -179,22 +195,7 @@ describe("createGmxProtocolAdapter", () => {
     expect(skew).toEqual({ longOi: 100_000n, shortOi: 50_000n });
   });
 
-  it("simulateOrder returns zero impactBps when publicClient absent", async () => {
-    const config: GmxProtocolAdapterConfig = { baseUrl };
-    const adapter = createGmxProtocolAdapter(config);
-
-    const result = await adapter.simulateOrder({
-      market,
-      positionSizeUsd: 50_000n * 10n ** 30n,
-      acceptablePriceUsd: 1_200n * 10n ** 30n,
-    });
-
-    expect(result).toEqual({ impactBps: 0n });
-    expect(getExecutionPriceFromReader).not.toHaveBeenCalled();
-  });
-
   it("simulateOrder returns impactBps from Reader when publicClient provided", async () => {
-    const mockPublicClient = {} as never;
     vi.mocked(getTickers).mockResolvedValue([
       { tokenSymbol: "ETH", minPrice: 3000n * 10n ** 30n, maxPrice: 3010n * 10n ** 30n },
     ] as never);
@@ -203,11 +204,7 @@ describe("createGmxProtocolAdapter", () => {
       priceImpactUsd: -50n * 10n ** 30n, // -50 USD in 30 decimals => 10 bps for 50k size
     });
 
-    const adapter = createGmxProtocolAdapter({
-      baseUrl,
-      publicClient: mockPublicClient,
-      chainId: 42161,
-    });
+    const adapter = createGmxProtocolAdapter(minimalConfig());
 
     const result = await adapter.simulateOrder({
       market,
@@ -227,7 +224,7 @@ describe("createGmxProtocolAdapter", () => {
   });
 
   it("submitOrder throws not yet implemented", async () => {
-    const config: GmxProtocolAdapterConfig = { baseUrl };
+    const config = minimalConfig();
     const adapter = createGmxProtocolAdapter(config);
 
     await expect(

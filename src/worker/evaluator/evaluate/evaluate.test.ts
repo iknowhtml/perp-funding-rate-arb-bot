@@ -19,13 +19,32 @@ import type { HealthMonitor } from "@/worker/websocket";
 import { evaluate } from "./evaluate";
 import type { EvaluatorDeps } from "./evaluate";
 
+vi.mock("@/lib/logger", () => ({
+  createLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  }),
+}));
 vi.mock("@gmx-io/sdk/configs/contracts", () => ({
   getContract: (_chainId: number, name: string) =>
     name === "SyntheticsReader"
       ? "0x470fbC46bcC0f16532691Df360A07d8Bf5ee0789"
       : "0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8",
 }));
-vi.mock("@gmx-io/sdk/configs/chainIds", () => ({ ARBITRUM: 42161 }));
+vi.mock("@gmx-io/sdk/configs/chainIds", () => ({
+  ARBITRUM: 42161,
+  ARBITRUM_SEPOLIA: 421614,
+  AVALANCHE: 43114,
+  AVALANCHE_FUJI: 43113,
+  BOTANIX: 3637,
+  SOURCE_ETHEREUM_MAINNET: 1,
+  SOURCE_BASE_MAINNET: 8453,
+  SOURCE_BSC_MAINNET: 56,
+  SOURCE_OPTIMISM_SEPOLIA: 11155420,
+  SOURCE_SEPOLIA: 11155111,
+}));
 
 vi.mock("@/domains/risk/evaluate", () => ({
   evaluateRisk: vi.fn(),

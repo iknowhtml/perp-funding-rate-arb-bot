@@ -15,6 +15,12 @@ export default defineConfig({
     globals: true,
     environment: "node",
     include: ["src/**/*.test.ts"],
+    server: {
+      deps: {
+        // Inline so Vite resolves @gmx-io/sdk's extensionless ESM imports (e.g. ./chainIds, ./utils)
+        inline: ["@gmx-io/sdk"],
+      },
+    },
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
